@@ -1,0 +1,6 @@
+{
+  "name": "Mythos // AI Story Engine & Game Studio",
+  "description": "Create, explore, and play immersive branching narrative RPGs powered by Gemini AI with full stat mechanics, inventory, visual node editing, and dynamic storytelling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
