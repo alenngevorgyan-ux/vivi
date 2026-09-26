@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+    <header className="vivi-navbar sticky top-0 z-50 w-full border-b backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand / Logo */}
         <div 
@@ -37,21 +37,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           }}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="relative w-9 h-9 rounded-lg bg-gradient-to-tr from-amber-600 via-rose-600 to-indigo-600 p-[1px] shadow-lg shadow-amber-500/10 transition-transform group-hover:scale-105">
-            <div className="w-full h-full bg-slate-950 rounded-[7px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
-            </div>
-          </div>
+          <div className="vivi-brand-symbol" aria-hidden="true">V<span>.</span></div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-cinzel text-lg font-bold tracking-widest bg-gradient-to-r from-amber-200 via-slate-100 to-rose-200 bg-clip-text text-transparent">
-                MYTHOS
-              </span>
-              <span className="text-[10px] font-code px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 tracking-wider">
-                ENGINE
-              </span>
+              <span className="vivi-wordmark">VIVI</span>
             </div>
-            <p className="text-[10px] text-slate-400 font-sans hidden sm:block">AI Interactive Fiction & Game Studio</p>
+            <p className="vivi-tagline hidden sm:block">STORIES YOU CAN ENTER</p>
           </div>
         </div>
 

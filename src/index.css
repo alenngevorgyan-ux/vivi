@@ -1,5 +1,156 @@
 @import "tailwindcss";
 
+:root { font-family: Inter, system-ui, sans-serif; color: #202629; background: #f4efe7; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-offset: 3px; }
+.vivi-app { background: #f4efe7; color: #202629; }
+.vivi-eyebrow { font: 600 11px/1.4 'IBM Plex Mono', monospace; letter-spacing: .13em; color: #a05948; }
+.vivi-signal { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: #b85f49; }
+.vivi-navbar { background: rgba(247,243,235,.94); border-color: #ddd5ca; }
+.vivi-app .vivi-navbar nav button { color: #675e58; }
+.vivi-app .vivi-navbar nav button:hover { color: #202629; background: #e9dfd3; }
+.vivi-app .vivi-navbar nav button.bg-slate-800, .vivi-app .vivi-navbar nav button.bg-amber-500\/15 { background:#e9dfd3; color:#8e4e3e; border-color:#d7c7b6; box-shadow:none; }
+.vivi-app .vivi-navbar button[title*="Sound"] { color:#605a54; border-color:#d7c7b6; }
+.vivi-app .vivi-navbar nav button:has(.lucide-compass), .vivi-app .vivi-navbar nav button:has(.lucide-plus-circle) { border-color: #d7c7b6; }
+.vivi-brand-symbol { display:grid; place-items:center; width:36px; height:36px; border-radius: 11px; background:#af644f; color:#fff4e8; font:italic 700 22px/1 Newsreader,Georgia,serif; letter-spacing:-.09em; }
+.vivi-brand-symbol span { color:#ecd6b1; }
+.vivi-wordmark { font: 700 18px/1 Inter,sans-serif; letter-spacing:.22em; color:#2c3434; }
+.vivi-tagline { font: 500 8px/1.4 'IBM Plex Mono',monospace; letter-spacing:.15em; color:#82766d; }
+.vivi-site-footer { padding:22px; text-align:center; color:#92867c; border-top:1px solid #ddd5ca; font:600 10px/1.4 'IBM Plex Mono',monospace; letter-spacing:.16em; }
+.vivi-feed { width:min(1280px,100%); margin:auto; padding:46px 36px 70px; }
+.vivi-feed-intro { padding: 5px 0 32px; }
+.vivi-intro-row { display:flex; align-items:end; justify-content:space-between; gap:30px; }
+.vivi-intro-row h1 { font:400 clamp(48px,6.5vw,94px)/.96 Newsreader,Georgia,serif; letter-spacing:-.055em; margin:20px 0 0; }
+.vivi-intro-row h1 em { color:#af644f; font-weight:400; }
+.vivi-intro-row p { max-width:300px; font:400 15px/1.7 Inter,sans-serif; color:#6a645e; margin-bottom:7px; }
+.vivi-feature { min-height:408px; position:relative; overflow:hidden; border-radius:22px; background:#2f303d; color:#fff7eb; box-shadow: 0 17px 46px rgba(51,47,41,.16); }
+.vivi-feature-art { position:absolute; inset:0; opacity:.8; transform:translateX(24%); }
+.vivi-feature-art .vivi-scene-art { width:100%; height:100%; }
+.vivi-feature:after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,#252632 2%,rgba(37,38,50,.95) 33%,rgba(37,38,50,.17) 83%); pointer-events:none; }
+.vivi-feature-content { position:relative; z-index:1; width:min(500px,90%); padding:61px 0 52px 65px; }
+.vivi-feature-content .vivi-eyebrow { color:#e0ab90; }
+.vivi-feature-content h2 { font:400 clamp(52px,6vw,84px)/1 Newsreader,Georgia,serif; letter-spacing:-.04em; margin:24px 0 17px; }
+.vivi-feature-content p { font:400 19px/1.5 Newsreader,Georgia,serif; color:#e5d9ce; max-width:400px; margin-bottom:28px; }
+.vivi-feature-index { position:absolute; right:26px; bottom:21px; z-index:1; font:500 11px 'IBM Plex Mono',monospace; letter-spacing:.13em; color:#e7d9c6; }
+.vivi-button { display:inline-flex; align-items:center; justify-content:center; gap:14px; border:0; border-radius:11px; background:#b85f49; color:#fff7ed; padding:14px 19px; font:600 13px Inter,sans-serif; transition:transform .18s,background .18s; }
+.vivi-button:hover:not(:disabled) { background:#974734; transform:translateY(-2px); }
+.vivi-button:disabled { opacity:.46; cursor:not-allowed; }
+.vivi-feed-toolbar { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-top:67px; }
+.vivi-feed-toolbar h2,.vivi-feed-end h2 { font:400 43px/1.1 Newsreader,Georgia,serif; letter-spacing:-.035em; margin:8px 0 0; }
+.vivi-search { display:flex; align-items:center; gap:9px; background:#fffaf3; border:1px solid #ded5ca; border-radius:10px; padding:10px 13px; width:260px; color:#9b8e82; }
+.vivi-search input { width:100%; outline:0; background:transparent; color:#272d2d; font-size:13px; }
+.vivi-filter-row { display:flex; gap:8px; align-items:center; overflow:auto; padding:24px 0 22px; color:#9f8779; }
+.vivi-filter-row button { white-space:nowrap; padding:9px 14px; border:1px solid #ddd4c9; border-radius:100px; background:transparent; font-size:12px; color:#675e58; }
+.vivi-filter-row button.active { border-color:#a85a47; background:#a85a47; color:#fff9f0; }
+.vivi-story-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.vivi-story-card { text-align:left; padding:0; overflow:hidden; border:1px solid #ded5ca; border-radius:17px; background:#fffbf5; color:#202629; box-shadow:0 6px 19px rgba(47,43,38,.045); transition:transform .2s,box-shadow .2s; }
+.vivi-story-card:hover { transform:translateY(-5px); box-shadow:0 15px 35px rgba(47,43,38,.12); }
+.vivi-card-art { position:relative; height:210px; overflow:hidden; background:#746a6b; }
+.vivi-card-art .vivi-scene-art { width:100%; height:100%; }
+.vivi-card-number { position:absolute; right:13px; top:13px; padding:6px 8px; color:#fff9ef; background:rgba(29,34,35,.64); border-radius:5px; font:500 10px 'IBM Plex Mono',monospace; }
+.vivi-card-copy { min-height:230px; display:flex; flex-direction:column; align-items:start; padding:22px 23px; }
+.vivi-card-copy h3 { font:400 30px/1.05 Newsreader,Georgia,serif; margin:9px 0 8px; letter-spacing:-.025em; }
+.vivi-card-copy p { font:400 14px/1.55 Inter,sans-serif; color:#69645f; margin:0 0 20px; }
+.vivi-card-enter { margin-top:auto; display:flex; gap:8px; align-items:center; color:#a85a47; font:600 10px 'IBM Plex Mono',monospace; letter-spacing:.12em; }
+.vivi-empty { padding:50px 0; color:#6a645e; }
+.vivi-feed-end { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:47px 0 24px; border-top:1px solid #ddd4c9; margin-top:58px; }
+.vivi-feed-end p { color:#6a645e; font-size:14px; margin-top:7px; }
+.vivi-archive-link { color:#8c8078; font-size:12px; text-decoration:underline; margin-top:25px; }
+.vivi-create { width:min(1180px,100%); margin:auto; padding:52px 32px 76px; }
+.vivi-create-heading { position:relative; padding-bottom:38px; border-bottom:1px solid #d9cfc3; }
+.vivi-create-heading h1 { font:400 clamp(54px,6.5vw,86px)/.93 Newsreader,Georgia,serif; letter-spacing:-.05em; margin:18px 0; }
+.vivi-create-heading h1 em { color:#af644f; font-weight:400; }
+.vivi-create-heading p { color:#6a645e; font-size:15px; line-height:1.6; max-width:510px; }
+.vivi-create-grid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(260px,.8fr); gap:28px; margin-top:31px; }
+.vivi-create-form { padding:31px; border:1px solid #ddd2c5; border-radius:18px; background:#fffbf5; box-shadow:0 8px 24px rgba(47,43,38,.05); }
+.vivi-create-step { margin-bottom:27px; }
+.vivi-create-step > span { color:#a85a47; font:600 10px 'IBM Plex Mono',monospace; letter-spacing:.13em; }
+.vivi-create-step h2 { font:400 34px/1 Newsreader,Georgia,serif; margin:9px 0 7px; }
+.vivi-create-step p { color:#756b62; font-size:12px; line-height:1.5; margin-bottom:14px; }
+.vivi-create-step textarea,.vivi-create-fields input,.vivi-create-fields select { display:block; width:100%; border:1px solid #d8cfc4; border-radius:10px; background:#fffdf9; padding:13px 15px; color:#202629; font:14px/1.55 Inter,sans-serif; outline:0; }
+.vivi-create-step textarea:focus,.vivi-create-fields input:focus,.vivi-create-fields select:focus { border-color:#b85f49; box-shadow:0 0 0 3px rgba(184,95,73,.13); }
+.vivi-create-step textarea::placeholder { color:#a89d93; }
+.vivi-create-fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.vivi-create-fields label { color:#615b55; font-size:12px; font-weight:600; }
+.vivi-create-fields input,.vivi-create-fields select { margin-top:7px; height:48px; }
+.vivi-create-submit { width:100%; margin-top:26px; }
+.vivi-create-error { color:#963f35; font-size:12px; padding-top:14px; }
+.vivi-create-result { border-top:1px solid #ded5ca; margin-top:29px; padding-top:24px; }
+.vivi-create-result h3 { font:400 28px Newsreader,Georgia,serif; margin:8px 0; }
+.vivi-create-result p { color:#6a645e; font-size:13px; line-height:1.5; }
+.vivi-create-result button { display:flex; align-items:center; gap:7px; color:#a85a47; font-size:13px; font-weight:600; margin-top:14px; }
+.vivi-create-aside { display:flex; flex-direction:column; gap:29px; padding:16px 0 0 9px; }
+.vivi-create-aside h2 { font:400 30px/1.08 Newsreader,Georgia,serif; margin:12px 0; }
+.vivi-create-aside p { color:#6d655d; font-size:13px; line-height:1.65; max-width:300px; }
+.vivi-inspiration { border-top:1px solid #d9cfc3; padding-top:23px; }
+.vivi-inspiration button { display:grid; grid-template-columns:1fr auto; gap:7px; width:100%; text-align:left; padding:16px 0; border-bottom:1px solid #d9cfc3; }
+.vivi-inspiration strong { font:400 21px Newsreader,Georgia,serif; }
+.vivi-inspiration span { grid-column:1/2; color:#736a62; font:12px/1.5 Inter,sans-serif; }
+.vivi-inspiration svg { grid-column:2; grid-row:1/3; color:#aa614b; margin-top:4px; }
+.vivi-advanced-link { align-self:flex-start; color:#857971; font-size:12px; text-decoration:underline; }
+.vivi-create-advanced { background:#17202b; padding:20px; }
+.vivi-create-advanced > button { color:#f0c29d; font-size:12px; padding:8px; }
+.vivi-play { min-height:calc(100vh - 64px); background:#eae3d9; color:#202629; }
+.vivi-play-header { height:92px; width:min(1450px,100%); margin:auto; padding:16px 34px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.vivi-play-header h1 { font:400 30px/1 Newsreader,Georgia,serif; text-align:center; margin:4px 0 0; }
+.vivi-play-header .vivi-eyebrow { display:block; text-align:center; font-size:9px; }
+.vivi-back,.vivi-restart { display:flex; gap:8px; align-items:center; border:0; background:transparent; color:#605a54; font-size:13px; padding:10px; }
+.vivi-play-layout { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(340px,.78fr); gap:0; width:min(1450px,100%); min-height:680px; margin:auto; padding:0 26px 25px; }
+.vivi-stage-shell { min-width:0; background:#262b30; border-radius:18px 0 0 18px; overflow:hidden; }
+.vivi-stage { position:relative; aspect-ratio:1000/600; width:100%; overflow:hidden; cursor:crosshair; }
+.vivi-stage .vivi-scene-art { width:100%; height:100%; }
+.vivi-stage-vignette { position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 120px 30px rgba(22,27,31,.35); }
+.vivi-stage-caption { position:absolute; top:18px; left:20px; right:20px; display:flex; justify-content:space-between; gap:10px; color:#fff5e7; font:500 10px 'IBM Plex Mono',monospace; letter-spacing:.1em; text-shadow:0 1px 5px #1f2a2c; pointer-events:none; }
+.vivi-stage-caption span:last-child { padding:7px 9px; border:1px solid rgba(255,246,233,.42); background:rgba(35,41,45,.56); border-radius:5px; }
+.vivi-prop-readout { position:absolute; transform:translate(-50%,-50%); z-index:3; padding:5px 8px; border-radius:4px; color:#fce5c4; background:rgba(28,40,45,.78); box-shadow:0 3px 9px rgba(0,0,0,.2); font:600 10px 'IBM Plex Mono',monospace; white-space:nowrap; pointer-events:none; }
+.vivi-player,.vivi-npc { position:absolute; transform:translate(-50%,-100%); transition:left .48s cubic-bezier(.22,.7,.18,1),top .48s cubic-bezier(.22,.7,.18,1); pointer-events:none; filter:drop-shadow(0 6px 7px rgba(12,20,25,.4)); }
+.vivi-world-action { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; padding:0; border:0; background:transparent; color:#fff8ed; z-index:4; }
+.vivi-action-dot { display:block; width:22px; height:22px; border-radius:50%; border:2px solid #fff4df; background:#b85f49; box-shadow:0 0 0 7px rgba(245,222,184,.2),0 2px 10px #26313c; }
+.vivi-world-action.selected .vivi-action-dot { background:#f3cf9e; border-color:#8b4939; }
+.vivi-action-label { display:block; margin-top:10px; padding:6px 8px; border-radius:5px; background:rgba(28,38,42,.82); white-space:nowrap; font:500 10px Inter,sans-serif; }
+.vivi-diegetic-cue { position:absolute; z-index:4; transform:translateX(-50%); min-width:160px; max-width:75%; padding:9px 14px; border-radius:7px; background:rgba(33,43,49,.91); color:#fff3e2; text-align:center; font:400 15px/1.4 Newsreader,Georgia,serif; box-shadow:0 7px 24px rgba(0,0,0,.2); pointer-events:none; }
+.vivi-diegetic-cue span { display:block; color:#d5a68d; font:600 9px 'IBM Plex Mono',monospace; letter-spacing:.14em; margin-bottom:3px; }
+.vivi-stage-freeze { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:30px; color:#fff6e7; background:rgba(26,31,38,.75); }
+.vivi-stage-freeze span { font:600 10px 'IBM Plex Mono',monospace; letter-spacing:.17em; color:#e5b498; }
+.vivi-stage-freeze p { max-width:450px; font:400 33px/1.18 Newsreader,Georgia,serif; margin:16px 0; }
+.vivi-stage-under { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:15px 22px; color:#c9c6c0; font:500 10px 'IBM Plex Mono',monospace; letter-spacing:.04em; }
+.vivi-stage-under span:first-child { display:flex; align-items:center; gap:7px; }
+.vivi-story-panel { display:flex; flex-direction:column; background:#fffaf3; border-radius:0 18px 18px 0; padding:33px 34px 25px; min-width:0; }
+.vivi-panel-top h2 { font:400 38px/1 Newsreader,Georgia,serif; letter-spacing:-.035em; margin:10px 0; }
+.vivi-setup { color:#706862; font-size:13px; line-height:1.55; }
+.vivi-story-beats { margin:17px 0; }
+.vivi-beat { border-top:1px solid #e4d9cd; padding:13px 0; }
+.vivi-beat span { color:#9c6756; font:600 9px 'IBM Plex Mono',monospace; letter-spacing:.12em; }
+.vivi-beat p { font:400 17px/1.32 Newsreader,Georgia,serif; margin:5px 0 0; }
+.vivi-beat.current p,.vivi-beat.pressure p { color:#853f35; }
+.vivi-beat.observation { background:#f1e8dc; padding:13px; margin:3px -13px; border-radius:7px; }
+.vivi-wait-hint { margin-top:auto; color:#8a7f72; font-size:12px; }
+.vivi-commit { margin-top:auto; }
+.vivi-action-list { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:10px 0 15px; }
+.vivi-action-list button { display:flex; justify-content:space-between; align-items:center; gap:5px; padding:10px; border:1px solid #e1d5c8; border-radius:7px; background:transparent; color:#5c5751; text-align:left; font-size:11px; }
+.vivi-action-list button.active { border-color:#b85f49; background:#f5e6db; color:#783d36; }
+.vivi-commit .vivi-button,.vivi-result .vivi-button { width:100%; }
+.vivi-result { margin-top:auto; }
+.vivi-result > p { font:400 20px/1.35 Newsreader,Georgia,serif; margin:9px 0 20px; }
+.vivi-reality { border-top:1px solid #e1d5c8; margin-top:20px; padding-top:18px; }
+.vivi-reality p { font:400 16px/1.4 Newsreader,Georgia,serif; margin:9px 0; }
+.vivi-compare { border-top:1px solid #e1d5c8; margin-top:18px; padding-top:17px; }
+.vivi-compare h3 { font:400 24px Newsreader,Georgia,serif; margin:8px 0; }
+.vivi-compare p { font-size:11px; color:#746c65; line-height:1.5; }
+.vivi-compare div { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.vivi-compare div span { font-size:10px; color:#815a4d; border:1px solid #dbc9b9; padding:5px; border-radius:5px; }
+.vivi-text-button { border:0; background:transparent; padding:15px 0 0; color:#a85a47; font-size:12px; text-decoration:underline; }
+.vivi-respond { border-top:1px solid #e1d5c8; padding-top:16px; margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+.vivi-respond label { font:400 20px Newsreader,Georgia,serif; }
+.vivi-respond textarea { border:1px solid #d9cfc4; border-radius:7px; background:#fffdf9; min-height:70px; resize:vertical; padding:9px; font:13px Inter,sans-serif; color:#202629; }
+.vivi-respond button { align-self:flex-start; color:#a85a47; font-size:12px; font-weight:600; }
+.vivi-respond button:disabled { color:#aaa099; cursor:not-allowed; }
+.vivi-respond small { color:#82776d; font-size:10px; }
+.vivi-play-footer { display:flex; justify-content:space-between; width:min(1400px,100%); margin:auto; padding:5px 34px 26px; color:#8d8176; font:500 10px 'IBM Plex Mono',monospace; letter-spacing:.1em; }
+@media(max-width:950px) { .vivi-story-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .vivi-play-layout { grid-template-columns:1fr; } .vivi-stage-shell { border-radius:16px 16px 0 0; } .vivi-story-panel { border-radius:0 0 16px 16px; } .vivi-create-grid { grid-template-columns:1fr; } .vivi-create-aside { padding:0; } }
+@media(max-width:650px) { .vivi-feed { padding:28px 16px 50px; } .vivi-intro-row { display:block; } .vivi-intro-row h1 { font-size:53px; } .vivi-intro-row p { margin-top:18px; } .vivi-feature { min-height:420px; } .vivi-feature-art { transform:translateX(0); opacity:.35; } .vivi-feature:after { background:linear-gradient(90deg,rgba(37,38,50,.92),rgba(37,38,50,.4)); } .vivi-feature-content { padding:50px 25px; } .vivi-feature-content h2 { font-size:58px; } .vivi-feed-toolbar { display:block; margin-top:46px; } .vivi-search { width:100%; margin-top:17px; } .vivi-story-grid { grid-template-columns:1fr; } .vivi-card-art { height:190px; } .vivi-feed-end { display:block; } .vivi-feed-end .vivi-button { margin-top:19px; } .vivi-create { padding:35px 16px 50px; } .vivi-create-heading h1 { font-size:59px; } .vivi-create-form { padding:20px; } .vivi-create-fields { grid-template-columns:1fr; } .vivi-play-header { padding:10px 14px; height:76px; } .vivi-play-header h1 { font-size:25px; } .vivi-play-header .vivi-eyebrow { font-size:7px; } .vivi-play-layout { padding:0 8px 20px; } .vivi-action-label { font-size:8px; max-width:78px; white-space:normal; } .vivi-stage-under { font-size:8px; padding:10px; } .vivi-story-panel { padding:24px 18px; } .vivi-play-footer { font-size:8px; padding:0 12px 20px; } }
+@media(prefers-reduced-motion:reduce) { .vivi-player,.vivi-npc,.vivi-story-card,.vivi-button { transition:none !important; } }
+
 @layer utilities {
   .font-cinzel {
     font-family: 'Cinzel', serif;

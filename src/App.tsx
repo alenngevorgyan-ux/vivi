@@ -9,9 +9,12 @@ import { SOCIAL_MEMORIES } from './data/socialMemories';
 import { DEFAULT_GAMES } from './data/defaultGames';
 import { Navbar } from './components/Navbar';
 import { FeedView } from './components/FeedView';
-import { CreateView } from './components/CreateView';
+import { ViviCreate } from './components/ViviCreate';
 import { PlaySceneSwitcher } from './components/PlaySceneSwitcher';
 import { sounds } from './utils/soundEffects';
+import { ViviFeed } from './components/ViviFeed';
+import { ViviPlay } from './components/ViviPlay';
+import { HeroStory } from './data/heroStories';
 
 const STORAGE_KEY = 'mythos_human_memories_v2';
 
@@ -39,7 +42,9 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<'feed' | 'create' | 'play'>('feed');
-  const [activeGame, setActiveGame] = useState<GameSpec | null>(() => SOCIAL_MEMORIES[0] || null);
+  const [activeHero, setActiveHero] = useState<HeroStory | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
+  const [activeGame, setActiveGame] = useState<GameSpec | null>(null);
   const [gameToEdit, setGameToEdit] = useState<GameSpec | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
 
@@ -53,6 +58,7 @@ export default function App() {
   }, [games]);
 
   const handlePlayGame = (game: GameSpec) => {
+    setActiveHero(null);
     setActiveGame(game);
     setActiveTab('play');
   };
@@ -63,6 +69,7 @@ export default function App() {
   };
 
   const handleCreateNew = () => {
+    setActiveHero(null);
     setGameToEdit(null);
     setActiveTab('create');
   };
@@ -87,18 +94,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+    <div className={`min-h-screen flex flex-col font-sans ${(activeTab === 'feed' && !showArchive) || activeTab === 'create' || activeHero ? 'vivi-app' : 'bg-slate-950 text-slate-100'}`}>
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        hasActiveGame={!!activeGame}
-        activeGameTitle={activeGame?.title}
+        setActiveTab={(tab) => { if (tab !== 'play') setActiveHero(null); if (tab === 'feed') setShowArchive(false); setActiveTab(tab); }}
+        hasActiveGame={!!activeGame || !!activeHero}
+        activeGameTitle={activeHero?.title || activeGame?.title}
         isAudioMuted={isAudioMuted}
         setIsAudioMuted={setIsAudioMuted}
       />
 
       <div className="flex-1 w-full">
-        {activeTab === 'feed' && (
+        {activeTab === 'feed' && !showArchive && <ViviFeed onEnter={(story) => { setActiveHero(story); setActiveTab('play'); }} onCreate={handleCreateNew} onArchive={() => setShowArchive(true)} />}
+        {activeTab === 'feed' && showArchive && (
           <FeedView
             games={games}
             onPlayGame={handlePlayGame}
@@ -109,14 +117,16 @@ export default function App() {
         )}
 
         {activeTab === 'create' && (
-          <CreateView
+          <ViviCreate
+            key={gameToEdit?.id || 'new'}
             initialGameToEdit={gameToEdit}
             onSaveGame={handleSaveGame}
             onPlayGame={handlePlayGame}
           />
         )}
 
-        {activeTab === 'play' && activeGame && (
+        {activeTab === 'play' && activeHero && <ViviPlay key={activeHero.id} story={activeHero} onExit={() => { setActiveHero(null); setShowArchive(false); setActiveTab('feed'); }} />}
+        {activeTab === 'play' && !activeHero && activeGame && (
           <PlaySceneSwitcher
             gameSpec={activeGame}
             onExit={() => setActiveTab('feed')}
@@ -126,8 +136,8 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-5 text-center text-xs text-slate-500 font-sans">
-        <p>Mythos // Социальная сеть живых воспоминаний в виде миниатюрных 2D миров</p>
+      <footer className="vivi-site-footer">
+        <p>VIVI · STORIES YOU CAN ENTER</p>
       </footer>
     </div>
   );

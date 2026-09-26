@@ -32,10 +32,11 @@ function getGeminiClient() {
 
 // System instruction for Story Generator
 const STORY_GENERATOR_SYSTEM_INSTRUCTION = `
-You are the Master Memory Architect for "Mythos", a platform where real human stories become tiny playable 2D worlds that users explore physically.
+You are the story compiler for VIVI, a platform where human situations become tiny playable 2D worlds that people explore physically.
 Your task is to convert human stories into a complete, playable GameSpec JSON.
 
-A story represents an authentic human memory (friendship, love, startups, tough life choices, childhood, family).
+A story may involve betrayal, a plausible creepy event, social disaster, work and power, money, family secrets, a moral dilemma, romance, a turning point, or a quiet memory. Preserve the contributor's facts and uncertainty. Do not turn every story into nostalgia or fantasy. All romantic or relationship characters must be adults.
+The feed synopsis must reveal the setup and stakes but never the truth, outcome or morally preferred choice. Use concise, contemporary human language. Do not invent a real-life outcome if one was not supplied: leave whatReallyHappened empty for author review. Make choices distinct physical actions, including a plausible option to wait, leave or ask someone. The player should be able to inspect the environment before committing.
 Every scene must include a 2D 'worldConfig' so the player can physically walk around, approach interactive memory objects (benches, bicycles, laptops, coffee cups, photos), meet an NPC (friend, co-founder, partner), converse, and then make a pivotal choice.
 
 World Templates available:
@@ -145,8 +146,8 @@ app.post('/api/generate-story', async (req, res) => {
     const {
       prompt,
       whatReallyHappened = '',
-      genre = 'Воспоминания',
-      author = 'Анонимный автор',
+      genre = 'Situations',
+      author = 'Anonymous',
     } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
@@ -156,13 +157,13 @@ app.post('/api/generate-story', async (req, res) => {
     const ai = getGeminiClient();
 
     const userPrompt = `
-Transform this real human story into a tiny playable 2D memory world in JSON:
+Transform this human situation into a tiny playable 2D Vivi world in JSON:
 User Story: "${prompt}"
 ${whatReallyHappened ? `What Really Happened in Real Life: "${whatReallyHappened}"` : ''}
 Genre Category: ${genre}
 Author: ${author}
 
-Design 1-2 rich playable 2D scenes where the player physically walks between interactive memory objects (benches, bicycles, laptops, coffee cups, bus stops), approaches the central NPC character, has a meaningful dialogue, and reaches the crucial life choice.
+Design 1-2 grounded playable scenes within the supported legacy world templates. Stage objects and people so the player can move, inspect, hesitate and then make a consequential physical choice. Use a phone, door, clock, window, laptop or arrival cue when relevant. Keep the synopsis spoiler-free. If no real-life outcome was provided, leave it blank for author review.
 `;
 
     const response = await ai.models.generateContent({
@@ -190,7 +191,7 @@ Design 1-2 rich playable 2D scenes where the player physically walks between int
       parsedSpec.id = 'gen_' + Date.now();
     }
     if (!parsedSpec.author) {
-      parsedSpec.author = 'Mythos AI Engine';
+      parsedSpec.author = author;
     }
     if (!parsedSpec.createdAt) {
       parsedSpec.createdAt = new Date().toISOString();
@@ -205,6 +206,7 @@ Design 1-2 rich playable 2D scenes where the player physically walks between int
       parsedSpec.coverImage = '';
     }
 
+    if (!whatReallyHappened) parsedSpec.whatReallyHappened = '';
     res.json({ success: true, gameSpec: parsedSpec });
   } catch (error: any) {
     console.error('Error generating story:', error);
@@ -270,7 +272,7 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`Mythos Story Engine running on http://0.0.0.0:${PORT}`);
+    console.log(`Vivi Story Engine running on http://0.0.0.0:${PORT}`);
   });
 }
 
