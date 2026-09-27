@@ -6,30 +6,30 @@ import { resolveMovement } from '../../engine/runtime/collision';
 import { computePhysicalModifiers, type PhysicalModifierState } from '../../engine/runtime/ModifierEngine';
 import { worldTemplates } from '../../world/templates';
 import { MobileVirtualJoystick } from './MobileVirtualJoystick';
-import { Volume2, VolumeX, Eye, ArrowRight } from 'lucide-react';
+import { Volume2, Footprints, AlertCircle } from 'lucide-react';
 import type { CharacterPose, CharacterFacing } from '../../assets/characters/characters';
+import { StoryBeatRunner } from '../../engine/runtime/StoryBeatRunner';
+import { telemetry } from '../../engine/runtime/telemetry';
 
 interface CanonicalViviEngineProps {
   scenario: CanonicalScenario;
   elapsedMs: number;
+  beatRunner: StoryBeatRunner;
   selectedAction: RuntimeAction | null;
-  onSelectAction: (action: RuntimeAction) => void;
-  onCommit: (action: RuntimeAction) => void;
+  onActionInspected: (action: RuntimeAction) => void;
   committed: boolean;
   revealed: boolean;
-  onObservation: (text: string) => void;
   isMuted?: boolean;
 }
 
 export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
   scenario,
   elapsedMs,
+  beatRunner,
   selectedAction,
-  onSelectAction,
-  onCommit,
+  onActionInspected,
   committed,
   revealed,
-  onObservation,
   isMuted = false,
 }) => {
   const world = worldTemplates[scenario.world] || worldTemplates.apartment_night;
@@ -40,17 +40,21 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
   const [playerPose, setPlayerPose] = useState<CharacterPose>('idle');
   const [isMoving, setIsMoving] = useState(false);
 
+  // Proximity warning state when player tries to click from across the room
+  const [tooFarNotice, setTooFarNotice] = useState<{ actionId: string; message: string } | null>(null);
+
   // Active keyboard inputs
   const keysPressed = useRef<{ [key: string]: boolean }>({});
   const mobileDir = useRef<'up' | 'down' | 'left' | 'right' | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const lastFrameTimeRef = useRef<number>(performance.now());
 
-  // Physical modifier state (vibrations, doors, elevators, timers)
+  // Physical modifier state (vibrations, doors, elevators, timers) - completely generic
   const physicalState: PhysicalModifierState = useMemo(() => {
-    return computePhysicalModifiers(scenario.modifiers, elapsedMs, scenario.id);
-  }, [scenario.modifiers, elapsedMs, scenario.id]);
+    return computePhysicalModifiers(scenario.modifiers, elapsedMs, scenario.timerAnchor);
+  }, [scenario.modifiers, elapsedMs, scenario.timerAnchor]);
 
-  // Compute nearby active actions based on physical distance
+  // Compute nearby active actions based on strict physical distance
   const nearbyAction = useMemo<RuntimeAction | null>(() => {
     if (committed) return null;
     for (const act of scenario.actions) {
@@ -62,18 +66,32 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     return null;
   }, [scenario.actions, playerPos, committed]);
 
-  // Handle interaction trigger (E key or inspect button)
-  const handleInspect = useCallback((actionToInspect: RuntimeAction) => {
-    onSelectAction(actionToInspect);
-    onObservation(actionToInspect.observation);
+  // Handle interaction trigger ONLY when physically near
+  const handleInspectNearAction = useCallback((actionToInspect: RuntimeAction) => {
+    const dist = Math.hypot(actionToInspect.slotInfo.anchorX - playerPos[0], actionToInspect.slotInfo.anchorY - playerPos[1]);
+    if (dist > actionToInspect.slotInfo.interactionRadius) {
+      // Reject remote interaction
+      setTooFarNotice({
+        actionId: actionToInspect.id,
+        message: 'Слишком далеко · Подойдите ближе, чтобы исследовать',
+      });
+      setTimeout(() => setTooFarNotice(null), 2200);
+      return;
+    }
+
+    setTooFarNotice(null);
+    onActionInspected(actionToInspect);
+    beatRunner.onObjectInspected(actionToInspect.targetSlot, actionToInspect.id, actionToInspect.observation);
+    telemetry.recordEvent('object_inspected', elapsedMs, { objectId: actionToInspect.id });
+
     if (actionToInspect.slotInfo.diegeticType === 'phone') {
       setPlayerPose('look_at_phone');
     } else {
       setPlayerPose('turn');
     }
-  }, [onSelectAction, onObservation]);
+  }, [playerPos, onActionInspected, beatRunner, elapsedMs]);
 
-  // 60FPS Continuous Movement Game Loop with real collision resolution
+  // Frame-rate-independent continuous movement loop using delta time
   useEffect(() => {
     if (committed) {
       setIsMoving(false);
@@ -82,9 +100,14 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     }
 
     let animId: number;
-    const moveSpeed = 0.55; // percentage per frame (~33% per second)
+    // 32% of canvas width per second across all display refresh rates (60Hz, 120Hz, 144Hz)
+    const speedPercentPerSecond = 32;
+    lastFrameTimeRef.current = performance.now();
 
-    const loop = () => {
+    const loop = (timestamp: number) => {
+      const deltaSeconds = Math.min(0.05, (timestamp - lastFrameTimeRef.current) / 1000);
+      lastFrameTimeRef.current = timestamp;
+
       let dx = 0;
       let dy = 0;
       const keys = keysPressed.current;
@@ -113,9 +136,11 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         }
         setPlayerPose('walk');
 
-        // Apply physical collision & sliding
+        // Apply physical collision & sliding with delta-time displacement
         setPlayerPos(([curX, curY]) => {
-          return resolveMovement(curX, curY, dx * moveSpeed, dy * moveSpeed, scenario.world);
+          const step = speedPercentPerSecond * deltaSeconds;
+          const [nextX, nextY] = resolveMovement(curX, curY, dx * step, dy * step, scenario.world);
+          return [nextX, nextY];
         });
       } else {
         setPlayerPose(prev => (prev === 'walk' ? 'idle' : prev));
@@ -128,18 +153,16 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [committed, scenario.world]);
 
-  // Keyboard listeners
+  // Keyboard listeners (inspection via 'E' or Space when in proximity)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Don't capture when typing in reflection textarea
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
       keysPressed.current[e.key] = true;
 
-      // 'E' or Space to inspect nearby action
       if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && nearbyAction) {
         e.preventDefault();
-        handleInspect(nearbyAction);
+        handleInspectNearAction(nearbyAction);
       }
     };
 
@@ -153,7 +176,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [nearbyAction, handleInspect]);
+  }, [nearbyAction, handleInspectNearAction]);
 
   // Physical NPC positioning
   const npcPosition = useMemo<[number, number]>(() => {
@@ -167,10 +190,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     return [76, 76];
   }, [physicalState.npcAction, scenario.world]);
 
-  // NPC character pose
   const npcPose = physicalState.npcAction.pose || (elapsedMs >= 24000 ? 'turn' : 'wait');
-
-  // Selected ending copy
   const selectedEnding = selectedAction ? scenario.endings[selectedAction.id] : '';
 
   return (
@@ -186,44 +206,62 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         <div className="vivi-stage-caption">
           <span>{world.label.toUpperCase()}</span>
           {physicalState.timeDisplay.text && (
-            <span className={`px-2 py-0.5 rounded font-mono text-xs ${physicalState.timeDisplay.isExpiring ? 'text-amber-400 bg-red-950/80 animate-pulse' : 'text-slate-200 bg-slate-900/60'}`}>
+            <span
+              className={`px-2 py-0.5 rounded font-mono text-xs ${
+                physicalState.timeDisplay.isExpiring
+                  ? 'text-amber-400 bg-red-950/80 animate-pulse'
+                  : 'text-slate-200 bg-slate-900/60'
+              }`}
+            >
               {physicalState.timeDisplay.text}
             </span>
           )}
         </div>
 
-        {/* Diegetic Elevator Indicator for hallway_night */}
+        {/* Wall-Mounted Elevator Indicator */}
         {scenario.world === 'hallway_night' && (
           <div className="absolute top-[28%] right-[17%] z-10 px-2 py-0.5 rounded bg-black/85 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold shadow-md">
             {physicalState.elevator.indicatorText || 'FL 1'}
           </div>
         )}
 
-        {/* Diegetic Phone on table with physical vibrations and illuminated screen */}
-        {scenario.world === 'apartment_night' && (
+        {/* Physical Phone Object on coffee table / nightstand */}
+        {(scenario.world === 'apartment_night' || scenario.world === 'bedroom_night') && (
           <div
-            className={`absolute z-10 transition-all ${physicalState.phone.isVibrating ? 'animate-bounce' : ''}`}
-            style={{ left: '54%', top: '68%', transform: 'translate(-50%, -50%)' }}
+            className={`absolute z-10 w-7 h-12 rounded-sm transition-all flex items-center justify-center ${
+              physicalState.phone.isVibrating ? 'animate-vivi-phone-vibrate' : ''
+            }`}
+            style={{
+              left: scenario.world === 'apartment_night' ? '54%' : '64%',
+              top: scenario.world === 'apartment_night' ? '68%' : '67%',
+              transform: 'translate(-50%, -50%)',
+              background: '#1a1e24',
+              border: physicalState.phone.isScreenLit ? '1.5px solid #f59e0b' : '1px solid #334155',
+              boxShadow: physicalState.phone.isScreenLit
+                ? '0 0 16px 4px rgba(245, 158, 11, 0.45)'
+                : '0 2px 5px rgba(0,0,0,0.5)',
+            }}
           >
-            {physicalState.phone.isScreenLit && (
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded bg-slate-950/90 border border-amber-400/50 text-amber-200 font-mono text-[11px] whitespace-nowrap shadow-lg animate-pulse">
-                💬 {physicalState.phone.previewText}
-              </div>
-            )}
+            {/* Screen illumination */}
+            <div
+              className={`w-5 h-9 rounded-[1px] transition-colors ${
+                physicalState.phone.isScreenLit ? 'bg-amber-100/90' : 'bg-slate-900'
+              }`}
+            />
           </div>
         )}
 
-        {/* Diegetic Door handle rattle animation */}
+        {/* Physical Door Handle with visible mechanical jiggle (No debug text) */}
         {physicalState.door.state === 'handle_moving' && (
           <div
-            className="absolute z-10 px-2 py-0.5 rounded bg-red-950/90 border border-red-500/50 text-red-200 font-mono text-[10px] animate-pulse"
+            className="absolute z-10 pointer-events-none"
             style={{
               left: scenario.world === 'apartment_night' ? '76%' : '18%',
               top: scenario.world === 'apartment_night' ? '38%' : '56%',
               transform: 'translate(-50%, -50%)',
             }}
           >
-            *HANDLE JIGGLES*
+            <div className="w-5 h-1.5 bg-amber-400 rounded-full shadow-lg animate-vivi-handle-jiggle" />
           </div>
         )}
 
@@ -247,7 +285,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
           </div>
         )}
 
-        {/* Player Character (Continuous physical movement) */}
+        {/* Player Character (Continuous physical movement with delta-time) */}
         <div
           className="vivi-player absolute pointer-events-none z-20"
           style={{ left: `${playerPos[0]}%`, top: `${playerPos[1]}%` }}
@@ -261,9 +299,11 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         </div>
 
         {/* Semantic Action Markers (Physical In-World Spots) */}
-        {!committed && elapsedMs >= 5000 && scenario.actions.map(action => {
+        {!committed && beatRunner.getState().cueTriggered && scenario.actions.map(action => {
           const isNearby = nearbyAction?.id === action.id;
           const isSelected = selectedAction?.id === action.id;
+          const isUnlocked = beatRunner.isActionUnlocked(action.id);
+          const hasNotice = tooFarNotice?.actionId === action.id;
 
           return (
             <div
@@ -271,27 +311,47 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
               className="absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
               style={{ left: `${action.slotInfo.anchorX}%`, top: `${action.slotInfo.anchorY}%` }}
             >
-              {/* Interaction Hotspot Pulse */}
+              {/* Interaction button - Clickable ONLY when nearby */}
               <button
                 type="button"
-                onClick={() => handleInspect(action)}
+                onClick={() => handleInspectNearAction(action)}
                 className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all shadow-md ${
                   isSelected
                     ? 'bg-amber-600 text-amber-50 ring-4 ring-amber-400/40 scale-105'
                     : isNearby
-                    ? 'bg-stone-900/90 text-stone-100 border border-amber-500/60 ring-2 ring-amber-500/20'
-                    : 'bg-stone-900/70 text-stone-300 border border-stone-700/50 hover:bg-stone-900/90'
+                    ? 'bg-stone-900/95 text-amber-200 border border-amber-400/80 ring-2 ring-amber-500/30 scale-105'
+                    : isUnlocked
+                    ? 'bg-stone-900/80 text-stone-200 border border-stone-600/60'
+                    : 'bg-stone-900/60 text-stone-400 border border-stone-800/40 opacity-75'
                 }`}
-                title={action.label}
+                title={isNearby ? `Исследовать: ${action.label}` : 'Подойдите ближе, чтобы исследовать'}
               >
-                <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-amber-200' : isNearby ? 'bg-amber-400 animate-ping' : 'bg-stone-400'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isSelected
+                      ? 'bg-amber-200'
+                      : isNearby
+                      ? 'bg-amber-400 animate-ping'
+                      : isUnlocked
+                      ? 'bg-emerald-400'
+                      : 'bg-stone-500'
+                  }`}
+                />
                 <span className="font-sans font-medium text-[11px] whitespace-nowrap">{action.label}</span>
               </button>
 
               {/* In-World Proximity Action Prompt */}
               {isNearby && !isSelected && (
-                <div className="mt-1 px-2 py-0.5 rounded bg-black/85 text-amber-300 font-mono text-[9px] tracking-wide uppercase border border-amber-400/40 animate-pulse pointer-events-none">
-                  Press [E] or Tap to Inspect
+                <div className="mt-1 px-2 py-0.5 rounded bg-black/90 text-amber-300 font-mono text-[9px] tracking-wide uppercase border border-amber-400/50 animate-pulse pointer-events-none">
+                  Нажмите [E] или коснитесь
+                </div>
+              )}
+
+              {/* Distance Warning if clicked from across room */}
+              {hasNotice && (
+                <div className="mt-1 px-2 py-0.5 rounded bg-red-950/95 text-red-200 font-sans text-[10px] tracking-wide border border-red-500/60 shadow-lg animate-fade-in pointer-events-none flex items-center gap-1">
+                  <AlertCircle size={10} />
+                  <span>Подойдите ближе</span>
                 </div>
               )}
             </div>
@@ -313,8 +373,9 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
           <Volume2 size={14} className="text-stone-400" />
           <span className="text-[10px] text-stone-400">Captions active · Spatial audio</span>
         </span>
-        <span className="hidden sm:inline text-[10px] text-stone-400 font-mono tracking-wider">
-          MOVE: [W, A, S, D] / ARROWS · INSPECT: [E] / PROXIMITY
+        <span className="hidden sm:inline text-[10px] text-stone-400 font-mono tracking-wider flex items-center gap-1.5">
+          <Footprints size={12} />
+          ПЕРЕДВИЖЕНИЕ: [W, A, S, D] / СТРЕЛКИ · ИССЛЕДОВАНИЕ: [E] ВБЛИЗИ ОБЪЕКТА
         </span>
       </div>
 
@@ -323,9 +384,9 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         <div className="block sm:hidden">
           <MobileVirtualJoystick
             onMove={(dir) => { mobileDir.current = dir; }}
-            onInteract={() => { if (nearbyAction) handleInspect(nearbyAction); }}
+            onInteract={() => { if (nearbyAction) handleInspectNearAction(nearbyAction); }}
             canInteract={!!nearbyAction}
-            interactionLabel={nearbyAction ? 'Inspect' : 'Explore'}
+            interactionLabel={nearbyAction ? 'Исследовать' : 'Идти'}
           />
         </div>
       )}

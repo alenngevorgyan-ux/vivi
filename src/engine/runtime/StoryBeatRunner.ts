@@ -42,6 +42,7 @@ export interface BeatRunnerState {
   completedBeatIds: Set<string>;
   cueTriggered: boolean;
   pressureTriggered: boolean;
+  unlockedActionIds: Set<string>;
   canCommit: boolean;
   committedChoiceId: string | null;
   isRevealed: boolean;
@@ -61,6 +62,7 @@ export class StoryBeatRunner {
       completedBeatIds: new Set<string>(),
       cueTriggered: false,
       pressureTriggered: false,
+      unlockedActionIds: new Set<string>(),
       canCommit: false,
       committedChoiceId: null,
       isRevealed: false,
@@ -106,10 +108,17 @@ export class StoryBeatRunner {
     }
   }
 
-  public onObjectInspected(slotId: string, observationText?: string): void {
+  public onObjectInspected(slotId: string, actionId?: string, observationText?: string): void {
+    if (actionId) {
+      this.state.unlockedActionIds.add(actionId);
+    }
+
     if (observationText && !this.state.activeObservations.includes(observationText)) {
       this.state.activeObservations = [observationText, ...this.state.activeObservations];
     }
+
+    // Commitment is strictly allowed once the key cue has happened AND at least one action was physically inspected
+    this.state.canCommit = this.state.cueTriggered && this.state.unlockedActionIds.size > 0;
 
     for (let i = this.state.currentBeatIndex; i < this.beats.length; i++) {
       const beat = this.beats[i];
@@ -122,9 +131,19 @@ export class StoryBeatRunner {
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
+  public isActionUnlocked(actionId: string): boolean {
+    return this.state.unlockedActionIds.has(actionId);
+  }
+
   public commitDecision(choiceId: string): void {
+    // Only allow commit if unlocked
+    if (!this.state.canCommit || !this.state.unlockedActionIds.has(choiceId)) {
+      throw new Error(`Cannot commit action "${choiceId}" before physically inspecting it.`);
+    }
+
     this.state.committedChoiceId = choiceId;
     this.state.canCommit = false;
+
     // Find commitment beat
     const commitIdx = this.beats.findIndex(b => b.type === 'commitment');
     if (commitIdx >= 0) {
@@ -146,18 +165,18 @@ export class StoryBeatRunner {
     const beat = this.beats[index];
     if (!beat) return;
 
-    // Mark previous as completed
     for (let i = 0; i <= index; i++) {
       this.state.completedBeatIds.add(this.beats[i].id);
       if (this.beats[i].isCue || this.beats[i].type === 'cue') {
         this.state.cueTriggered = true;
-        this.state.canCommit = true;
       }
       if (this.beats[i].isPressure || this.beats[i].type === 'pressure') {
         this.state.pressureTriggered = true;
       }
     }
 
+    // Re-check canCommit
+    this.state.canCommit = this.state.cueTriggered && this.state.unlockedActionIds.size > 0;
     this.state.currentBeatIndex = index;
     this.state.currentBeat = beat;
   }

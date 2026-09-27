@@ -30,163 +30,137 @@ function getGeminiClient() {
   });
 }
 
-// System instruction for Story Generator
-const STORY_GENERATOR_SYSTEM_INSTRUCTION = `
-You are the story compiler for VIVI, a platform where real human situations become tiny playable 2D worlds that people enter and explore physically.
-Convert the contributor's story into a clean GameSpec JSON that compiles into the canonical Vivi diorama engine.
+import {
+  validateExperiencePlan,
+  generateDeterministicExperiencePlan,
+  compileExperiencePlanToScenario,
+  type ExperiencePlan,
+  type StoryAnalysis,
+} from './src/engine/runtime/generationPipeline.ts';
 
-World Templates available:
-- 'apartment_night': intimate domestic tension, night, phone on table, bathroom door, sofa.
-- 'office_night': startup/work confrontation, presentation screen, laptop, director desk.
-- 'hallway_night': eerie corridor, apartment door, intercom, elevator.
-- 'neighborhood_sunset': nostalgic or honest walk, park bench, street, bus stop.
-- 'bar_or_party': social dilemma, crowd, tables, bar, exit.
-- 'train_station': parting, last train, departures board, platform edge.
-- 'city_rain': rain, street, parked car, crossing.
-- 'family_home': dining table with archives, stairs, photos.
-- 'hotel_or_rental': mysterious rental, table with photo, balcony.
-- 'bedroom_night': quiet bedroom, nightstand, lit phone.
+// System instruction for Experience Plan Generator
+const EXPERIENCE_PLAN_SYSTEM_INSTRUCTION = `
+You are the scenario compiler for VIVI, a platform where real human situations become tiny playable 2D worlds that people enter and explore physically.
 
-Semantic Slots to use for actions & cues:
-'phone_table', 'bathroom_door', 'sofa', 'presentation_screen', 'player_laptop', 'director', 'intercom', 'elevator', 'front_door', 'bench', 'bus_stop', 'station_board', 'platform_edge', 'dining_table', 'decision_center'.
-
-GameSpec Output JSON format:
-{
-  "id": "gen_...",
-  "title": "...",
-  "author": "...",
-  "synopsis": "...",
-  "description": "...",
-  "genre": "...",
-  "tags": ["..."],
-  "estimatedPlaytime": "3 min",
-  "whatReallyHappened": "...",
-  "startNodeId": "node_start",
-  "nodes": {
-    "node_start": {
-      "id": "node_start",
-      "title": "The Situation",
-      "narrative": "...",
-      "worldConfig": {
-        "template": "apartment_night" | "office_night" | "hallway_night" | "neighborhood_sunset" | "bar_or_party" | "train_station"
-      },
-      "choices": [
-        { "id": "c1", "text": "Action 1 description", "nextNodeId": "node_end_1" },
-        { "id": "c2", "text": "Action 2 description", "nextNodeId": "node_end_2" },
-        { "id": "c3", "text": "Action 3 description", "nextNodeId": "node_end_3" }
-      ]
-    },
-    "node_end_1": {
-      "id": "node_end_1",
-      "title": "Outcome 1",
-      "isEnding": true,
-      "endingSummary": "What happens immediately after choosing action 1..."
-    },
-    "node_end_2": {
-      "id": "node_end_2",
-      "title": "Outcome 2",
-      "isEnding": true,
-      "endingSummary": "What happens immediately after choosing action 2..."
-    },
-    "node_end_3": {
-      "id": "node_end_3",
-      "title": "Outcome 3",
-      "isEnding": true,
-      "endingSummary": "What happens immediately after choosing action 3..."
-    }
-  }
+Analyze the user's situation and generate a JSON response with two objects:
+1. "analysis": StoryAnalysis {
+   "setting": string,
+   "people": string[],
+   "emotionalCore": string,
+   "centralTension": string,
+   "pivotalMoment": string,
+   "importantObjects": string[],
+   "actualOutcome": string | null, // ONLY if provided by user! Never invent!
+   "experienceGrammar": string,
+   "themeKey": string
 }
-Respond ONLY with clean valid JSON.
+
+2. "plan": ExperiencePlan {
+   "id": string, // "exp_..."
+   "title": string,
+   "synopsis": string,
+   "worldTemplate": "apartment_night" | "office_night" | "hallway_night" | "neighborhood_sunset" | "bar_or_party" | "train_station" | "city_rain" | "family_home" | "hotel_or_rental" | "bedroom_night",
+   "durationMinutes": 3,
+   "cast": [
+     {
+       "role": string,
+       "character": "young_adult_masc_01" | "adult_fem_01" | "young_adult_masc_02" | "elder_masc_01",
+       "slot": string, // semantic slot
+       "pose": "idle" | "wait" | "confront" | "read" | "leave"
+     }
+   ],
+   "beats": [
+     { "id": "beat_arrival", "type": "arrival", "trigger": "time_elapsed", "triggerPayload": 0, "title": "Arrival", "description": "..." },
+     { "id": "beat_cue", "type": "cue", "trigger": "time_elapsed", "triggerPayload": 6000, "title": "The Cue", "description": "...", "isCue": true },
+     { "id": "beat_pressure", "type": "pressure", "trigger": "time_elapsed", "triggerPayload": 22000, "title": "Pressure", "description": "...", "isPressure": true },
+     { "id": "beat_commit", "type": "commitment", "trigger": "player_committed", "title": "Decision", "description": "..." }
+   ],
+   "interactions": [
+     {
+       "id": "act_1",
+       "targetSlot": string, // MUST be semantic slot name (e.g. phone_table, bathroom_door, sofa, front_door, presentation_screen, etc.)
+       "label": string, // 1-45 chars max
+       "observation": string,
+       "commitLabel": string
+     },
+     {
+       "id": "act_2",
+       "targetSlot": string,
+       "label": string,
+       "observation": string,
+       "commitLabel": string
+     }
+   ],
+   "modifiers": [
+     {
+       "id": "mod_1",
+       "kind": "timer" | "message" | "sound" | "door" | "npcPressure" | "lighting" | "arrival",
+       "atMs": number,
+       "anchor": string,
+       "payload": string,
+       "visibleToPlayer": true
+     }
+   ],
+   "commitments": [
+     { "id": "act_1", "targetSlot": string, "label": string, "outcome": string },
+     { "id": "act_2", "targetSlot": string, "label": string, "outcome": string }
+   ],
+   "authorTruth": {
+     "status": "verified" | "missing",
+     "text": string // ONLY IF USER SUPPLIED WHAT ACTUALLY HAPPENED! Omit or leave empty if user did not provide reality.
+   },
+   "crowdQuestion": string,
+   "responsePrompt": string
+}
+
+CRITICAL RULES:
+- Raw x/y coordinates are STRICTLY FORBIDDEN. Only use semantic slots: 'phone_table', 'bathroom_door', 'sofa', 'presentation_screen', 'player_laptop', 'director', 'intercom', 'elevator', 'front_door', 'bench', 'bus_stop', 'station_board', 'platform_edge', 'dining_table', 'decision_center'.
+- ZERO AUTHOR TRUTH FABRICATION: If the user did not specify what really happened in real life, authorTruth.status MUST be "missing". DO NOT invent or make up what happened in reality.
+- Respond ONLY with clean, valid JSON containing {"analysis": ..., "plan": ...}.
 `;
 
-function generateLocalViviStory(prompt: string, whatReallyHappened: string, genre: string, author: string) {
-  const p = prompt.toLowerCase();
-  let template = 'apartment_night';
-  let title = 'A Moment in Time';
+function experiencePlanToGameSpec(plan: ExperiencePlan, author: string, genre: string): any {
+  const nodes: Record<string, any> = {
+    node_start: {
+      id: 'node_start',
+      title: plan.title,
+      narrative: plan.synopsis,
+      worldConfig: {
+        template: plan.worldTemplate,
+      },
+      choices: plan.commitments.map((c, i) => ({
+        id: c.id,
+        text: c.label,
+        nextNodeId: `node_end_${i + 1}`,
+      })),
+    },
+  };
 
-  if (p.includes('work') || p.includes('meeting') || p.includes('office') || p.includes('boss') || p.includes('slide')) {
-    template = 'office_night';
-    title = 'The Decision at Work';
-  } else if (p.includes('door') || p.includes('night') || p.includes('intercom') || p.includes('hallway') || p.includes('sound')) {
-    template = 'hallway_night';
-    title = 'Footsteps in the Hall';
-  } else if (p.includes('friend') || p.includes('walk') || p.includes('bus') || p.includes('goodbye')) {
-    template = 'neighborhood_sunset';
-    title = 'The Walk Back';
-  } else if (p.includes('party') || p.includes('bar') || p.includes('secret') || p.includes('crowd')) {
-    template = 'bar_or_party';
-    title = 'The Confession';
-  } else if (p.includes('train') || p.includes('station') || p.includes('late')) {
-    template = 'train_station';
-    title = 'The Last Service';
-  }
+  plan.commitments.forEach((c, i) => {
+    nodes[`node_end_${i + 1}`] = {
+      id: `node_end_${i + 1}`,
+      title: c.label,
+      isEnding: true,
+      endingSummary: c.outcome,
+    };
+  });
 
-  const firstSentence = prompt.split('.')[0] || prompt;
-  if (firstSentence.length > 5 && firstSentence.length < 40) {
-    title = firstSentence;
-  }
-
-  const id = 'gen_' + Date.now();
   return {
-    id,
-    title,
+    id: plan.id,
+    title: plan.title,
     author: author || 'Community Contributor',
-    synopsis: prompt.length > 120 ? prompt.slice(0, 117) + '…' : prompt,
-    description: prompt,
+    synopsis: plan.synopsis,
+    description: plan.synopsis,
     genre: genre || 'Human Situations',
     tags: [genre || 'Real', 'Interactive'],
-    estimatedPlaytime: '3 min',
-    whatReallyHappened: whatReallyHappened || 'The author shared this moment so other people could experience the pressure before learning what happened.',
+    estimatedPlaytime: `${plan.durationMinutes || 3} min`,
+    whatReallyHappened: plan.authorTruth.status === 'verified' ? plan.authorTruth.text : '',
     startNodeId: 'node_start',
-    nodes: {
-      node_start: {
-        id: 'node_start',
-        title: 'The Situation',
-        narrative: prompt,
-        worldConfig: {
-          template,
-        },
-        choices: [
-          {
-            id: 'c1',
-            text: 'Confront the situation directly',
-            nextNodeId: 'node_end_1',
-          },
-          {
-            id: 'c2',
-            text: 'Wait and observe for a moment longer',
-            nextNodeId: 'node_end_2',
-          },
-          {
-            id: 'c3',
-            text: 'Step away and protect yourself',
-            nextNodeId: 'node_end_3',
-          },
-        ],
-      },
-      node_end_1: {
-        id: 'node_end_1',
-        title: 'Direct confrontation',
-        isEnding: true,
-        endingSummary: 'You speak before hesitation can stop you. The room shifts to look at you, and the reality of the moment takes shape.',
-      },
-      node_end_2: {
-        id: 'node_end_2',
-        title: 'Observation',
-        isEnding: true,
-        endingSummary: 'You choose silence for another minute. You gather more details, but the window to act begins to narrow.',
-      },
-      node_end_3: {
-        id: 'node_end_3',
-        title: 'Stepping away',
-        isEnding: true,
-        endingSummary: 'You step back. The unanswered question remains, but your boundaries are intact.',
-      },
-    },
+    nodes,
   };
 }
 
-// API: Generate GameSpec using Gemini or Local Fallback
+// API: Generate GameSpec & ExperiencePlan using Gemini (with retry & schema validation) or Deterministic Fallback
 app.post('/api/generate-story', async (req, res) => {
   try {
     const {
@@ -200,48 +174,106 @@ app.post('/api/generate-story', async (req, res) => {
       return res.status(400).json({ error: 'A story description is required.' });
     }
 
+    const hasRealOutcome = typeof whatReallyHappened === 'string' && whatReallyHappened.trim().length > 5;
+    const cleanRealOutcome = hasRealOutcome ? whatReallyHappened.trim() : '';
+
+    let generatedPlan: ExperiencePlan | null = null;
+    let storyAnalysis: StoryAnalysis | null = null;
+
     // Try Gemini if API key is present
     if (process.env.GEMINI_API_KEY) {
       try {
         const ai = getGeminiClient();
         const userPrompt = `
-Transform this human situation into a tiny playable 2D Vivi world in JSON:
+Transform this human situation into an ExperiencePlan for a 2D Vivi world in JSON:
 User Story: "${prompt}"
-${whatReallyHappened ? `What Really Happened in Real Life: "${whatReallyHappened}"` : ''}
+${cleanRealOutcome ? `What Really Happened in Real Life: "${cleanRealOutcome}"` : 'What Really Happened in Real Life: [Not provided by author]'}
 Genre Category: ${genre}
 Author: ${author}
 
 Design 1 grounded playable scene within the supported Vivi world templates and semantic slots.
-Stage objects and people so the player can move, inspect, hesitate and make a consequential choice.
+Stage objects and people so the player can physically move, inspect, hesitate, and make a consequential choice.
+If what really happened was not provided, set authorTruth.status to "missing".
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: userPrompt,
-          config: {
-            systemInstruction: STORY_GENERATOR_SYSTEM_INSTRUCTION,
-            responseMimeType: 'application/json',
-            temperature: 0.85,
-          },
-        });
+        const requestGemini = async (extraInstruction?: string) => {
+          const contents = extraInstruction
+            ? `${userPrompt}\n\nATTENTION TO PREVIOUS VALIDATION ERRORS:\n${extraInstruction}`
+            : userPrompt;
 
-        const responseText = response.text || '';
-        const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsedSpec = JSON.parse(cleanJson);
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents,
+            config: {
+              systemInstruction: EXPERIENCE_PLAN_SYSTEM_INSTRUCTION,
+              responseMimeType: 'application/json',
+              temperature: 0.8,
+            },
+          });
 
-        if (!parsedSpec.id) parsedSpec.id = 'gen_' + Date.now();
-        if (!parsedSpec.author) parsedSpec.author = author;
-        if (!parsedSpec.whatReallyHappened) parsedSpec.whatReallyHappened = whatReallyHappened;
+          const responseText = response.text || '';
+          const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+          return JSON.parse(cleanJson);
+        };
 
-        return res.json({ success: true, gameSpec: parsedSpec });
+        // Attempt 1
+        let parsed = await requestGemini();
+        let planCandidate = parsed.plan || parsed;
+        let validation = validateExperiencePlan(planCandidate);
+
+        // Retry once if invalid
+        if (!validation.valid) {
+          console.warn('Initial ExperiencePlan failed validation:', validation.errors);
+          const errorMsg = validation.errors.join('; ');
+          parsed = await requestGemini(`Please fix the following schema errors: ${errorMsg}. Remember: NO raw coordinates (x/y), between 2-5 commitments, and valid semantic slots.`);
+          planCandidate = parsed.plan || parsed;
+          validation = validateExperiencePlan(planCandidate);
+        }
+
+        if (validation.valid) {
+          generatedPlan = validation.plan;
+          storyAnalysis = parsed.analysis || null;
+          // Enforce zero truth fabrication
+          if (!hasRealOutcome) {
+            generatedPlan.authorTruth = { status: 'missing' };
+          } else {
+            generatedPlan.authorTruth = { status: 'verified', text: cleanRealOutcome };
+          }
+        }
       } catch (geminiErr: any) {
-        console.warn('Gemini generation failed, using local compiler fallback:', geminiErr?.message);
+        console.warn('Gemini generation failed or timed out, using deterministic pipeline fallback:', geminiErr?.message);
       }
     }
 
-    // High quality deterministic fallback
-    const fallbackSpec = generateLocalViviStory(prompt, whatReallyHappened, genre, author);
-    res.json({ success: true, gameSpec: fallbackSpec });
+    // Deterministic fallback if Gemini was skipped or failed validation
+    if (!generatedPlan) {
+      const fallbackResult = generateDeterministicExperiencePlan(prompt, cleanRealOutcome, genre, author);
+      generatedPlan = fallbackResult.plan;
+      storyAnalysis = fallbackResult.analysis;
+    }
+
+    const gameSpec = experiencePlanToGameSpec(generatedPlan, author, genre);
+    const scenario = compileExperiencePlanToScenario(
+      generatedPlan,
+      storyAnalysis || {
+        setting: generatedPlan.worldTemplate,
+        people: ['Player'],
+        emotionalCore: 'Hesitation',
+        centralTension: prompt,
+        pivotalMoment: 'Decision',
+        importantObjects: ['decision center'],
+        experienceGrammar: 'Move, inspect, commit',
+        themeKey: genre,
+      },
+      author
+    );
+
+    res.json({
+      success: true,
+      gameSpec,
+      experiencePlan: generatedPlan,
+      scenario,
+    });
   } catch (error: any) {
     console.error('Error generating story:', error);
     res.status(500).json({

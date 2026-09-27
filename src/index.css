@@ -178,3 +178,30 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+@keyframes vivi-phone-vibrate {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  20% { transform: translate(-52%, -49%) rotate(-2deg); }
+  40% { transform: translate(-48%, -51%) rotate(2deg); }
+  60% { transform: translate(-51%, -50%) rotate(-1deg); }
+  80% { transform: translate(-49%, -49%) rotate(1deg); }
+  100% { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+.animate-vivi-phone-vibrate {
+  animation: vivi-phone-vibrate 0.12s infinite;
+}
+
+@keyframes vivi-handle-jiggle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(18deg); }
+  50% { transform: rotate(-5deg); }
+  75% { transform: rotate(22deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-vivi-handle-jiggle {
+  transform-origin: left center;
+  animation: vivi-handle-jiggle 0.18s infinite;
+}
+

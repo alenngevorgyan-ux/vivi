@@ -6,12 +6,14 @@ export interface PhysicalModifierState {
   phone: {
     isVibrating: boolean;
     isScreenLit: boolean;
+    isTyping: boolean;
     previewText: string;
     lockCountdownSeconds?: number;
   };
   door: {
     state: 'closed' | 'ajar' | 'open' | 'handle_moving';
     isLocked: boolean;
+    anchorSlot?: string;
   };
   elevator: {
     currentFloor: number;
@@ -34,22 +36,28 @@ export interface PhysicalModifierState {
   dynamicCollisions: CollisionBox[];
 }
 
+/**
+ * Generic physical modifier interpreter.
+ * Completely free of storyId-specific branching.
+ */
 export function computePhysicalModifiers(
   modifiers: ExperienceModifier[],
   elapsedMs: number,
-  storyId: string
+  storyTimerAnchor?: string
 ): PhysicalModifierState {
   const activeModifiers = modifiers.filter(m => elapsedMs >= m.atMs);
 
   // Phone state
   let isVibrating = false;
   let isScreenLit = false;
+  let isTyping = false;
   let previewText = '';
   let lockCountdownSeconds: number | undefined = undefined;
 
   // Door state
   let doorState: PhysicalModifierState['door']['state'] = 'closed';
   let doorLocked = false;
+  let doorAnchor: string | undefined = undefined;
 
   // Elevator state
   let currentFloor = 1;
@@ -69,100 +77,158 @@ export function computePhysicalModifiers(
   let ambientAudioCue: string | null = null;
   const dynamicCollisions: CollisionBox[] = [];
 
-  // Story-specific physical orchestration
-  if (storyId === 'the-message') {
-    // 0s-4s: partner in living room
-    // 4s: partner walks to bathroom, shower starts
-    // 7s: phone vibrates "I still smell like you."
-    // 18s: typing indicator
-    // 30s: shower stops, footsteps behind door
-    // 36s: door handle jiggles
-    if (elapsedMs >= 4000 && elapsedMs < 30000) {
-      ambientAudioCue = 'shower_water';
-      npcAction.pose = 'leave';
-      npcAction.x = 76;
-      npcAction.y = 52;
-    }
-    if (elapsedMs >= 7000) {
-      isScreenLit = true;
-      previewText = 'I still smell like you.';
-      isVibrating = elapsedMs < 11000 || (elapsedMs >= 17000 && elapsedMs < 20000);
-      lockCountdownSeconds = Math.max(0, 35 - Math.floor((elapsedMs - 7000) / 1000));
-      timeText = `LOCKS IN ${lockCountdownSeconds}s`;
-    }
-    if (elapsedMs >= 18000 && elapsedMs < 24000) {
-      previewText = 'Typing…';
-    }
-    if (elapsedMs >= 30000) {
-      doorState = 'handle_moving';
-      npcAction.pose = 'turn';
-      isExpiring = true;
-    }
-    if (elapsedMs >= 36000) {
-      doorState = 'ajar';
-    }
-  } else if (storyId === '0317') {
-    // 03:16 -> 03:17
-    const isRing = elapsedMs >= 6000;
-    timeText = isRing ? '03:17' : '03:16';
-    if (isRing) {
-      ambientAudioCue = 'intercom_ring';
-    }
-    if (elapsedMs >= 16000 && elapsedMs < 24000) {
-      // Elevator counting 6..7..8..9
-      const floorStep = Math.min(9, 6 + Math.floor((elapsedMs - 16000) / 2000));
-      currentFloor = floorStep;
-      elevatorText = `FL ${floorStep}`;
-      isDingActive = floorStep === 9;
-    }
-    if (elapsedMs >= 24000) {
-      elevatorText = 'FL 9';
-      doorState = 'handle_moving';
-      isExpiring = true;
-    }
-  } else if (storyId === 'the-presentation') {
-    if (elapsedMs >= 6000) {
-      npcAction.pose = 'talk';
-      npcAction.speakingLine = 'Excellent work.';
-    }
-    if (elapsedMs >= 25000) {
-      const remaining = Math.max(0, 10 - Math.floor((elapsedMs - 25000) / 1000));
-      timeText = `${remaining}s`;
-      isExpiring = true;
-      npcAction.pose = 'turn';
-    } else {
+  // Default timer anchor fallback if provided
+  if (storyTimerAnchor) {
+    if (storyTimerAnchor.includes('03:16') && elapsedMs < 6000) {
+      timeText = '03:16';
+    } else if (storyTimerAnchor.includes('Meeting room clock')) {
       timeText = '10:42';
+    } else if (storyTimerAnchor.includes('Station departure board') && elapsedMs < 7000) {
+      timeText = '00:47';
+    } else if (storyTimerAnchor.includes('Bus arrival board') && elapsedMs < 26000) {
+      timeText = 'DUE 3 MIN';
     }
-  } else if (storyId === 'last-walk') {
-    timeText = elapsedMs >= 26000 ? 'BUS ARRIVING' : 'DUE 3 MIN';
-    if (elapsedMs >= 7000) {
-      npcAction.pose = 'turn';
-    }
-    if (elapsedMs >= 26000) {
-      ambientAudioCue = 'bus_engine';
-      npcAction.pose = 'walk';
-    }
-  } else if (storyId === 'the-last-train') {
-    timeText = elapsedMs >= 26000 ? '00:45 DEPARTING' : elapsedMs >= 7000 ? '00:46 BOARDING' : '00:47';
-    if (elapsedMs >= 26000) {
-      doorsOpen = true;
-      isExpiring = true;
-    }
-  } else {
-    // Generic fallback for user-generated or other stories
-    const lastModifier = activeModifiers[activeModifiers.length - 1];
-    if (lastModifier) {
-      if (lastModifier.kind === 'message' || lastModifier.kind === 'call') {
-        isScreenLit = true;
-        previewText = lastModifier.payload;
+  }
+
+  // Generic interpretation across all active modifiers
+  for (const m of activeModifiers) {
+    const elapsedSinceMod = elapsedMs - m.atMs;
+    const kind = m.kind as string;
+    const anchor = (m.anchor || '').toLowerCase();
+    const payload = (m.payload || '').trim();
+    const payloadLower = payload.toLowerCase();
+
+    // 1. Phone & text messages & typing
+    if (
+      kind === 'message' ||
+      kind === 'typing' ||
+      kind === 'incoming_call' ||
+      kind === 'call' ||
+      anchor.includes('phone')
+    ) {
+      isScreenLit = true;
+      previewText = payload;
+
+      if (kind === 'typing' || payloadLower.includes('typing')) {
+        isTyping = true;
+        previewText = 'Typing…';
+      }
+
+      // Vibrate for first 4 seconds of notification or during a call
+      if (elapsedSinceMod < (m.durationMs || 4000) || kind === 'call') {
         isVibrating = true;
       }
-      if (lastModifier.kind === 'door') {
-        doorState = 'handle_moving';
+
+      // If modifier payload or anchor specifies phone lock countdown
+      if (payloadLower.includes('lock') || anchor.includes('phone')) {
+        const remaining = Math.max(0, 35 - Math.floor(elapsedSinceMod / 1000));
+        lockCountdownSeconds = remaining;
+        timeText = `LOCKS IN ${remaining}s`;
+        isExpiring = remaining < 15;
       }
-      if (lastModifier.kind === 'timer') {
-        timeText = lastModifier.payload;
+    }
+
+    // 2. Intercom & buzzers
+    if (anchor.includes('intercom') || (kind === 'call' && anchor.includes('intercom'))) {
+      ambientAudioCue = 'intercom_ring';
+      timeText = '03:17';
+    }
+
+    // 3. Doors & handles
+    if (kind === 'door' || kind === 'door_state' || anchor.includes('door')) {
+      doorAnchor = m.anchor;
+      if (
+        payloadLower.includes('handle') ||
+        payloadLower.includes('move') ||
+        payloadLower.includes('jiggle') ||
+        payloadLower.includes('rattle')
+      ) {
+        doorState = 'handle_moving';
         isExpiring = true;
+      } else if (payloadLower.includes('open') || payloadLower.includes('ajar')) {
+        doorState = 'open';
+      } else if (payloadLower.includes('close') || payloadLower.includes('closed')) {
+        doorState = 'closed';
+      }
+    }
+
+    // 4. Elevator / Transit countdowns
+    if (kind === 'elevator' || anchor.includes('elevator') || (kind === 'arrival' && anchor.includes('elevator'))) {
+      // Check for progressive floor counting format like '6 · 7 · 8 · 9'
+      if (payload.includes('6') && payload.includes('9')) {
+        const floorStep = Math.min(9, 6 + Math.floor(elapsedSinceMod / 2000));
+        currentFloor = floorStep;
+        elevatorText = `FL ${floorStep}`;
+        isDingActive = floorStep === 9;
+      } else {
+        elevatorText = payload;
+        isDingActive = true;
+      }
+
+      if (elapsedSinceMod >= 8000) {
+        doorsOpen = true;
+      }
+    }
+
+    // 5. Timers & Clocks
+    if (kind === 'timer') {
+      if (payloadLower.includes('ten seconds') || payloadLower.includes('10')) {
+        const remaining = Math.max(0, 10 - Math.floor(elapsedSinceMod / 1000));
+        timeText = `${remaining}s`;
+        isExpiring = true;
+      } else {
+        timeText = payload;
+        if (payload.includes(':') || payload.includes('s')) {
+          isExpiring = true;
+        }
+      }
+    }
+
+    // 6. Transit arrival / departure boards
+    if (kind === 'arrival' || anchor.includes('station_board') || anchor.includes('bus_stop') || anchor.includes('train')) {
+      if (anchor.includes('train')) {
+        timeText = elapsedMs >= 26000 ? '00:45 DEPARTING' : '00:46 BOARDING';
+        if (payloadLower.includes('doors open')) {
+          doorsOpen = true;
+          isExpiring = true;
+        }
+      } else if (anchor.includes('bus')) {
+        timeText = elapsedMs >= 26000 ? 'BUS ARRIVING' : 'DUE 3 MIN';
+        if (elapsedMs >= 26000) {
+          ambientAudioCue = 'bus_engine';
+          npcAction.pose = 'walk';
+        }
+      }
+    }
+
+    // 7. NPC pressure & dialogue
+    if (kind === 'npcPressure' || kind === 'npc_dialogue') {
+      npcAction.speakingLine = payload;
+      npcAction.pose = 'talk';
+    }
+
+    // 8. Sound & Ambient cues
+    if (kind === 'sound') {
+      if (payloadLower.includes('shower') && !payloadLower.includes('stop')) {
+        ambientAudioCue = 'shower_water';
+        npcAction.pose = 'leave';
+        npcAction.x = 76;
+        npcAction.y = 52;
+      } else if (payloadLower.includes('stop') || payloadLower.includes('stops')) {
+        ambientAudioCue = null;
+        npcAction.pose = 'wait';
+      } else {
+        ambientAudioCue = payload;
+      }
+    }
+
+    // 9. Lighting & weather shifts
+    if (kind === 'lighting' || kind === 'weather') {
+      if (payloadLower.includes('flicker')) {
+        isExpiring = true;
+      }
+      if (payloadLower.includes('rain')) {
+        ambientAudioCue = 'rain_ambient';
       }
     }
   }
@@ -172,12 +238,14 @@ export function computePhysicalModifiers(
     phone: {
       isVibrating,
       isScreenLit,
+      isTyping,
       previewText,
       lockCountdownSeconds,
     },
     door: {
       state: doorState,
       isLocked: doorLocked,
+      anchorSlot: doorAnchor,
     },
     elevator: {
       currentFloor,

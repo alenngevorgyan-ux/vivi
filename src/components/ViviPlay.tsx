@@ -8,8 +8,10 @@ import {
   Share2,
   Sparkles,
   MessageSquare,
+  Lock,
   CheckCircle,
   HelpCircle,
+  Info,
 } from 'lucide-react';
 import type { HeroStory } from '../data/heroStories';
 import type { GameSpec } from '../types/gameSpec';
@@ -21,6 +23,8 @@ import {
   type CommunityReflection,
 } from '../engine/runtime/RuntimeCompiler';
 import { CanonicalViviEngine } from './world/CanonicalViviEngine';
+import { StoryBeatRunner, type BeatRunnerState } from '../engine/runtime/StoryBeatRunner';
+import { telemetry } from '../engine/runtime/telemetry';
 
 interface ViviPlayProps {
   story?: HeroStory | null;
@@ -50,11 +54,24 @@ export function ViviPlay({
   const startRef = useRef(Date.now());
   const hiddenAtRef = useRef<number | null>(null);
 
+  // Authoritative StoryBeatRunner instance
+  const [beatState, setBeatState] = useState<BeatRunnerState>(() => {
+    const runner = new StoryBeatRunner(canonicalScenario.beats);
+    return runner.getState();
+  });
+
+  const beatRunner = useMemo(() => {
+    return new StoryBeatRunner(canonicalScenario.beats, (newState) => {
+      setBeatState({ ...newState });
+    });
+  }, [canonicalScenario]);
+
   // Gameplay state
   const [selectedAction, setSelectedAction] = useState<RuntimeAction | null>(null);
   const [committed, setCommitted] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [observations, setObservations] = useState<string[]>([]);
+  const [commitAttemptWarning, setCommitAttemptWarning] = useState<string | null>(null);
 
   // Social interactions state (persisted in localStorage)
   const [reflections, setReflections] = useState<CommunityReflection[]>(() => {
@@ -94,11 +111,21 @@ export function ViviPlay({
   const [userReflectionText, setUserReflectionText] = useState('');
   const [isReflectionSubmitted, setIsReflectionSubmitted] = useState(false);
 
-  // Time ticker
+  // Telemetry session start
+  useEffect(() => {
+    telemetry.startSession(canonicalScenario.id);
+  }, [canonicalScenario.id]);
+
+  // Authoritative tick loop feeding StoryBeatRunner
   useEffect(() => {
     const update = () => {
-      if (!document.hidden) setElapsed(Date.now() - startRef.current);
+      if (!document.hidden) {
+        const currentElapsed = Date.now() - startRef.current;
+        setElapsed(currentElapsed);
+        beatRunner.checkTick(currentElapsed);
+      }
     };
+
     const onVisibility = () => {
       if (document.hidden) {
         hiddenAtRef.current = Date.now();
@@ -108,24 +135,41 @@ export function ViviPlay({
         update();
       }
     };
+
     const id = window.setInterval(update, 100);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [beatRunner]);
 
-  const handleObservation = (text: string) => {
-    setObservations(prev => (prev.includes(text) ? prev : [text, ...prev]));
+  const handleActionInspected = (action: RuntimeAction) => {
+    setSelectedAction(action);
+    setCommitAttemptWarning(null);
+    setObservations(prev => (prev.includes(action.observation) ? prev : [action.observation, ...prev]));
   };
 
   const handleCommit = (action: RuntimeAction) => {
-    setSelectedAction(action);
-    setCommitted(true);
+    // Enforce physical discovery: action must have been physically inspected
+    if (!beatRunner.isActionUnlocked(action.id)) {
+      setCommitAttemptWarning('Сначала подойдите к объекту в сцене и исследуйте его.');
+      return;
+    }
 
-    // Save decision locally
+    if (!beatState.canCommit) {
+      setCommitAttemptWarning('Момент для решения еще не настал. Исследуйте обстановку.');
+      return;
+    }
+
     try {
+      beatRunner.commitDecision(action.id);
+      setSelectedAction(action);
+      setCommitted(true);
+      setCommitAttemptWarning(null);
+      telemetry.recordEvent('decision_committed', elapsed, { choiceId: action.id });
+
+      // Save user decision locally
       const decisions = JSON.parse(localStorage.getItem('vivi_my_decisions') || '{}');
       decisions[canonicalScenario.id] = {
         choiceId: action.id,
@@ -133,9 +177,15 @@ export function ViviPlay({
         timestamp: Date.now(),
       };
       localStorage.setItem('vivi_my_decisions', JSON.stringify(decisions));
-    } catch (e) {
-      console.error('Failed to save decision locally:', e);
+    } catch (err: any) {
+      setCommitAttemptWarning(err?.message || 'Действие заблокировано');
     }
+  };
+
+  const handleReveal = () => {
+    setRevealed(true);
+    beatRunner.triggerReveal();
+    telemetry.recordEvent('reveal_seen', elapsed);
   };
 
   const toggleResonance = () => {
@@ -170,11 +220,12 @@ export function ViviPlay({
     const newRef: CommunityReflection = {
       id: `ref_user_${Date.now()}`,
       authorHandle: '@you',
-      authorName: 'You',
+      authorName: 'Вы',
       choiceLabel: selectedAction?.commitLabel,
       text: userReflectionText.trim(),
-      timestamp: 'Just now',
+      timestamp: 'Только что',
       upvotes: 1,
+      source: 'user_local',
     };
 
     const updated = [newRef, ...reflections];
@@ -196,18 +247,18 @@ export function ViviPlay({
     setRevealed(false);
     setObservations([]);
     setIsReflectionSubmitted(false);
+    setCommitAttemptWarning(null);
   };
 
-  const cueActive = elapsed >= 5000;
-  const pressureActive = elapsed >= 18000;
   const selectedEnding = selectedAction ? canonicalScenario.endings[selectedAction.id] : '';
+  const hasAuthorTruth = canonicalScenario.authorTruth?.status === 'verified' && !!canonicalScenario.reality;
 
   return (
     <main className="vivi-play min-h-screen">
       {/* Top Bar with Story Metadata & Social Actions */}
       <header className="vivi-play-header">
         <button className="vivi-back" onClick={onExit}>
-          <ArrowLeft size={18} /> Feed
+          <ArrowLeft size={18} /> Лента
         </button>
 
         <div className="text-center">
@@ -264,23 +315,22 @@ export function ViviPlay({
         </div>
       )}
 
-      {/* Main Experience Layout: 2D Stage + Narrative & Social Panel */}
+      {/* Main Experience Layout: 2D Stage + Authoritative Narrative & Social Panel */}
       <div className="vivi-play-layout">
-        {/* Canonical Physical 2D World */}
+        {/* Canonical Physical 2D World (Enforces physical proximity) */}
         <section className="vivi-stage-shell">
           <CanonicalViviEngine
             scenario={canonicalScenario}
             elapsedMs={elapsed}
+            beatRunner={beatRunner}
             selectedAction={selectedAction}
-            onSelectAction={(action) => setSelectedAction(action)}
-            onCommit={handleCommit}
+            onActionInspected={handleActionInspected}
             committed={committed}
             revealed={revealed}
-            onObservation={handleObservation}
           />
         </section>
 
-        {/* Right Editorial & Social Narrative Panel */}
+        {/* Right Authoritative Narrative Panel */}
         <aside className="vivi-story-panel overflow-y-auto max-h-[85vh]">
           {/* Situation Setup */}
           <div className="vivi-panel-top">
@@ -290,28 +340,28 @@ export function ViviPlay({
             <h2>
               {committed
                 ? 'Вы сделали выбор.'
-                : cueActive
+                : beatState.cueTriggered
                 ? 'Ваш следующий шаг.'
                 : 'Войдите в ситуацию.'}
             </h2>
             <p className="vivi-setup">{canonicalScenario.setup}</p>
           </div>
 
-          {/* Dynamic Story Beats & Observations */}
+          {/* Authoritative Story Beats driven by StoryBeatRunner */}
           <div className="vivi-story-beats">
             <div className="vivi-beat">
               <span>01 / ВХОД</span>
               <p>{canonicalScenario.hook}</p>
             </div>
 
-            {cueActive && (
+            {beatState.cueTriggered && (
               <div className="vivi-beat current">
                 <span>02 / МОМЕНТ НАПРЯЖЕНИЯ</span>
                 <p>{canonicalScenario.beats.find(b => b.isCue)?.description || 'Момент настал.'}</p>
               </div>
             )}
 
-            {pressureActive && !committed && (
+            {beatState.pressureTriggered && !committed && (
               <div className="vivi-beat pressure">
                 <span>03 / ДАВЛЕНИЕ ВРЕМЕНИ</span>
                 <p>{canonicalScenario.beats.find(b => b.isPressure)?.description || 'Секунды уходят.'}</p>
@@ -320,79 +370,116 @@ export function ViviPlay({
 
             {observations.length > 0 && !committed && (
               <div className="vivi-beat observation">
-                <span>ВЫ ЗАМЕТИЛИ</span>
+                <span>ВЫ ИССЛЕДОВАЛИ</span>
                 <p>{observations[0]}</p>
               </div>
             )}
           </div>
 
           {/* Physical Exploration hint before Cue */}
-          {!cueActive && (
+          {!beatState.cueTriggered && (
             <p className="vivi-wait-hint">
-              Двигайтесь по комнате (W, A, S, D или стрелки). Ситуация развивается перед вами.
+              Двигайтесь по комнате (W, A, S, D или стрелки). Ситуация развивается в реальном времени.
             </p>
           )}
 
-          {/* Interactive Actions & Commitment Stage */}
-          {cueActive && !committed && (
+          {/* Action Discovery List - Enforces Physical Inspection Before Commit */}
+          {beatState.cueTriggered && !committed && (
             <div className="vivi-commit">
-              <span className="vivi-eyebrow">ИССЛЕДУЙТЕ ПРОСТРАНСТВО, ЗАТЕМ СДЕЛАЙТЕ ШАГ</span>
+              <span className="vivi-eyebrow">ИССЛЕДУЙТЕ ТОЧКИ В МИРЕ, ЧТОБЫ ОТКРЫТЬ ДЕЙСТВИЯ</span>
               <div className="vivi-action-list">
-                {canonicalScenario.actions.map(action => (
-                  <button
-                    key={action.id}
-                    className={selectedAction?.id === action.id ? 'active' : ''}
-                    onClick={() => {
-                      setSelectedAction(action);
-                      handleObservation(action.observation);
-                    }}
-                  >
-                    <span>{action.label}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                ))}
+                {canonicalScenario.actions.map(action => {
+                  const isUnlocked = beatRunner.isActionUnlocked(action.id);
+                  const isSelected = selectedAction?.id === action.id;
+
+                  return (
+                    <button
+                      key={action.id}
+                      disabled={!isUnlocked}
+                      className={`${isSelected ? 'active' : ''} ${!isUnlocked ? 'opacity-50 cursor-not-allowed bg-stone-100 text-stone-400' : ''}`}
+                      onClick={() => {
+                        if (isUnlocked) {
+                          setSelectedAction(action);
+                          setCommitAttemptWarning(null);
+                        }
+                      }}
+                      title={isUnlocked ? action.commitLabel : 'Подойдите к объекту в мире, чтобы исследовать'}
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        {!isUnlocked && <Lock size={12} className="text-stone-400 shrink-0" />}
+                        <span className="truncate">{action.label}</span>
+                      </div>
+                      {isUnlocked && <ArrowRight size={14} className="shrink-0" />}
+                    </button>
+                  );
+                })}
               </div>
 
+              {commitAttemptWarning && (
+                <p className="text-xs text-rose-700 font-medium my-2 flex items-center gap-1">
+                  <Info size={13} /> {commitAttemptWarning}
+                </p>
+              )}
+
+              {/* Commit Button: ONLY enabled when action was physically discovered */}
               <button
                 className="vivi-button"
-                disabled={!selectedAction}
+                disabled={!selectedAction || !beatRunner.isActionUnlocked(selectedAction.id) || !beatState.canCommit}
                 onClick={() => {
                   if (selectedAction) handleCommit(selectedAction);
                 }}
               >
-                {selectedAction ? selectedAction.commitLabel : 'Подойдите к объекту или выберите действие'}
+                {selectedAction && beatRunner.isActionUnlocked(selectedAction.id)
+                  ? selectedAction.commitLabel
+                  : 'Подойдите к объекту в мире для действия'}
                 <ArrowRight size={17} />
               </button>
             </div>
           )}
 
-          {/* Post-Commitment Phase: Reveal, Compare, and Community Respond */}
+          {/* Post-Commitment Phase: Truth-Safe Reveal, Compare, and Community Respond */}
           {committed && (
             <div className="vivi-result">
               <span className="vivi-eyebrow">ВАША ЛИНИЯ</span>
               <p>{selectedEnding}</p>
 
               {!revealed ? (
-                <button className="vivi-button mt-4" onClick={() => setRevealed(true)}>
-                  Узнать, что произошло в реальности <ArrowRight size={17} />
+                <button className="vivi-button mt-4" onClick={handleReveal}>
+                  Узнать развязку <ArrowRight size={17} />
                 </button>
               ) : (
                 <>
-                  {/* Authentic Author Reveal */}
+                  {/* Truth-Safe Author Reveal: Zero Fabrication */}
                   <div className="vivi-reality">
-                    <div className="flex items-center justify-between">
-                      <span className="vivi-eyebrow">ЧТО ПРОИЗОШЛО НА САМОМ ДЕЛЕ</span>
-                      <span className="text-[10px] text-stone-500 font-mono">РЕАЛЬНЫЙ СЛУЧАЙ</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="vivi-eyebrow">
+                        {hasAuthorTruth ? 'ЧТО ПРОИЗОШЛО В РЕАЛЬНОСТИ' : 'ПРАВДА АВТОРА'}
+                      </span>
+                      <span className="text-[10px] text-stone-500 font-mono">
+                        {hasAuthorTruth ? 'ПОДЛИННЫЙ СЛУЧАЙ' : 'НЕ РАСКРЫТО'}
+                      </span>
                     </div>
-                    <p>{canonicalScenario.reality}</p>
+
+                    {hasAuthorTruth ? (
+                      <p>{canonicalScenario.reality}</p>
+                    ) : (
+                      <p className="italic text-stone-500 text-sm">
+                        Автор пока не раскрыл, что произошло в реальности. История опубликована для проверки ваших инстинктов в моменте выбора.
+                      </p>
+                    )}
                   </div>
 
-                  {/* 1. Crowd Compare: ТЫ · АВТОР · ДРУГИЕ */}
+                  {/* 1. Honest Crowd Compare: ТЫ · АВТОР · ДРУГИЕ with Explicit Data Provenance */}
                   <div className="vivi-compare border-t border-stone-200 pt-5 mt-5">
-                    <span className="vivi-eyebrow">ВЫБОР СООБЩЕСТВА</span>
+                    <div className="flex items-center justify-between">
+                      <span className="vivi-eyebrow">ВЫБОР СООБЩЕСТВА</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-stone-200 text-stone-600 font-mono uppercase">
+                        Пример распределения (демо)
+                      </span>
+                    </div>
                     <h3 className="text-lg font-serif mt-1">{canonicalScenario.crowdQuestion}</h3>
                     <p className="text-xs text-stone-500 mt-1 mb-4">
-                      Сравнение ваших инстинктов с решениями других участников и автора:
+                      Сравнение ваших инстинктов с демонстрационным распределением и решением автора:
                     </p>
 
                     <div className="space-y-3">
@@ -439,7 +526,7 @@ export function ViviPlay({
                       })}
                     </div>
                     <small className="block mt-3 text-[10px] text-stone-400 font-mono">
-                      * Статистика объединяет выбор 1,420+ участников и проверенное действие автора.
+                      * Демо-распределение приведено в иллюстративных целях; ваш выбор сохранен локально.
                     </small>
                   </div>
 
@@ -450,16 +537,17 @@ export function ViviPlay({
                       Расскажи свою историю в ответ
                     </h4>
                     <p className="text-xs text-stone-700 leading-relaxed mb-3">
-                      Каждая сложная ситуация порождает цепочки похожих моментов. Опиши свой случай — мы превратим его в маленький мир, в который смогут войти другие.
+                      Каждая сложная ситуация порождает цепочки похожих моментов. Опишите свой случай — движок Vivi превратит его в маленький физический мир.
                     </p>
                     <button
                       className="vivi-button w-full flex items-center justify-center gap-2 text-xs py-2.5"
                       onClick={() => {
+                        telemetry.recordEvent('response_cta_clicked', elapsed);
                         if (onRespondWithStory) {
                           onRespondWithStory(
                             canonicalScenario.id,
                             canonicalScenario.themeKey,
-                            `В ответ на историю "${canonicalScenario.title}": со мной произошла похожая ситуация…`
+                            `В ответ на ситуацию "${canonicalScenario.title}": со мной произошло похожее…`
                           );
                         } else {
                           onExit();
@@ -472,12 +560,15 @@ export function ViviPlay({
                     </button>
                   </div>
 
-                  {/* 3. Community Reflections & Discussions Feed */}
+                  {/* 3. Community Reflections Feed with Honest Provenance */}
                   <div className="vivi-respond mt-6 border-t border-stone-200 pt-5">
                     <div className="flex items-center justify-between mb-3">
                       <span className="vivi-eyebrow flex items-center gap-1.5">
                         <MessageSquare size={13} />
-                        ОТКЛИКИ СООБЩЕСТВА ({reflections.length})
+                        ОТКЛИКИ ({reflections.length})
+                      </span>
+                      <span className="text-[9px] text-stone-400 font-mono">
+                        ДЕМО-ОБРАЗЦЫ И ЛОКАЛЬНЫЕ ОТЗЫВЫ
                       </span>
                     </div>
 
@@ -515,8 +606,8 @@ export function ViviPlay({
                         <div
                           key={ref.id}
                           className={`p-3 rounded-xl border text-xs ${
-                            ref.isAuthorResponse
-                              ? 'bg-amber-50/70 border-amber-300/80 shadow-sm'
+                            ref.source === 'user_local'
+                              ? 'bg-amber-50/80 border-amber-300/80 shadow-sm'
                               : 'bg-stone-50 border-stone-200/80'
                           }`}
                         >
@@ -525,14 +616,18 @@ export function ViviPlay({
                               <span className="font-semibold text-stone-900 font-mono text-[11px]">
                                 {ref.authorHandle}
                               </span>
-                              {ref.isAuthorResponse && (
+                              {ref.source === 'user_local' ? (
                                 <span className="px-1.5 py-0.2 rounded bg-amber-600 text-white text-[9px] font-bold">
-                                  АВТОР
+                                  ВАШ ОТКЛИК
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded bg-stone-200 text-stone-600 text-[8px] font-mono">
+                                  ДЕМО
                                 </span>
                               )}
                               {ref.choiceLabel && (
                                 <span className="text-[10px] text-stone-500 italic">
-                                  · Выбрал: «{ref.choiceLabel}»
+                                  · Выбор: «{ref.choiceLabel}»
                                 </span>
                               )}
                             </div>
@@ -559,7 +654,7 @@ export function ViviPlay({
       {/* Footer */}
       <footer className="vivi-play-footer">
         <span>ENTER → EXPERIENCE → COMMIT → REVEAL → COMPARE → RESPOND</span>
-        <span>CANONICAL VIVI ENGINE V1</span>
+        <span>CANONICAL VIVI ENGINE V2 · AUTHORITATIVE BEAT RUNNER</span>
       </footer>
     </main>
   );

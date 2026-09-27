@@ -20,6 +20,7 @@ export interface CrowdStat {
   label: string;
   percentage: number;
   count: number;
+  source?: 'seed_demo' | 'local' | 'live';
 }
 
 export interface CommunityReflection {
@@ -33,6 +34,7 @@ export interface CommunityReflection {
   timestamp: string;
   isAuthorResponse?: boolean;
   upvotes?: number;
+  source?: 'seed_demo' | 'user_local' | 'live';
 }
 
 export interface CanonicalScenario {
@@ -47,6 +49,7 @@ export interface CanonicalScenario {
   world: ViviWorldId;
   playerSpawn: [number, number];
   playerCharacter: ViviCharacterId;
+  timerAnchor?: string;
   npc?: {
     id: string;
     character: ViviCharacterId;
@@ -58,6 +61,7 @@ export interface CanonicalScenario {
   modifiers: ExperienceModifier[];
   endings: Record<string, string>;
   reality: string;
+  authorTruth: { status: 'verified' | 'missing'; text?: string };
   crowdQuestion: string;
   authorChoiceId?: string;
   seededStats: CrowdStat[];
@@ -187,10 +191,14 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     label: act.commit,
     percentage: percentages[idx] || 15,
     count: Math.round(totalVotes * ((percentages[idx] || 15) / 100)),
+    source: 'seed_demo',
   }));
 
   // Seed realistic reflections
-  const reflections = getSeededReflections(story.id, story.author);
+  const reflections = getSeededReflections(story.id, story.author).map(r => ({
+    ...r,
+    source: 'seed_demo' as const,
+  }));
 
   const authorHandle = story.author.toLowerCase().includes('alex')
     ? '@alex_k'
@@ -210,6 +218,8 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     world: story.world,
     playerSpawn: [38, 77],
     playerCharacter: 'young_adult_masc_01',
+    timerAnchor: story.timerAnchor,
+    authorTruth: { status: 'verified', text: story.reality },
     npc: {
       id: 'partner_or_other',
       character: story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01',
@@ -343,11 +353,18 @@ export function compileGameSpecToRuntime(gameSpec: GameSpec): CanonicalScenario 
     },
   ];
 
+  const rawTruth = gameSpec.whatReallyHappened;
+  const hasAuthorTruth = typeof rawTruth === 'string' && rawTruth.trim().length > 5;
+  const authorTruth = hasAuthorTruth
+    ? { status: 'verified' as const, text: rawTruth.trim() }
+    : { status: 'missing' as const };
+
   const seededStats: CrowdStat[] = runtimeActions.map((act, i) => ({
     choiceId: act.id,
     label: act.commitLabel,
     percentage: i === 0 ? 56 : Math.round(44 / (runtimeActions.length - 1)),
     count: i === 0 ? 342 : 180,
+    source: 'seed_demo',
   }));
 
   const authorHandle = `@${(gameSpec.author || 'creator').toLowerCase().replace(/\s+/g, '_')}`;
@@ -370,17 +387,19 @@ export function compileGameSpecToRuntime(gameSpec: GameSpec): CanonicalScenario 
       { id: 'cue_mod', kind: 'timer', atMs: 5000, anchor: 'decision_center', payload: 'Decision time', visibleToPlayer: true },
     ],
     endings,
-    reality: gameSpec.whatReallyHappened || 'The author shared this moment so others could test their own instincts.',
+    reality: hasAuthorTruth ? rawTruth.trim() : '',
+    authorTruth,
     crowdQuestion: 'What would you do?',
     seededStats,
     communityReflections: [
       {
         id: 'ref_1',
-        authorHandle: '@lena_art',
-        authorName: 'Lena',
-        text: 'This hit way too close to home. The pressure in that room is unforgettable.',
-        timestamp: '2 hours ago',
-        upvotes: 14,
+        authorHandle: '@reader_sample',
+        authorName: 'Sample Reader',
+        text: 'The hesitation before acting captures the moment well.',
+        timestamp: 'Demo reflection',
+        upvotes: 4,
+        source: 'seed_demo',
       },
     ],
     responsePrompt: 'Did you experience something similar?',
