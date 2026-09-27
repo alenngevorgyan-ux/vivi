@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Compass, PlusCircle, Gamepad2, Volume2, VolumeX, BookOpen, Layers } from 'lucide-react';
+import { Compass, PlusCircle, Gamepad2, Volume2, VolumeX } from 'lucide-react';
 import { sounds } from '../utils/soundEffects';
 
 interface NavbarProps {
@@ -23,92 +23,81 @@ export const Navbar: React.FC<NavbarProps> = ({
     const next = !isAudioMuted;
     setIsAudioMuted(next);
     sounds.setMuted(next);
-    if (!next) sounds.playClick();
   };
 
   return (
     <header className="vivi-navbar sticky top-0 z-50 w-full border-b backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand / Logo */}
-        <div 
-          onClick={() => {
-            sounds.playClick();
-            setActiveTab('feed');
-          }}
+        <div
+          onClick={() => setActiveTab('feed')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="vivi-brand-symbol" aria-hidden="true">V<span>.</span></div>
+          <div className="vivi-brand-symbol" aria-hidden="true">
+            V<span>.</span>
+          </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="vivi-wordmark">VIVI</span>
+              <span className="vivi-wordmark font-serif tracking-wider font-bold">VIVI</span>
             </div>
             <p className="vivi-tagline hidden sm:block">STORIES YOU CAN ENTER</p>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 sm:gap-2">
+        <nav className="flex items-center gap-1.5 sm:gap-2">
           <button
-            onClick={() => {
-              sounds.playClick();
-              setActiveTab('feed');
-            }}
+            onClick={() => setActiveTab('feed')}
             className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all ${
               activeTab === 'feed'
-                ? 'bg-slate-800 text-amber-300 border border-amber-500/30 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                ? 'bg-stone-800 text-stone-100 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/70'
             }`}
           >
             <Compass className="w-4 h-4" />
-            <span>Stories</span>
+            <span>Лента</span>
           </button>
 
           <button
-            onClick={() => {
-              sounds.playClick();
-              setActiveTab('create');
-            }}
+            onClick={() => setActiveTab('create')}
             className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all ${
               activeTab === 'create'
-                ? 'bg-slate-800 text-amber-300 border border-amber-500/30 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                ? 'bg-stone-800 text-stone-100 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/70'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Create & AI</span>
+            <span>Создать историю</span>
           </button>
 
           {hasActiveGame && (
             <button
-              onClick={() => {
-                sounds.playClick();
-                setActiveTab('play');
-              }}
+              onClick={() => setActiveTab('play')}
               className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all ${
                 activeTab === 'play'
-                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-amber-200 hover:bg-amber-500/10'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-stone-600 hover:text-amber-900 hover:bg-amber-100/60'
               }`}
             >
-              <Gamepad2 className="w-4 h-4 text-amber-400 animate-pulse" />
+              <Gamepad2 className="w-4 h-4" />
               <span className="max-w-[120px] sm:max-w-[160px] truncate">
-                {activeGameTitle ? `Play: ${activeGameTitle}` : 'Play Session'}
+                {activeGameTitle ? activeGameTitle : 'Сессия'}
               </span>
             </button>
           )}
         </nav>
 
-        {/* Right Tools (Mute / Engine Info) */}
+        {/* Right Tools (Mute / Captions) */}
         <div className="flex items-center gap-2">
           <button
             onClick={toggleMute}
-            title={isAudioMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-            className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg border border-slate-800/80 transition-colors"
+            title={isAudioMuted ? 'Включить атмосферный звук' : 'Выключить звук'}
+            className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/70 rounded-lg transition-colors"
           >
             {isAudioMuted ? (
-              <VolumeX className="w-4 h-4 text-rose-400" />
+              <VolumeX className="w-4 h-4 text-rose-500" />
             ) : (
-              <Volume2 className="w-4 h-4 text-amber-400" />
+              <Volume2 className="w-4 h-4 text-stone-600" />
             )}
           </button>
         </div>

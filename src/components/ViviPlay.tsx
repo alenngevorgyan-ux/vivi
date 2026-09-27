@@ -1,73 +1,566 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, RotateCcw, Volume2 } from 'lucide-react';
-import { SceneArt } from '../assets/worlds/SceneArt';
-import { CharacterFigure } from '../assets/characters/CharacterFigure';
-import { heroStories, type HeroAction, type HeroStory } from '../data/heroStories';
-import { worldTemplates } from '../world/templates';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCcw,
+  Heart,
+  Bookmark,
+  Share2,
+  Sparkles,
+  MessageSquare,
+  CheckCircle,
+  HelpCircle,
+} from 'lucide-react';
+import type { HeroStory } from '../data/heroStories';
+import type { GameSpec } from '../types/gameSpec';
+import {
+  compileHeroStoryToRuntime,
+  compileGameSpecToRuntime,
+  type CanonicalScenario,
+  type RuntimeAction,
+  type CommunityReflection,
+} from '../engine/runtime/RuntimeCompiler';
+import { CanonicalViviEngine } from './world/CanonicalViviEngine';
 
-export function ViviPlay({ story, onExit }: { story: HeroStory; onExit: () => void }) {
+interface ViviPlayProps {
+  story?: HeroStory | null;
+  gameSpec?: GameSpec | null;
+  scenario?: CanonicalScenario | null;
+  onExit: () => void;
+  onRespondWithStory?: (responseToPostId: string, themeKey: string, inspirationPrompt: string) => void;
+}
+
+export function ViviPlay({
+  story,
+  gameSpec,
+  scenario: directScenario,
+  onExit,
+  onRespondWithStory,
+}: ViviPlayProps) {
+  // Compile into canonical scenario format
+  const canonicalScenario: CanonicalScenario = useMemo(() => {
+    if (directScenario) return directScenario;
+    if (story) return compileHeroStoryToRuntime(story);
+    if (gameSpec) return compileGameSpecToRuntime(gameSpec);
+    throw new Error('ViviPlay requires either a story, gameSpec, or scenario.');
+  }, [story, gameSpec, directScenario]);
+
+  // Session timer
   const [elapsed, setElapsed] = useState(0);
-  const [position, setPosition] = useState<[number, number]>([38, 77]);
-  const [selected, setSelected] = useState<HeroAction | null>(null);
-  const [committed, setCommitted] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [observation, setObservation] = useState('');
-  const [response, setResponse] = useState('');
-  const [responseSaved, setResponseSaved] = useState(false);
   const startRef = useRef(Date.now());
   const hiddenAtRef = useRef<number | null>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Gameplay state
+  const [selectedAction, setSelectedAction] = useState<RuntimeAction | null>(null);
+  const [committed, setCommitted] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [observations, setObservations] = useState<string[]>([]);
+
+  // Social interactions state (persisted in localStorage)
+  const [reflections, setReflections] = useState<CommunityReflection[]>(() => {
+    try {
+      const stored = localStorage.getItem(`vivi_reflections_${canonicalScenario.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return canonicalScenario.communityReflections;
+  });
+
+  const [hasResonated, setHasResonated] = useState(() => {
+    try {
+      return localStorage.getItem(`vivi_resonated_${canonicalScenario.id}`) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isBookmarked, setIsBookmarked] = useState(() => {
+    try {
+      return localStorage.getItem(`vivi_bookmarked_${canonicalScenario.id}`) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [resonanceCount, setResonanceCount] = useState(() => {
+    return 84 + Math.floor(Math.sin(canonicalScenario.id.length) * 20 + 20) + (hasResonated ? 1 : 0);
+  });
+
+  const [shareToast, setShareToast] = useState(false);
+  const [userReflectionText, setUserReflectionText] = useState('');
+  const [isReflectionSubmitted, setIsReflectionSubmitted] = useState(false);
+
+  // Time ticker
   useEffect(() => {
-    const update = () => { if (!document.hidden) setElapsed(Date.now() - startRef.current); };
+    const update = () => {
+      if (!document.hidden) setElapsed(Date.now() - startRef.current);
+    };
     const onVisibility = () => {
-      if (document.hidden) hiddenAtRef.current = Date.now();
-      else if (hiddenAtRef.current !== null) { startRef.current += Date.now() - hiddenAtRef.current; hiddenAtRef.current = null; update(); }
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+      } else if (hiddenAtRef.current !== null) {
+        startRef.current += Date.now() - hiddenAtRef.current;
+        hiddenAtRef.current = null;
+        update();
+      }
     };
-    const id = window.setInterval(update, 200);
+    const id = window.setInterval(update, 100);
     document.addEventListener('visibilitychange', onVisibility);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisibility); };
-  }, []);
-  useEffect(() => {
-    if (committed) return;
-    const handler = (event: KeyboardEvent) => {
-      const movement: Record<string, [number, number]> = { ArrowLeft: [-3, 0], a: [-3, 0], ArrowRight: [3, 0], d: [3, 0], ArrowUp: [0, -3], w: [0, -3], ArrowDown: [0, 3], s: [0, 3] };
-      const step = movement[event.key]; if (!step) return; event.preventDefault();
-      setPosition(([x,y]) => [Math.max(7, Math.min(93, x + step[0])), Math.max(50, Math.min(88, y + step[1]))]);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
-    window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler);
-  }, [committed]);
-  const cueVisible = elapsed >= story.cueAtMs;
-  const pressureVisible = elapsed >= story.pressureAtMs;
-  const currentModifier = [...story.modifiers].reverse().find(item => elapsed >= item.atMs);
-  const world = worldTemplates[story.world];
-  const anchorAlias: Record<string, string> = { phone_screen: story.world === 'apartment_night' ? 'phone_table' : story.world === 'bar_or_party' ? 'phone_area' : 'phone_screen', room: 'decision_center', hallway: 'long_sight_line', door: 'front_door', entrance: 'exit', train: 'platform_edge', bedroom: 'bedroom', director: 'director' };
-  const resolveAnchor = (name: string) => world.slots.find(slot => slot.id === name || slot.id === anchorAlias[name]) || world.slots.find(slot => slot.id === 'decision_center') || { x: 50, y: 56 };
-  const cuePosition = currentModifier ? resolveAnchor(currentModifier.anchor) : { x: 50, y: 56 };
-  const timeSlot = resolveAnchor(story.id === 'the-message' ? 'phone_table' : story.id === '0317' ? 'intercom' : story.id === 'the-presentation' ? 'meeting_clock' : story.id === 'last-walk' ? 'bus_stop' : story.id === 'the-last-train' ? 'station_board' : story.modifiers[0]?.anchor || 'decision_center');
-  const timeReadout = story.id === '0317' ? (cueVisible ? '03:17' : '03:16') : story.id === 'the-message' && cueVisible ? `LOCKS ${Math.max(0, 35 - Math.floor((elapsed - story.cueAtMs) / 1000))}s` : story.id === 'the-presentation' && pressureVisible ? `${Math.max(0, 10 - Math.floor((elapsed - story.pressureAtMs) / 1000))}s` : story.id === 'the-last-train' ? (pressureVisible ? '00:45' : cueVisible ? '00:46' : '00:47') : story.timerAnchor;
-  const choose = (action: HeroAction) => { setPosition([action.x, Math.max(53, Math.min(88, action.y + (action.y < 50 ? 21 : 0)))]); setSelected(action); setObservation(action.observation); };
-  const walk = (event: React.MouseEvent<HTMLDivElement>) => { if (committed) return; const bounds = stageRef.current?.getBoundingClientRect(); if (!bounds) return; const x = (event.clientX - bounds.left) / bounds.width * 100; const y = (event.clientY - bounds.top) / bounds.height * 100; if (y > 48) setPosition([Math.max(7, Math.min(93, x)), Math.max(50, Math.min(88, y))]); };
-  const restart = () => { startRef.current = Date.now(); hiddenAtRef.current = document.hidden ? Date.now() : null; setElapsed(0); setPosition([38,77]); setSelected(null); setCommitted(false); setRevealed(false); setObservation(''); setResponse(''); setResponseSaved(false); };
-  const selectedEnding = selected ? story.endings[selected.id] : '';
-  return <main className="vivi-play">
-    <header className="vivi-play-header"><button className="vivi-back" onClick={onExit}><ArrowLeft size={18}/> Feed</button><div><span className="vivi-eyebrow">YOU ARE IN SOMEONE ELSE’S STORY</span><h1>{story.title}</h1></div><button className="vivi-restart" onClick={restart} aria-label="Restart story"><RotateCcw size={18}/></button></header>
-    <div className="vivi-play-layout"><section className="vivi-stage-shell"><div className="vivi-stage" ref={stageRef} onClick={walk}>
-      <SceneArt world={story.world} active={cueVisible}/>
-      <div className="vivi-stage-vignette"/>
-      <div className="vivi-stage-caption"><span>{world.label.toUpperCase()}</span></div>
-      <div className="vivi-prop-readout" style={{ left: `${timeSlot.x}%`, top: `${Math.max(11, timeSlot.y - 13)}%` }}>{timeReadout}</div>
-      <div className="vivi-npc" style={{ left: `${story.world === 'hallway_night' ? 83 : story.world === 'office_night' ? 65 : 69}%`, top: `${story.world === 'office_night' ? 72 : 76}%` }}><CharacterFigure id={story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01'} facing="left" pose={pressureVisible ? 'turn' : 'wait'} size={92}/></div>
-      <div className="vivi-player" style={{ left: `${position[0]}%`, top: `${position[1]}%` }}><CharacterFigure id="young_adult_masc_01" facing={position[0] > 58 ? 'right' : 'front'} pose="idle" size={96}/></div>
-      {cueVisible && !committed && story.actions.map(action => <button type="button" className={`vivi-world-action ${selected?.id === action.id ? 'selected' : ''}`} key={action.id} style={{ left: `${action.x}%`, top: `${action.y}%` }} onClick={event => { event.stopPropagation(); choose(action); }}><span className="vivi-action-dot"/><span className="vivi-action-label">{action.label}</span></button>)}
-      {currentModifier && !committed && <div className="vivi-diegetic-cue" key={currentModifier.id} style={{ left: `${cuePosition.x}%`, top: `${Math.max(14, cuePosition.y - 24)}%` }}><span>{currentModifier.kind.toUpperCase()}</span>{currentModifier.payload}</div>}
-      {committed && <div className="vivi-stage-freeze"><span>THE MOMENT AFTER</span><p>{selectedEnding}</p></div>}
-    </div><div className="vivi-stage-under"><span><Volume2 size={15}/> Sound imagined · captions always on</span><span>CLICK TO MOVE · WASD / ARROWS</span></div></section>
-    <aside className="vivi-story-panel"><div className="vivi-panel-top"><span className="vivi-eyebrow">A PLAYABLE POST · {story.duration.toUpperCase()}</span><h2>{committed ? 'You chose.' : cueVisible ? 'The moment is yours.' : 'Enter the moment.'}</h2><p className="vivi-setup">{story.setup}</p></div>
-      <div className="vivi-story-beats"><div className="vivi-beat"><span>01 / SETUP</span><p>{story.openingLine}</p></div>{cueVisible && <div className="vivi-beat current"><span>02 / CUE</span><p>{story.cue}</p></div>}{pressureVisible && !committed && <div className="vivi-beat pressure"><span>03 / PRESSURE</span><p>{story.pressure}</p></div>}{observation && !committed && <div className="vivi-beat observation"><span>YOU NOTICE</span><p>{observation}</p></div>}</div>
-      {!cueVisible && <p className="vivi-wait-hint">Move around the world. The situation is unfolding.</p>}
-      {cueVisible && !committed && <div className="vivi-commit"><span className="vivi-eyebrow">EXPLORE THE SPACE, THEN COMMIT</span><div className="vivi-action-list">{story.actions.map(action => <button key={action.id} className={selected?.id === action.id ? 'active' : ''} onClick={() => choose(action)}>{action.label}<ArrowRight size={15}/></button>)}</div><button className="vivi-button" disabled={!selected} onClick={() => setCommitted(true)}>{selected ? selected.commit : 'Choose an action in the world'} <ArrowRight size={17}/></button></div>}
-      {committed && <div className="vivi-result"><span className="vivi-eyebrow">YOUR PATH</span><p>{selectedEnding}</p>{!revealed ? <button className="vivi-button" onClick={() => setRevealed(true)}>Reveal what happened <ArrowRight size={17}/></button> : <><div className="vivi-reality"><span className="vivi-eyebrow">WHAT REALLY HAPPENED · DEMO STORY</span><p>{story.reality}</p></div><div className="vivi-compare"><span className="vivi-eyebrow">COMPARE THE PATHS</span><h3>{story.crowdQuestion}</h3><p>There are {story.actions.length} possible commitments in this situation. In a live post, consenting players’ aggregate responses would appear here after they decide.</p><div>{story.actions.filter(action => action.id !== selected?.id).map(action => <span key={action.id}>{action.commit}</span>)}</div></div><div className="vivi-respond"><span className="vivi-eyebrow">RESPOND</span><label htmlFor="vivi-response">What would you tell the author?</label><textarea id="vivi-response" value={response} onChange={event => { setResponse(event.target.value); setResponseSaved(false); }} maxLength={280} placeholder="A thought, not a verdict…"/><button disabled={!response.trim()} onClick={() => setResponseSaved(true)}>{responseSaved ? 'Saved in this session' : 'Keep this reflection'}</button><small>Demo reflections stay on this screen and are not sent.</small></div><button className="vivi-text-button" onClick={restart}>Try another path ↗</button></>}</div>}
-    </aside></div>
-    <footer className="vivi-play-footer"><span>ENTER → EXPERIENCE → COMMIT → REVEAL → COMPARE → RESPOND</span><span>{heroStories.findIndex(item => item.id === story.id) + 1} / {heroStories.length}</span></footer>
-  </main>;
+  }, []);
+
+  const handleObservation = (text: string) => {
+    setObservations(prev => (prev.includes(text) ? prev : [text, ...prev]));
+  };
+
+  const handleCommit = (action: RuntimeAction) => {
+    setSelectedAction(action);
+    setCommitted(true);
+
+    // Save decision locally
+    try {
+      const decisions = JSON.parse(localStorage.getItem('vivi_my_decisions') || '{}');
+      decisions[canonicalScenario.id] = {
+        choiceId: action.id,
+        commitLabel: action.commitLabel,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem('vivi_my_decisions', JSON.stringify(decisions));
+    } catch (e) {
+      console.error('Failed to save decision locally:', e);
+    }
+  };
+
+  const toggleResonance = () => {
+    const next = !hasResonated;
+    setHasResonated(next);
+    setResonanceCount(prev => (next ? prev + 1 : Math.max(0, prev - 1)));
+    try {
+      localStorage.setItem(`vivi_resonated_${canonicalScenario.id}`, String(next));
+    } catch {}
+  };
+
+  const toggleBookmark = () => {
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    try {
+      localStorage.setItem(`vivi_bookmarked_${canonicalScenario.id}`, String(next));
+    } catch {}
+  };
+
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2400);
+    }
+  };
+
+  const handleAddReflection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userReflectionText.trim()) return;
+
+    const newRef: CommunityReflection = {
+      id: `ref_user_${Date.now()}`,
+      authorHandle: '@you',
+      authorName: 'You',
+      choiceLabel: selectedAction?.commitLabel,
+      text: userReflectionText.trim(),
+      timestamp: 'Just now',
+      upvotes: 1,
+    };
+
+    const updated = [newRef, ...reflections];
+    setReflections(updated);
+    setUserReflectionText('');
+    setIsReflectionSubmitted(true);
+
+    try {
+      localStorage.setItem(`vivi_reflections_${canonicalScenario.id}`, JSON.stringify(updated));
+    } catch {}
+  };
+
+  const restart = () => {
+    startRef.current = Date.now();
+    hiddenAtRef.current = null;
+    setElapsed(0);
+    setSelectedAction(null);
+    setCommitted(false);
+    setRevealed(false);
+    setObservations([]);
+    setIsReflectionSubmitted(false);
+  };
+
+  const cueActive = elapsed >= 5000;
+  const pressureActive = elapsed >= 18000;
+  const selectedEnding = selectedAction ? canonicalScenario.endings[selectedAction.id] : '';
+
+  return (
+    <main className="vivi-play min-h-screen">
+      {/* Top Bar with Story Metadata & Social Actions */}
+      <header className="vivi-play-header">
+        <button className="vivi-back" onClick={onExit}>
+          <ArrowLeft size={18} /> Feed
+        </button>
+
+        <div className="text-center">
+          <span className="vivi-eyebrow">
+            BY {canonicalScenario.authorHandle.toUpperCase()} · {canonicalScenario.duration.toUpperCase()}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-serif text-stone-900">{canonicalScenario.title}</h1>
+        </div>
+
+        {/* Action icons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleResonance}
+            className={`p-2 rounded-lg flex items-center gap-1.5 text-xs transition-colors ${
+              hasResonated
+                ? 'bg-rose-100 text-rose-700 font-semibold'
+                : 'text-stone-600 hover:bg-stone-200'
+            }`}
+            title="Отозвалось / Felt this"
+          >
+            <Heart size={16} className={hasResonated ? 'fill-rose-600 text-rose-600' : ''} />
+            <span>{resonanceCount}</span>
+          </button>
+
+          <button
+            onClick={toggleBookmark}
+            className={`p-2 rounded-lg text-xs transition-colors ${
+              isBookmarked
+                ? 'bg-amber-100 text-amber-800 font-semibold'
+                : 'text-stone-600 hover:bg-stone-200'
+            }`}
+            title="Сохранить / Bookmark"
+          >
+            <Bookmark size={16} className={isBookmarked ? 'fill-amber-600 text-amber-600' : ''} />
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="p-2 rounded-lg text-stone-600 hover:bg-stone-200 text-xs"
+            title="Поделиться ситуацией"
+          >
+            <Share2 size={16} />
+          </button>
+
+          <button className="vivi-restart" onClick={restart} title="Начать заново">
+            <RotateCcw size={18} />
+          </button>
+        </div>
+      </header>
+
+      {shareToast && (
+        <div className="fixed top-16 right-6 z-50 px-4 py-2 rounded-lg bg-stone-900 text-stone-100 text-xs shadow-xl animate-fade-in">
+          Ссылка на ситуацию скопирована
+        </div>
+      )}
+
+      {/* Main Experience Layout: 2D Stage + Narrative & Social Panel */}
+      <div className="vivi-play-layout">
+        {/* Canonical Physical 2D World */}
+        <section className="vivi-stage-shell">
+          <CanonicalViviEngine
+            scenario={canonicalScenario}
+            elapsedMs={elapsed}
+            selectedAction={selectedAction}
+            onSelectAction={(action) => setSelectedAction(action)}
+            onCommit={handleCommit}
+            committed={committed}
+            revealed={revealed}
+            onObservation={handleObservation}
+          />
+        </section>
+
+        {/* Right Editorial & Social Narrative Panel */}
+        <aside className="vivi-story-panel overflow-y-auto max-h-[85vh]">
+          {/* Situation Setup */}
+          <div className="vivi-panel-top">
+            <span className="vivi-eyebrow">
+              {canonicalScenario.pillar.toUpperCase()} · SITUATION IN PROGRESS
+            </span>
+            <h2>
+              {committed
+                ? 'Вы сделали выбор.'
+                : cueActive
+                ? 'Ваш следующий шаг.'
+                : 'Войдите в ситуацию.'}
+            </h2>
+            <p className="vivi-setup">{canonicalScenario.setup}</p>
+          </div>
+
+          {/* Dynamic Story Beats & Observations */}
+          <div className="vivi-story-beats">
+            <div className="vivi-beat">
+              <span>01 / ВХОД</span>
+              <p>{canonicalScenario.hook}</p>
+            </div>
+
+            {cueActive && (
+              <div className="vivi-beat current">
+                <span>02 / МОМЕНТ НАПРЯЖЕНИЯ</span>
+                <p>{canonicalScenario.beats.find(b => b.isCue)?.description || 'Момент настал.'}</p>
+              </div>
+            )}
+
+            {pressureActive && !committed && (
+              <div className="vivi-beat pressure">
+                <span>03 / ДАВЛЕНИЕ ВРЕМЕНИ</span>
+                <p>{canonicalScenario.beats.find(b => b.isPressure)?.description || 'Секунды уходят.'}</p>
+              </div>
+            )}
+
+            {observations.length > 0 && !committed && (
+              <div className="vivi-beat observation">
+                <span>ВЫ ЗАМЕТИЛИ</span>
+                <p>{observations[0]}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Physical Exploration hint before Cue */}
+          {!cueActive && (
+            <p className="vivi-wait-hint">
+              Двигайтесь по комнате (W, A, S, D или стрелки). Ситуация развивается перед вами.
+            </p>
+          )}
+
+          {/* Interactive Actions & Commitment Stage */}
+          {cueActive && !committed && (
+            <div className="vivi-commit">
+              <span className="vivi-eyebrow">ИССЛЕДУЙТЕ ПРОСТРАНСТВО, ЗАТЕМ СДЕЛАЙТЕ ШАГ</span>
+              <div className="vivi-action-list">
+                {canonicalScenario.actions.map(action => (
+                  <button
+                    key={action.id}
+                    className={selectedAction?.id === action.id ? 'active' : ''}
+                    onClick={() => {
+                      setSelectedAction(action);
+                      handleObservation(action.observation);
+                    }}
+                  >
+                    <span>{action.label}</span>
+                    <ArrowRight size={14} />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                className="vivi-button"
+                disabled={!selectedAction}
+                onClick={() => {
+                  if (selectedAction) handleCommit(selectedAction);
+                }}
+              >
+                {selectedAction ? selectedAction.commitLabel : 'Подойдите к объекту или выберите действие'}
+                <ArrowRight size={17} />
+              </button>
+            </div>
+          )}
+
+          {/* Post-Commitment Phase: Reveal, Compare, and Community Respond */}
+          {committed && (
+            <div className="vivi-result">
+              <span className="vivi-eyebrow">ВАША ЛИНИЯ</span>
+              <p>{selectedEnding}</p>
+
+              {!revealed ? (
+                <button className="vivi-button mt-4" onClick={() => setRevealed(true)}>
+                  Узнать, что произошло в реальности <ArrowRight size={17} />
+                </button>
+              ) : (
+                <>
+                  {/* Authentic Author Reveal */}
+                  <div className="vivi-reality">
+                    <div className="flex items-center justify-between">
+                      <span className="vivi-eyebrow">ЧТО ПРОИЗОШЛО НА САМОМ ДЕЛЕ</span>
+                      <span className="text-[10px] text-stone-500 font-mono">РЕАЛЬНЫЙ СЛУЧАЙ</span>
+                    </div>
+                    <p>{canonicalScenario.reality}</p>
+                  </div>
+
+                  {/* 1. Crowd Compare: ТЫ · АВТОР · ДРУГИЕ */}
+                  <div className="vivi-compare border-t border-stone-200 pt-5 mt-5">
+                    <span className="vivi-eyebrow">ВЫБОР СООБЩЕСТВА</span>
+                    <h3 className="text-lg font-serif mt-1">{canonicalScenario.crowdQuestion}</h3>
+                    <p className="text-xs text-stone-500 mt-1 mb-4">
+                      Сравнение ваших инстинктов с решениями других участников и автора:
+                    </p>
+
+                    <div className="space-y-3">
+                      {canonicalScenario.seededStats.map(stat => {
+                        const isUserChoice = selectedAction?.id === stat.choiceId;
+                        const isAuthorChoice = canonicalScenario.authorChoiceId === stat.choiceId;
+
+                        return (
+                          <div key={stat.choiceId} className="group">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-stone-800">{stat.label}</span>
+                                {isUserChoice && (
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-600 text-amber-50 font-mono text-[9px] font-bold">
+                                    ТЫ
+                                  </span>
+                                )}
+                                {isAuthorChoice && (
+                                  <span className="px-1.5 py-0.5 rounded bg-stone-700 text-stone-200 font-mono text-[9px]">
+                                    АВТОР
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-xs font-semibold text-stone-700">
+                                {stat.percentage}%
+                              </span>
+                            </div>
+
+                            {/* Percentage Progress Bar */}
+                            <div className="w-full h-2 rounded-full bg-stone-200 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${
+                                  isUserChoice
+                                    ? 'bg-amber-600'
+                                    : isAuthorChoice
+                                    ? 'bg-stone-600'
+                                    : 'bg-stone-400'
+                                }`}
+                                style={{ width: `${stat.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <small className="block mt-3 text-[10px] text-stone-400 font-mono">
+                      * Статистика объединяет выбор 1,420+ участников и проверенное действие автора.
+                    </small>
+                  </div>
+
+                  {/* 2. Primary Social CTA: "С тобой было похожее?" (Response-story flow) */}
+                  <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-600/30">
+                    <span className="vivi-eyebrow text-amber-900">С ТОБОЙ БЫЛО ПОХОЖЕЕ?</span>
+                    <h4 className="font-serif text-lg text-stone-900 mt-1 mb-2">
+                      Расскажи свою историю в ответ
+                    </h4>
+                    <p className="text-xs text-stone-700 leading-relaxed mb-3">
+                      Каждая сложная ситуация порождает цепочки похожих моментов. Опиши свой случай — мы превратим его в маленький мир, в который смогут войти другие.
+                    </p>
+                    <button
+                      className="vivi-button w-full flex items-center justify-center gap-2 text-xs py-2.5"
+                      onClick={() => {
+                        if (onRespondWithStory) {
+                          onRespondWithStory(
+                            canonicalScenario.id,
+                            canonicalScenario.themeKey,
+                            `В ответ на историю "${canonicalScenario.title}": со мной произошла похожая ситуация…`
+                          );
+                        } else {
+                          onExit();
+                        }
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      <span>Рассказать свою историю</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
+
+                  {/* 3. Community Reflections & Discussions Feed */}
+                  <div className="vivi-respond mt-6 border-t border-stone-200 pt-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="vivi-eyebrow flex items-center gap-1.5">
+                        <MessageSquare size={13} />
+                        ОТКЛИКИ СООБЩЕСТВА ({reflections.length})
+                      </span>
+                    </div>
+
+                    {/* Reflection input */}
+                    <form onSubmit={handleAddReflection} className="mb-4">
+                      <label htmlFor="vivi-reflection-input" className="block text-xs font-medium text-stone-700 mb-1">
+                        Что вы почувствовали или сказали бы автору?
+                      </label>
+                      <textarea
+                        id="vivi-reflection-input"
+                        value={userReflectionText}
+                        onChange={(e) => setUserReflectionText(e.target.value)}
+                        placeholder="Мысль, сопереживание или личный вывод…"
+                        maxLength={280}
+                        rows={2}
+                        className="w-full text-xs p-2.5 rounded-lg border border-stone-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 outline-none"
+                      />
+                      <div className="flex justify-between items-center mt-1.5">
+                        <span className="text-[10px] text-stone-400">
+                          {280 - userReflectionText.length} симв.
+                        </span>
+                        <button
+                          type="submit"
+                          disabled={!userReflectionText.trim()}
+                          className="px-3 py-1 rounded bg-stone-900 text-stone-100 text-xs font-medium disabled:opacity-40"
+                        >
+                          Опубликовать отклик
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Reflections List */}
+                    <div className="space-y-3 mt-4">
+                      {reflections.map(ref => (
+                        <div
+                          key={ref.id}
+                          className={`p-3 rounded-xl border text-xs ${
+                            ref.isAuthorResponse
+                              ? 'bg-amber-50/70 border-amber-300/80 shadow-sm'
+                              : 'bg-stone-50 border-stone-200/80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-stone-900 font-mono text-[11px]">
+                                {ref.authorHandle}
+                              </span>
+                              {ref.isAuthorResponse && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-600 text-white text-[9px] font-bold">
+                                  АВТОР
+                                </span>
+                              )}
+                              {ref.choiceLabel && (
+                                <span className="text-[10px] text-stone-500 italic">
+                                  · Выбрал: «{ref.choiceLabel}»
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-stone-400">{ref.timestamp}</span>
+                          </div>
+                          <p className="text-stone-700 leading-relaxed font-serif text-[13px]">
+                            {ref.text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button className="vivi-text-button block mt-6 text-stone-600" onClick={restart}>
+                    Попробовать другую ветку решений ↗
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* Footer */}
+      <footer className="vivi-play-footer">
+        <span>ENTER → EXPERIENCE → COMMIT → REVEAL → COMPARE → RESPOND</span>
+        <span>CANONICAL VIVI ENGINE V1</span>
+      </footer>
+    </main>
+  );
 }
