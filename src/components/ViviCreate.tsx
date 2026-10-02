@@ -89,6 +89,14 @@ export function ViviCreate({
       });
 
       const data = await response.json();
+      if (import.meta.env.DEV && data.compilerReport) {
+        // Dev only: lets ?lab show what the real Create flow just did (no story text, no secrets).
+        try {
+          sessionStorage.setItem('vivi:lastGeneration', JSON.stringify(data.compilerReport));
+        } catch {
+          // storage unavailable
+        }
+      }
       if (!response.ok || (!data.gameSpec && !data.scenario)) {
         throw new Error(data.error || 'Vivi не удалось построить мир для этой ситуации.');
       }

@@ -45,13 +45,65 @@ const estimateTokens = (s: string) => {
   return Math.ceil(latin / 3.4 + other / 1.7);
 };
 
+type GenerationReport = CompileStoryResult['report'] & { semanticProvider?: string };
+
+/** Last generation made through the real Create flow (stored by ViviCreate in dev only). */
+function readLastUiGeneration(): GenerationReport | null {
+  try {
+    const raw = sessionStorage.getItem('vivi:lastGeneration');
+    return raw ? (JSON.parse(raw) as GenerationReport) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Development-only generation report: who answered, what it cost, whether it
+ * needed a repair or fell back. Built from the server's compilerReport, which
+ * never contains a key, headers or request objects.
+ */
+function GenerationReportPanel({ report, title }: { report: GenerationReport; title: string }) {
+  const u = report.usage;
+  const rows: Array<[string, React.ReactNode]> = [
+    ['source', <strong key="s">{report.source}</strong>],
+    ['provider', report.semanticProvider ?? report.providerId?.split(':')[0] ?? '—'],
+    ['model', report.model ?? '—'],
+    ['upstream', report.upstream ?? '—'],
+    ['input tokens', u?.inputTokens ?? '—'],
+    ['output tokens', u?.outputTokens ?? '—'],
+    ['reasoning tokens', u?.reasoningTokens ?? '—'],
+    ['cached input tokens', u?.cachedInputTokens ?? '—'],
+    ['cost (reported)', u?.costUsd !== undefined ? `$${u.costUsd.toFixed(6)}` : '—'],
+    ['latency', u?.latencyMs !== undefined ? `${u.latencyMs} ms` : '—'],
+    ['first-pass valid', report.firstPassValid === undefined ? '—' : String(report.firstPassValid)],
+    ['repair', report.repaired ? `yes${report.repairUsage?.costUsd !== undefined ? ` ($${report.repairUsage.costUsd.toFixed(6)})` : ''}` : 'no'],
+    ['fallback', report.fallbackReason ?? 'no'],
+    ['cache hit', String(report.cacheHit)],
+    ['DSL bytes', report.dslBytes],
+    ['compile', `${report.compileMs.toFixed(2)} ms`],
+  ];
+  return (
+    <div className="vivi-lab-facts vivi-lab-generation">
+      <div>
+        <h4>{title}</h4>
+        {rows.map(([k, v]) => (
+          <p key={k}>
+            {k}: {v}
+          </p>
+        ))}
+        {report.firstPassErrors?.length ? <p>first-pass errors: {report.firstPassErrors.slice(0, 4).join(' · ')}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 interface LabCompiled {
   scenario: CanonicalScenario;
   dsl?: ViviExperienceDSL;
   hints?: StoryHints;
   notes: string[];
   plan?: unknown;
-  report?: CompileStoryResult['report'];
+  report?: GenerationReport;
   story?: string;
 }
 
@@ -67,6 +119,7 @@ export function DirectorLab({ onPlay }: { onPlay: (scenario: CanonicalScenario) 
   const [playerAt, setPlayerAt] = useState<string>('spawn');
   const [directed, setDirected] = useState<DirectedShot | null>(null);
   const [useServer, setUseServer] = useState(false);
+  const [lastUi] = useState(readLastUiGeneration);
 
   const source = SOURCES.find(s => s.key === sourceKey)!;
 
@@ -210,6 +263,8 @@ export function DirectorLab({ onPlay }: { onPlay: (scenario: CanonicalScenario) 
           {scenario && <button onClick={() => onPlay(scenario)}>Play live ▶</button>}
         </div>
         {error && <p className="vivi-lab-error">{error}</p>}
+        {compiled?.report && <GenerationReportPanel report={compiled.report} title="Generation report (this compile)" />}
+        {lastUi && <GenerationReportPanel report={lastUi} title="Last generation from the Create screen" />}
       </section>
 
       {scenario && runner && (

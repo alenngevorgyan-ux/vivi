@@ -10,6 +10,7 @@ export function createGeminiProvider(apiKey: string, model = 'gemini-2.5-flash')
   const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
 
   const call = async (contents: string): Promise<SemanticReply> => {
+    const started = Date.now();
     const response = await ai.models.generateContent({
       model,
       contents,
@@ -29,8 +30,10 @@ export function createGeminiProvider(apiKey: string, model = 'gemini-2.5-flash')
             inputTokens: meta.promptTokenCount,
             outputTokens: meta.candidatesTokenCount,
             totalTokens: meta.totalTokenCount,
+            reasoningTokens: meta.thoughtsTokenCount,
+            latencyMs: Date.now() - started,
           }
-        : undefined,
+        : { latencyMs: Date.now() - started },
     };
   };
 
