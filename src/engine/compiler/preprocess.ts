@@ -70,7 +70,7 @@ const GRAMMAR_WORDS: Table<DslGrammar> = [
 const ROLE_WORDS: Table<DslRole> = [
   ['partner', /\b(partner|boyfriend|girlfriend|husband|wife|fianc[eé]e?|spouse)\b|партн[её]р|парн|девушк|муж(?![а-яё])|мужа|жена|жены|жених|невест|զուգընկեր|ամուսին|կին|ընկերուհ/i],
   ['ex', /\b(ex|ex-?(boyfriend|girlfriend|husband|wife))\b|бывш|նախկին/i],
-  ['friend', /\b(friend|best friend|buddy|bff)\b|друг|подруг|приятел|ընկեր/i],
+  ['friend', /\b(friend|best friend|buddy|bff)\b|друг(?!ой|ая|ое|ие|им|их|ом|ую)|подруг|приятел|(?<!գործ)ընկեր(?!ուհ)/i],
   ['sibling', /\b(sister|brother|sibling)\b|сестр|брат|քույր|եղբայր/i],
   ['parent', /\b(mother|father|mom|mum|dad|parents?)\b|мама|мать|мам[уы]|папа|отец|отца|родител|մայր|հայր|ծնող/i],
   ['relative', /\b(aunt|uncle|cousin|grand(mother|father|ma|pa))\b|т[её]т|дяд|кузен|бабушк|дедушк|մորաքույր|հորեղբայր|տատիկ|պապիկ/i],

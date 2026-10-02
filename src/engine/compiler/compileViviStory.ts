@@ -4,6 +4,7 @@ import { serializeDSL, stripModelOnlyFields, validateDSL, type ViviExperienceDSL
 import { compileExperience, type CompiledExperience } from './ExperienceCompiler.ts';
 import { parseModelJson } from './modelContract.ts';
 import { wireToDsl } from './structuredContract.ts';
+import { reviewDsl } from './semanticReview.ts';
 import { addUsage, type ExperienceSemanticProvider, type ModelUsage } from './provider.ts';
 import { COMPILER_VERSION, DSL_VERSION } from './vocabulary.ts';
 import type { StoredPlayablePost } from '../runtime/generationPipeline.ts';
@@ -59,6 +60,12 @@ export interface CompileStoryReport {
   firstPassValid?: boolean;
   /** First-pass validation errors, kept even when the repair succeeded. */
   firstPassErrors?: string[];
+  /** The first reply was both structurally valid and a real situation. */
+  firstPassClean?: boolean;
+  /** Semantic-review objections that survived the repair turn. The scene is still played. */
+  semanticErrors?: string[];
+  /** What the review fixed without asking the model. */
+  semanticNotes?: string[];
   repaired: boolean;
   cacheHit: boolean;
   fallbackReason?: string;
@@ -116,14 +123,34 @@ export async function compileViviStory(
   let cacheHit = false;
   let firstPassValid: boolean | undefined;
   let firstPassErrors: string[] | undefined;
+  let firstPassClean: boolean | undefined;
+  let semanticErrors: string[] | undefined;
+  let semanticNotes: string[] | undefined;
   let fallbackReason: string | undefined;
   let validationErrors: string[] | undefined;
 
-  const check = (text: string) => {
+  /**
+   * A reply is judged twice: `validateDSL` decides whether it is a legal
+   * program at all, then the semantic review decides whether it is a
+   * situation. Only the first kind of failure can force a fallback — a scene
+   * that compiles but reads as a menu is still the author's story, and far
+   * better than a generic one.
+   */
+  interface Checked {
+    structural: boolean;
+    dsl?: ViviExperienceDSL;
+    errors: string[];
+    semantic: string[];
+    notes: string[];
+  }
+  const check = (text: string): Checked => {
     try {
-      return validateDSL(stripModelOnlyFields(wireToDsl(parseModelJson(text))));
+      const validated = validateDSL(stripModelOnlyFields(wireToDsl(parseModelJson(text))));
+      if (!validated.ok) return { structural: false, errors: validated.errors, semantic: [], notes: [] };
+      const review = reviewDsl(validated.dsl, hints);
+      return { structural: true, dsl: review.dsl, errors: [], semantic: review.errors, notes: review.notes };
     } catch (err) {
-      return { ok: false as const, errors: [err instanceof Error ? err.message : 'Unparseable reply'] };
+      return { structural: false, errors: [err instanceof Error ? err.message : 'Unparseable reply'], semantic: [], notes: [] };
     }
   };
 
@@ -145,24 +172,31 @@ export async function compileViviStory(
         model = reply.model;
         upstream = reply.upstream;
         usage = reply.usage;
-        let validation = check(reply.text);
-        firstPassValid = validation.ok;
-        if (!validation.ok) firstPassErrors = validation.errors;
+        let checked = check(reply.text);
+        firstPassValid = checked.structural;
+        firstPassClean = checked.structural && checked.semantic.length === 0;
+        if (!checked.structural) firstPassErrors = checked.errors;
 
-        if (!validation.ok && provider.repair) {
-          const fixed = await provider.repair(request, reply.text, validation.errors);
+        const objections = [...checked.errors, ...checked.semantic];
+        if (objections.length && provider.repair) {
+          const fixed = await provider.repair(request, reply.text, objections);
           repairUsage = fixed.usage;
           usage = addUsage(usage, fixed.usage);
           repaired = true;
-          validation = check(fixed.text);
+          const retry = check(fixed.text);
+          // A repair that breaks the program is discarded; a first reply that
+          // only read as a menu is still playable and is kept.
+          if (retry.structural && (retry.semantic.length <= checked.semantic.length || !checked.structural)) checked = retry;
         }
 
-        if (validation.ok) {
-          dsl = validation.dsl;
+        if (checked.structural && checked.dsl) {
+          dsl = checked.dsl;
           source = 'model';
+          semanticErrors = checked.semantic.length ? checked.semantic : undefined;
+          semanticNotes = checked.notes.length ? checked.notes : undefined;
           options.cache?.set(key, { dsl, model: model ?? provider.id, upstream, usage, repaired });
         } else {
-          validationErrors = validation.errors;
+          validationErrors = checked.errors;
           fallbackReason = `model DSL invalid after ${repaired ? 'repair' : 'first attempt'}`;
         }
       } catch (err) {
@@ -179,8 +213,11 @@ export async function compileViviStory(
       // The fallback is code we own; an invalid program here is a bug, not bad input.
       throw new Error(`Deterministic DSL failed validation: ${fallback.errors.join('; ')}`);
     }
-    dsl = fallback.dsl;
+    const review = reviewDsl(fallback.dsl, hints);
+    dsl = review.dsl;
     source = 'deterministic';
+    if (review.errors.length) semanticErrors = review.errors;
+    if (review.notes.length) semanticNotes = review.notes;
   }
 
   const started = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -215,6 +252,9 @@ export async function compileViviStory(
       repairUsage,
       firstPassValid,
       firstPassErrors,
+      firstPassClean,
+      semanticErrors,
+      semanticNotes,
       repaired,
       cacheHit,
       fallbackReason,

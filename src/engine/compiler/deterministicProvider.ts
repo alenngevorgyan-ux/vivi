@@ -2,6 +2,7 @@ import type { ViviExperienceDSL, DslCastMember, DslCommitment, DslEvent } from '
 import type { DslGrammar, DslObject, DslPlace, DslRole, DslVerb, DslWorld } from './vocabulary.ts';
 import { WORLDS } from './vocabulary.ts';
 import { resolvePlace, hostSlot, CARRIED } from './worldKnowledge.ts';
+import { groundCast } from './castGrounding.ts';
 import type { StoryHints } from './preprocess.ts';
 import type { Lang } from './i18n.ts';
 
@@ -200,8 +201,24 @@ function chooseGrammar(h: StoryHints): DslGrammar {
 }
 
 /** The first role that fits, from what the story mentions or the grammar implies. */
+/**
+ * Roles that claim no relationship to the author, so standing one up invents
+ * nothing the story did not already have: there was simply someone there.
+ */
+const UNCLAIMED: DslRole[] = ['stranger', 'neighbor', 'guest', 'commuter'];
+
+/**
+ * Who the fallback puts on stage.
+ *
+ * The named fallback is only taken when the story actually named someone. A
+ * story that mentions nobody gets an unclaimed figure instead of an invented
+ * friend or partner — the fallback is allowed to be thin, never to be wrong.
+ */
 function firstRole(h: StoryHints, preferred: DslRole[], fallback: DslRole): DslRole {
-  return preferred.find(r => h.roles.includes(r)) ?? h.roles.find(r => r !== 'stranger') ?? fallback;
+  const named = preferred.find(r => h.roles.includes(r)) ?? h.roles.find(r => r !== 'stranger');
+  if (named) return named;
+  if (h.roles.length) return h.roles[0];
+  return UNCLAIMED.includes(fallback) ? fallback : (preferred.find(r => UNCLAIMED.includes(r)) ?? 'stranger');
 }
 
 export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
@@ -407,7 +424,7 @@ export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
   // A carried phone never needs to be walked to, so a remote person is reached through it.
   if (carriedPhone) objects.add('phone');
 
-  return {
+  const draft: ViviExperienceDSL = {
     v: 1,
     w,
     g: grammar,
@@ -416,4 +433,18 @@ export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
     e: events.slice(0, 9),
     a: commitments.slice(0, 4),
   };
+
+  /**
+   * The fallback holds itself to the same grounding rule as a model. When the
+   * story shows nobody in the room, whoever the grammar needed becomes a voice
+   * on the other end of a device instead of a person standing there — the
+   * scene gets thinner, never less true.
+   */
+  const demote = new Set(
+    groundCast(draft, h)
+      .filter(g => g.support === 'UNSUPPORTED' && g.presence === 'on')
+      .map(g => g.role)
+  );
+  if (!demote.size) return draft;
+  return { ...draft, c: draft.c.map(m => (demote.has(m[0]) ? [m[0], 'off'] : m)) as DslCastMember[] };
 }

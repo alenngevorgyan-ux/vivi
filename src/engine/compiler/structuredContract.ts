@@ -146,9 +146,9 @@ export const STRUCTURED_SYSTEM_PROMPT = [
   'x {ti title, op opening line, q question to the reader}',
   '',
   'Rules:',
-  '- Only people from the story. Every role used in e or a must be in c.',
+  '- Only people the story gives. Every role used in e or a must be in c. Crowds (bg) are fine in public places.',
   '- Events: what is set up, the moment something changes, then what closes the window. 3-9 events.',
-  '- 2-4 commitments, each a different physical act at a thing, a person or a place in the room.',
+  '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
   "- Write l, ob, out, x and spoken lines in the story's language. l ≤6 words; others ≤20 words.",
   '- out is only the next moment after the player acts. Never say what really happened afterwards.',
 ].join('\n');
@@ -159,7 +159,7 @@ export function structuredUserPrompt(story: string, hints: StoryHints): string {
 
 /** Short system line for the single repair turn; the schema carries the shape. */
 export const STRUCTURED_REPAIR_SYSTEM =
-  'Fix this Vivi scene program so it passes validation. Change only what the errors name. Every role used in e or a must be listed in c. Reply with the corrected JSON object.';
+  'Fix this Vivi scene program. Change only what the errors name, and invent no new story facts. Every role used in e or a must be listed in c. Reply with the corrected JSON object.';
 
 export function structuredRepairPrompt(invalidJson: string, errors: string[]): string {
   return `ERRORS:\n${errors

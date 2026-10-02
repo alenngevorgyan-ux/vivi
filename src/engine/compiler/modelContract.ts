@@ -44,7 +44,7 @@ export const MODEL_SYSTEM_PROMPT = [
   '',
   'Rules:',
   '- Events in story order: what is set up, the moment something changes, then what closes the window. At most 9.',
-  '- 2-4 commitments. Each is a physical act at a thing, a person or a place in the room.',
+  '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
   '- Write label, observation, outcome, title and lines in the story\'s language. Label ≤6 words; others ≤20 words.',
   '- The outcome is only the next moment after the player acts. Never say what really happened afterwards.',
   '- No coordinates, sizes, timings, colours or camera directions. Omit anything you are unsure of.',
