@@ -383,8 +383,8 @@ export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
       if (w === 'station') {
         objects.add('board');
         objects.add('train');
-        const seconds = Math.min(120, Math.max(20, (h.minutes ?? 2) * 12));
-        events.push(['countdown', 'board', seconds], ['arrive', 'train']);
+        // The train arrives under pressure and the board counts its doors closed.
+        events.push(['arrive', 'train'], ['countdown', 'board']);
         commit(isRemote ? 'answer' : 'stay', isRemote ? 'phone' : other);
         commit('board', 'train');
         commit('wait', 'bench');

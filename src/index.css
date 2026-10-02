@@ -274,3 +274,48 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 @media(max-width:650px) {
   .vivi-play.is-cinematic .vivi-stage { aspect-ratio:4/3; }
 }
+
+/* ---------- compiled experiences: grade, props, carried phone, lab overlay ---------- */
+.vivi-grade { position:absolute; inset:0; pointer-events:none; z-index:2; }
+.vivi-grade > div { position:absolute; inset:0; transition:opacity 1400ms cubic-bezier(.22,.68,.16,1); }
+.vivi-grade-tint { mix-blend-mode:soft-light; }
+.vivi-grade-dark { background:#05070c; }
+.vivi-grade-vignette { background:radial-gradient(ellipse 72% 68% at 50% 54%, transparent 55%, rgba(3,5,9,.62) 100%); }
+.vivi-grade.is-flicker .vivi-grade-dark { animation:vivi-flicker 3.2s steps(1,end) 1; }
+@keyframes vivi-flicker { 0%{opacity:.1} 8%{opacity:.62} 11%{opacity:.12} 34%{opacity:.7} 38%{opacity:.18} 61%{opacity:.55} 64%{opacity:.15} 100%{opacity:.15} }
+.vivi-prop { position:absolute; transform:translate(-50%,-50%); pointer-events:none; filter:drop-shadow(0 2px 3px rgba(0,0,0,.55)); transition:filter 420ms ease-out; }
+.vivi-prop.is-active { filter:drop-shadow(0 0 6px rgba(246,220,174,.85)) drop-shadow(0 0 16px rgba(246,220,174,.45)); animation:vivi-prop-breathe 2.4s ease-in-out infinite; }
+@keyframes vivi-prop-breathe { 50% { filter:drop-shadow(0 0 3px rgba(246,220,174,.6)) drop-shadow(0 0 9px rgba(246,220,174,.25)); } }
+.vivi-carried-phone { position:absolute; left:50%; bottom:104%; transform:translateX(-50%); max-width:220px; padding:4px 9px; border-radius:5px; background:rgba(14,17,22,.88); color:#f6dcae; font:400 11px/1.35 Newsreader,Georgia,serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 0 14px rgba(246,220,174,.35); animation:vivi-fade-up 500ms cubic-bezier(.19,.72,.16,1); }
+.vivi-carried-phone.is-vibrating { animation:vivi-phone-vibrate .09s linear infinite; }
+.vivi-figure.is-background { filter:drop-shadow(0 4px 5px rgba(10,14,20,.4)) saturate(.82) brightness(.92); }
+.vivi-debug { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:6; }
+@media (prefers-reduced-motion: reduce) { .vivi-prop.is-active, .vivi-grade.is-flicker .vivi-grade-dark { animation:none; } }
+.vivi-seat { position:absolute; left:0; bottom:0; transform:translateX(-50%); left:50%; z-index:-1; }
+
+/* ---------- Director Lab (development only) ---------- */
+.vivi-lab { max-width:1280px; margin:0 auto; padding:18px 20px 60px; font:13px/1.45 'IBM Plex Mono',ui-monospace,monospace; color:#1d2327; }
+.vivi-lab-head { display:flex; gap:14px; align-items:baseline; padding-bottom:10px; border-bottom:1px solid #cfc6b8; margin-bottom:12px; }
+.vivi-lab-head span { color:#7a7064; font-size:11px; }
+.vivi-lab-controls, .vivi-lab-stage, .vivi-lab-inspector { margin-bottom:16px; }
+.vivi-lab-controls label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#5b544b; }
+.vivi-lab-controls select, .vivi-lab-controls textarea, .vivi-lab-controls input { font:inherit; padding:6px 8px; border:1px solid #cbbfae; border-radius:6px; background:#fffaf2; }
+.vivi-lab-controls textarea { width:100%; margin-top:8px; }
+.vivi-lab-controls input { width:100%; margin-top:6px; }
+.vivi-lab-inline { flex-direction:row !important; align-items:center; gap:6px !important; }
+.vivi-lab-inline input { width:auto !important; margin:0 !important; }
+.vivi-lab-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+.vivi-lab-row input[type=range] { flex:1; min-width:200px; }
+.vivi-lab-controls button, .vivi-lab-stage > .vivi-lab-row button { font:inherit; font-size:11px; padding:5px 10px; border-radius:6px; border:1px solid #b9ad9b; background:#f6efe3; cursor:pointer; }
+.vivi-lab-stage > .vivi-lab-row button.is-on { background:#1f2a2e; color:#f6efe3; }
+.vivi-lab-moments { gap:6px; }
+.vivi-lab-engine { background:#0a0d12; border-radius:14px; overflow:hidden; }
+.vivi-lab-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:10px; }
+.vivi-lab-facts > div { background:#fffaf2; border:1px solid #e1d6c6; border-radius:8px; padding:8px 10px; }
+.vivi-lab-facts h4 { margin:0 0 4px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#8a7e6e; }
+.vivi-lab-facts p { margin:2px 0; font-size:11px; }
+.vivi-lab-inspector details { background:#fffaf2; border:1px solid #e1d6c6; border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+.vivi-lab-inspector summary { cursor:pointer; font-weight:600; }
+.vivi-lab-inspector pre { max-height:340px; overflow:auto; font-size:11px; background:#f3ebdd; padding:8px; border-radius:6px; white-space:pre-wrap; word-break:break-word; }
+.vivi-lab-dsl { background:#1f2a2e !important; color:#e9dfcd; }
+.vivi-lab-error { color:#a2392b; }

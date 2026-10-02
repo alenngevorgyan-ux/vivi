@@ -82,7 +82,7 @@ export const WORLD_KNOWLEDGE: Record<ViviWorldId, WorldKnowledge> = {
     public: false,
   },
   hallway_night: {
-    spawn: [58, 84],
+    spawn: [66, 86],
     places: {
       front_door: 'front_door', elevator: 'elevator', stairs: 'stairs', exit: 'stairs',
       center: 'decision_center', corner: 'long_sight_line',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import type { GameSpec } from './types/gameSpec';
 import { SOCIAL_MEMORIES } from './data/socialMemories';
 import { Navbar } from './components/Navbar';
@@ -6,7 +6,7 @@ import { ViviCreate } from './components/ViviCreate';
 import { ViviFeed } from './components/ViviFeed';
 import { ViviPlay } from './components/ViviPlay';
 import { FeedView } from './components/FeedView';
-import type { HeroStory } from './data/heroStories';
+import { heroStoryById, type HeroStory } from './data/heroStories';
 import {
   type StoredPlayablePost,
   isStoredPlayablePost,
@@ -14,6 +14,9 @@ import {
 import type { CanonicalScenario } from './engine/runtime/RuntimeCompiler';
 
 const STORAGE_KEY = 'vivi_community_stories_v1';
+
+/** Development-only Director Lab; compiled out of production builds. */
+const DirectorLab = import.meta.env.DEV ? lazy(() => import('./components/dev/DirectorLab')) : null;
 
 export default function App() {
   const [games, setGames] = useState<(StoredPlayablePost | GameSpec)[]>(() => {
@@ -34,8 +37,18 @@ export default function App() {
     return SOCIAL_MEMORIES;
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'create' | 'play'>('feed');
-  const [activeHero, setActiveHero] = useState<HeroStory | null>(null);
+  // Development only: ?play=<story id> opens a story directly, for QA and screenshots.
+  const devPlayId =
+    import.meta.env.DEV && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('play') : null;
+  const [labOpen] = useState(
+    () => import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('lab')
+  );
+  const [activeTab, setActiveTab] = useState<'feed' | 'create' | 'play'>(() =>
+    devPlayId && heroStoryById[devPlayId] ? 'play' : 'feed'
+  );
+  const [activeHero, setActiveHero] = useState<HeroStory | null>(() =>
+    devPlayId && heroStoryById[devPlayId] ? heroStoryById[devPlayId] : null
+  );
   const [activeScenario, setActiveScenario] = useState<CanonicalScenario | null>(null);
   const [activeLegacyGame, setActiveLegacyGame] = useState<GameSpec | null>(null);
   const [postToEdit, setPostToEdit] = useState<StoredPlayablePost | null>(null);
@@ -147,8 +160,21 @@ export default function App() {
 
       {/* Main View Area */}
       <div className="flex-1 w-full">
+        {DirectorLab && labOpen && activeTab !== 'play' && (
+          <Suspense fallback={null}>
+            <DirectorLab
+              onPlay={scenario => {
+                setActiveHero(null);
+                setActiveLegacyGame(null);
+                setActiveScenario(scenario);
+                setActiveTab('play');
+              }}
+            />
+          </Suspense>
+        )}
+
         {/* Main Feed View */}
-        {activeTab === 'feed' && !showArchive && (
+        {activeTab === 'feed' && !showArchive && !labOpen && (
           <ViviFeed
             customGames={games}
             onEnter={handleEnterHero}

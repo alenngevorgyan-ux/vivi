@@ -22,10 +22,19 @@ export interface SceneState {
   phoneLit?: boolean;
   /** Diegetic readout on an elevator or floor indicator. */
   elevatorText?: string;
+  /** Elevator doors have parted. */
+  elevatorOpen?: boolean;
+  /** A train or bus has pulled in. */
+  vehicleIn?: boolean;
   /** Diegetic clock or board readout. */
   clockText?: string;
   /** Extra darkness for a held, quiet moment. */
   dim?: number;
+  /**
+   * Draw set-dressing people into the art. Only the flat composite used for
+   * feed cards does this; on stage, people are actors in the runtime.
+   */
+  populated?: boolean;
 }
 
 const FLOOR_Y = 284;
@@ -242,8 +251,19 @@ function HallwayBackdrop({ p, uid, state }: { p: Palette; uid: string; state: Sc
 
       {/* Elevator at the far end: the only cold light in the corridor. */}
       <rect x="470" y="236" width="118" height="156" fill="#16222c" />
+      {state.elevatorOpen ? (
+        <g>
+          {/* An empty, lit car. Nobody steps out. */}
+          <rect x="482" y="238" width="94" height="152" fill="#9fb4ba" opacity="0.62" />
+          <rect x="482" y="238" width="94" height="10" fill="#e4f0f2" opacity="0.7" />
+          <path d="M482 390 L576 390 L566 372 L492 372Z" fill="#7b8f95" opacity="0.6" />
+          <rect x="472" y="238" width="10" height="152" fill="#2a3a44" />
+          <rect x="576" y="238" width="10" height="152" fill="#2a3a44" />
+        </g>
+      ) : (
+        <path d="M529 238 V390" stroke="#9fb3b8" strokeWidth="3" opacity="0.8" />
+      )}
       <rect x="470" y="236" width="118" height="156" fill="none" stroke="#7f949b" strokeWidth="4" />
-      <path d="M529 238 V390" stroke="#9fb3b8" strokeWidth="3" opacity="0.8" />
       <rect x="486" y="206" width="86" height="26" rx="2" fill="#0e161d" />
       <text
         x="529"
@@ -412,18 +432,23 @@ function OfficeMidground({ p, uid, state }: { p: Palette; uid: string; state: Sc
       {/* Screen spill reaches the floor; the room is otherwise flat and sterile. */}
       <path d="M402 286 L686 286 L760 372 L330 372Z" fill="#9fc4cc" opacity={state.active ? 0.17 : 0.09} />
 
-      {/* Colleagues already seated and already facing the director. */}
-      {/* The coworker is already presenting; the player arrives into an argument in progress. */}
-      <g transform="translate(372 196) scale(0.82)" opacity="0.95">
-        <path d="M-16 0 Q0 -8 16 0 L20 52 H-20Z" fill="#5a6a71" />
-        <path d="M-20 52 L-24 112 M20 52 L24 112" stroke="#2a3a43" strokeWidth="9" />
-        <path d="M16 6 Q34 16 44 2" fill="none" stroke="#5a6a71" strokeWidth="9" strokeLinecap="round" />
-        <ellipse cx="0" cy="-17" rx="10.5" ry="12" fill="#c08a66" />
-        <path d="M-10.5 -20 Q-10 -31 0 -31 Q10 -31 10.5 -20 Q6 -26 0 -26 Q-6 -26 -10.5 -20Z" fill="#332b26" />
-      </g>
-      <SeatedExtra x={286} y={318} s={0.74} tone="#4a5d66" turn={12} />
-      <SeatedExtra x={392} y={306} s={0.68} tone="#56666d" turn={16} />
-      <SeatedExtra x={742} y={312} s={0.72} tone="#4f6068" turn={-14} />
+      {/* Stills only: on stage these people are runtime actors who react to the room. */}
+      {state.populated && (
+        <>
+          {/* Colleagues already seated and already facing the director. */}
+          {/* The coworker is already presenting; the player arrives into an argument in progress. */}
+          <g transform="translate(372 196) scale(0.82)" opacity="0.95">
+            <path d="M-16 0 Q0 -8 16 0 L20 52 H-20Z" fill="#5a6a71" />
+            <path d="M-20 52 L-24 112 M20 52 L24 112" stroke="#2a3a43" strokeWidth="9" />
+            <path d="M16 6 Q34 16 44 2" fill="none" stroke="#5a6a71" strokeWidth="9" strokeLinecap="round" />
+            <ellipse cx="0" cy="-17" rx="10.5" ry="12" fill="#c08a66" />
+            <path d="M-10.5 -20 Q-10 -31 0 -31 Q10 -31 10.5 -20 Q6 -26 0 -26 Q-6 -26 -10.5 -20Z" fill="#332b26" />
+          </g>
+          <SeatedExtra x={286} y={318} s={0.74} tone="#4a5d66" turn={12} />
+          <SeatedExtra x={392} y={306} s={0.68} tone="#56666d" turn={16} />
+          <SeatedExtra x={742} y={312} s={0.72} tone="#4f6068" turn={-14} />
+        </>
+      )}
 
       {/* Meeting table. Wide enough that speaking across it costs something. */}
       <path d="M236 404 H806 L880 498 H162Z" fill="#41545d" />
@@ -469,7 +494,7 @@ function OfficeLighting({ uid, state }: { uid: string; state: SceneState }) {
 
 /* ------------------------------------------- remaining worlds (structural) --- */
 
-function GenericBackdrop({ world, p, uid }: { world: ViviWorldId; p: Palette; uid: string }) {
+function GenericBackdrop({ world, p, uid, state }: { world: ViviWorldId; p: Palette; uid: string; state: SceneState }) {
   if (isExterior(world)) {
     return (
       <g>
@@ -497,7 +522,9 @@ function GenericBackdrop({ world, p, uid }: { world: ViviWorldId; p: Palette; ui
             <path d="M0 330 L1000 297" stroke="#ebd4ac" strokeWidth="12" />
             <rect x="690" y="83" width="224" height="102" rx="3" fill="#263d44" stroke="#d7c6a7" strokeWidth="7" />
             <text x="714" y="124" fill="#f3e4c8" fontFamily="monospace" fontSize="26">LAST TRAIN</text>
-            <text x="714" y="159" fill="#f3e4c8" fontFamily="monospace" fontSize="28">00:47</text>
+            <text x="714" y="159" fill={state.vehicleIn ? '#f0b49c' : '#f3e4c8'} fontFamily="monospace" fontSize="28">
+              {state.clockText && /\d/.test(state.clockText) && state.clockText.length <= 8 ? state.clockText : '00:47'}
+            </text>
           </>
         )}
       </g>
@@ -516,7 +543,7 @@ function GenericBackdrop({ world, p, uid }: { world: ViviWorldId; p: Palette; ui
   );
 }
 
-function GenericMidground({ world, p, uid }: { world: ViviWorldId; p: Palette; uid: string }) {
+function GenericMidground({ world, p, uid, state }: { world: ViviWorldId; p: Palette; uid: string; state: SceneState }) {
   return (
     <g>
       {isExterior(world) ? (
@@ -562,6 +589,21 @@ function GenericMidground({ world, p, uid }: { world: ViviWorldId; p: Palette; u
       {world === 'train_station' && (
         <>
           <path d="M0 421 L1000 385" stroke="#2c4350" strokeWidth="45" />
+          {/* The last train: it slides in on the track when it arrives and its doors stand open. */}
+          <g
+            style={{
+              transform: state.vehicleIn ? 'translateX(0px)' : 'translateX(1100px)',
+              transition: 'transform 3.2s cubic-bezier(.16,.72,.18,1)',
+            }}
+          >
+            <path d="M-20 300 L640 278 L640 392 L-20 414Z" fill="#3c5560" />
+            <path d="M-20 300 L640 278 L640 292 L-20 314Z" fill="#cfd8d6" opacity="0.6" />
+            {[30, 150, 270, 390, 510].map(x => (
+              <rect key={x} x={x} y={322 - x * 0.033} width="70" height="38" rx="3" fill="#e9dcb6" opacity="0.75" />
+            ))}
+            <rect x="440" y={330 - 440 * 0.033} width="44" height="70" fill="#f3e6c2" opacity="0.9" />
+            <path d="M-20 414 L640 392" stroke="#1c2a31" strokeWidth="8" />
+          </g>
           <path d="M560 405 L1000 372 L1000 520 L560 550Z" fill="#89979a" />
           <rect x="175" y="401" width="166" height="15" fill="#83705d" />
           <path d="M188 413 L179 493 M327 413 L340 493" stroke="#665848" strokeWidth="10" />
@@ -630,8 +672,8 @@ function layerFor(
     if (kind === 'foreground') return <OfficeForeground />;
     return <OfficeLighting uid={uid} state={state} />;
   }
-  if (kind === 'backdrop') return <GenericBackdrop world={world} p={p} uid={uid} />;
-  if (kind === 'midground') return <GenericMidground world={world} p={p} uid={uid} />;
+  if (kind === 'backdrop') return <GenericBackdrop world={world} p={p} uid={uid} state={state} />;
+  if (kind === 'midground') return <GenericMidground world={world} p={p} uid={uid} state={state} />;
   if (kind === 'foreground') return <GenericForeground world={world} />;
   return <GenericLighting uid={uid} state={state} />;
 }
@@ -686,7 +728,7 @@ export const SceneLighting = ({ world, state = {} }: { world: ViviWorldId; state
  */
 export function SceneArt({ world, active = false }: { world: ViviWorldId; active?: boolean }) {
   const p = palettes[worldTemplates[world].palette];
-  const state: SceneState = { active, phoneLit: active, doorState: 'closed' };
+  const state: SceneState = { active, phoneLit: active, doorState: 'closed', populated: true };
   const uid = `${world}-flat`;
   return (
     <svg

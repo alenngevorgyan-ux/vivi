@@ -7,7 +7,24 @@
  * the tension in these scenes comes from what stops, not from what is loud.
  */
 
-type AmbientBed = 'room_tone' | 'shower_water' | 'rain_ambient' | 'bus_engine' | 'city_night';
+export type AmbientBed =
+  | 'room_tone'
+  | 'ventilation'
+  | 'office_hum'
+  | 'crowd_murmur'
+  | 'station_air'
+  | 'city_night'
+  | 'rain_ambient'
+  | 'evening_air'
+  | 'shower_water'
+  | 'music_muffled'
+  | 'train_idle'
+  | 'bus_engine';
+
+const BEDS = new Set<string>([
+  'room_tone', 'ventilation', 'office_hum', 'crowd_murmur', 'station_air', 'city_night', 'rain_ambient',
+  'evening_air', 'shower_water', 'music_muffled', 'train_idle', 'bus_engine',
+]);
 
 const BED_FOR_CUE: Record<string, AmbientBed> = {
   shower_water: 'shower_water',
@@ -43,9 +60,47 @@ class ViviAmbience {
   private beds = new Map<AmbientBed, Bed>();
   private activeBed: AmbientBed | null = null;
   private muted = false;
+  /** Browsers only let audio start inside a user gesture; until then nothing is created. */
+  private unlocked = false;
+  /** The bed the scene wants, remembered until audio is allowed to play it. */
+  private desiredBed: AmbientBed | null = null;
+  /** 0 = beds at full level, 1 = near silence. Set per scene by its grammar. */
+  private restraint = 0;
+
+  constructor() {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+      window.removeEventListener('touchstart', unlock, true);
+      this.unlock();
+    };
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
+    window.addEventListener('touchstart', unlock, true);
+  }
+
+  /** Called on the first real gesture. Starts nothing while muted. */
+  unlock() {
+    this.unlocked = true;
+    if (this.muted) return;
+    if (this.ensure()) this.applyBed(this.desiredBed, 1.2);
+  }
+
+  /** Diagnostic snapshot, used by tests and the Director Lab. */
+  status() {
+    return {
+      unlocked: this.unlocked,
+      muted: this.muted,
+      context: this.ctx ? this.ctx.state : 'none',
+      bed: this.activeBed,
+      desiredBed: this.desiredBed,
+    };
+  }
 
   private ensure(): boolean {
     if (typeof window === 'undefined') return false;
+    if (!this.unlocked || this.muted) return !!this.ctx && !this.muted;
     if (!this.ctx) {
       const Ctor = window.AudioContext || (window as any).webkitAudioContext;
       if (!Ctor) return false;
@@ -59,7 +114,7 @@ class ViviAmbience {
       this.master.connect(this.ctx.destination);
       this.noise = makeNoiseBuffer(this.ctx);
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
     return true;
   }
 
@@ -73,6 +128,20 @@ class ViviAmbience {
         return { type: 'lowpass', frequency: 220, q: 0.8, gain: 0.05 };
       case 'city_night':
         return { type: 'lowpass', frequency: 420, q: 0.7, gain: 0.018 };
+      case 'ventilation':
+        return { type: 'bandpass', frequency: 520, q: 1.4, gain: 0.016 };
+      case 'office_hum':
+        return { type: 'lowpass', frequency: 160, q: 2.2, gain: 0.02 };
+      case 'crowd_murmur':
+        return { type: 'bandpass', frequency: 680, q: 0.8, gain: 0.03 };
+      case 'station_air':
+        return { type: 'lowpass', frequency: 260, q: 0.6, gain: 0.024 };
+      case 'evening_air':
+        return { type: 'bandpass', frequency: 2400, q: 0.5, gain: 0.008 };
+      case 'music_muffled':
+        return { type: 'lowpass', frequency: 140, q: 3, gain: 0.04 };
+      case 'train_idle':
+        return { type: 'lowpass', frequency: 110, q: 1.6, gain: 0.05 };
       default:
         return { type: 'lowpass', frequency: 300, q: 0.7, gain: 0.014 };
     }
@@ -105,7 +174,17 @@ class ViviAmbience {
 
   /** Fade between ambient beds. A hard switch would read as an edit, not a room. */
   setBed(bed: AmbientBed | null, fadeSeconds = 1.4) {
-    if (!this.ensure() || !this.ctx) return;
+    this.desiredBed = bed;
+    if (!this.ensure()) return;
+    this.applyBed(bed, fadeSeconds);
+  }
+
+  setRestraint(restraint: number) {
+    this.restraint = Math.max(0, Math.min(1, restraint));
+  }
+
+  private applyBed(bed: AmbientBed | null, fadeSeconds: number) {
+    if (!this.ctx) return;
     if (this.activeBed === bed) return;
 
     const now = this.ctx.currentTime;
@@ -120,7 +199,7 @@ class ViviAmbience {
     if (bed) {
       const next = this.getBed(bed);
       if (next) {
-        const target = this.bedSpec(bed).gain;
+        const target = this.bedSpec(bed).gain * (1 - this.restraint * 0.7);
         next.gain.gain.cancelScheduledValues(now);
         next.gain.gain.setValueAtTime(next.gain.gain.value, now);
         next.gain.gain.linearRampToValueAtTime(target, now + fadeSeconds);
@@ -130,8 +209,40 @@ class ViviAmbience {
   }
 
   /** Map a modifier's ambient cue onto a bed; no cue means the room itself. */
-  setCue(cue: string | null) {
-    this.setBed(cue ? BED_FOR_CUE[cue] ?? 'room_tone' : 'room_tone');
+  setCue(cue: string | null, base: string = 'room_tone') {
+    const baseBed = (BEDS.has(base) ? base : 'room_tone') as AmbientBed;
+    if (cue && BEDS.has(cue)) return this.setBed(cue as AmbientBed);
+    this.setBed(cue ? BED_FOR_CUE[cue] ?? baseBed : baseBed);
+  }
+
+  /** Knuckles on a door, twice. */
+  knock() {
+    if (!this.ensure()) return;
+    this.doorThump(0.45);
+    window.setTimeout(() => this.doorThump(0.4), 260);
+  }
+
+  /** A few soft steps beyond a wall. */
+  footsteps() {
+    if (!this.ensure() || !this.ctx || !this.master || !this.noise) return;
+    const now = this.ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const at = now + i * 0.52;
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noise;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 340;
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.05, at + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0008, at + 0.14);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      src.start(at);
+      src.stop(at + 0.16);
+    }
   }
 
   /** A phone buzzing against a hard surface: body resonance, not a ringtone. */
@@ -229,11 +340,18 @@ class ViviAmbience {
 
   setMuted(muted: boolean) {
     this.muted = muted;
+    if (!muted && this.unlocked && !this.ctx) {
+      // Unmuting is itself a gesture in practice; start the room now.
+      if (this.ensure()) this.applyBed(this.desiredBed, 1.2);
+      return;
+    }
     if (!this.master || !this.ctx) return;
     const now = this.ctx.currentTime;
     this.master.gain.cancelScheduledValues(now);
     this.master.gain.setValueAtTime(this.master.gain.value, now);
     this.master.gain.linearRampToValueAtTime(muted ? 0 : 1, now + 0.25);
+    // Whatever the scene asked for while muted takes over now.
+    if (!muted) this.applyBed(this.desiredBed, 0.8);
   }
 
   /** Called when a scene unmounts: stop the world, keep the context. */

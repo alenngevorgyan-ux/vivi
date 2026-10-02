@@ -580,7 +580,8 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       case 'countdown': {
         const obj = a1 as DslObject;
         const slot = hostSlot(world, obj);
-        const secs = typeof a2 === 'number' ? a2 : grammar.countdownSec;
+        // Unspecified countdowns run out shortly after pressure peaks, never minutes later.
+        const secs = typeof a2 === 'number' ? a2 : Math.max(8, Math.min(grammar.countdownSec, Math.round((pressureAtMs + 14000 - at) / 1000)));
         mod('timer', at, slot, `${secs}s`, { countdownSec: secs });
         markObject(obj, at);
         camera('pressure', at, { slot });
