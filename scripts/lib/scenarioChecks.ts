@@ -5,6 +5,7 @@
  */
 import type { CanonicalScenario } from '../../src/engine/runtime/RuntimeCompiler.ts';
 import { validateDSL, serializeDSL, type ViviExperienceDSL } from '../../src/engine/compiler/dsl.ts';
+import { commitmentVariety } from '../../src/engine/compiler/commitmentClasses.ts';
 import { worldTemplates } from '../../src/world/templates/index.ts';
 import { WORLD_COLLISIONS } from '../../src/engine/runtime/collision.ts';
 import { findPath, pathCollides, isWalkable } from '../../src/engine/runtime/navigation.ts';
@@ -45,8 +46,14 @@ export function checkScenario(
 
   // commitments
   if (scenario.actions.length < 2 || scenario.actions.length > 4) fail.push(`${scenario.actions.length} commitments (need 2–4)`);
-  const kinds = new Set(dsl.a.map(a => (a[1] === null ? 'none' : dsl.o.includes(a[1] as never) ? 'object' : dsl.c.some(c => c[0] === a[1]) ? 'person' : 'place')));
-  if (kinds.size < 2) fail.push('every commitment targets the same kind of thing — scene reads as a menu');
+  // Variety is judged on what the compiler actually stages, not on the target
+  // word: `call the phone` and `read the phone` are the same noun and two
+  // different acts, while `open the door` and `lock the door` are two verbs in
+  // one spot. `legacyCommitmentKinds` keeps the older, cruder measure available
+  // so a stored run can still be scored the way it was scored when it ran.
+  const variety = commitmentVariety(dsl);
+  if (variety.oneKind) fail.push('every commitment reaches for the same kind of thing — scene reads as a menu');
+  else if (variety.oneSpot) fail.push('every commitment happens in one spot — scene reads as a menu');
 
   // truth
   const truth = scenario.authorTruth;
@@ -144,4 +151,15 @@ export function checkScenario(
   if (!cue || !pressure) fail.push('missing cue or pressure beat');
 
   return fail;
+}
+
+/**
+ * The commitment-variety measure used before the semantic classifier existed:
+ * the target word's category alone. Kept so a stored run can be re-scored the
+ * way it was scored when it ran, and both numbers reported side by side.
+ */
+export function legacyCommitmentKinds(dsl: ViviExperienceDSL): number {
+  return new Set(
+    dsl.a.map(a => (a[1] === null ? 'none' : dsl.o.includes(a[1] as never) ? 'object' : dsl.c.some(c => c[0] === a[1]) ? 'person' : 'place'))
+  ).size;
 }

@@ -18,8 +18,8 @@ import type {
   CompilerStamp,
 } from '../runtime/generationPipeline.ts';
 import { actorObstacle, travelSeconds, type ActorCue, type RuntimeActor } from '../runtime/actors.ts';
-import { findPath, nearestWalkable, pathLength, semanticPath, type Point } from '../runtime/navigation.ts';
-import type { CollisionBox } from '../runtime/collision.ts';
+import { findPath, hasLineOfSight, isWalkable, nearestWalkable, pathLength, semanticPath, type Point } from '../runtime/navigation.ts';
+import { WORLD_COLLISIONS, type CollisionBox } from '../runtime/collision.ts';
 import { stagePair, type StagingPreset } from '../cinematic/staging.ts';
 import type { CameraEvent } from '../cinematic/director.ts';
 import { serializeDSL, type DslCommitment, type DslEvent, type ViviExperienceDSL } from './dsl.ts';
@@ -38,6 +38,7 @@ import {
 } from './vocabulary.ts';
 import { EXPERIENCE_GRAMMARS, LIGHTING_PROFILE_DEFS, toneAdjustedLighting } from './grammars.ts';
 import { CARRIED, WORLD_KNOWLEDGE, defaultSlotForVerb, hostSlot, resolvePlace, type AmbientBedId } from './worldKnowledge.ts';
+import { resolveCommitment } from './commitmentClasses.ts';
 import { approachLabel, carriedLabel, detectLanguage, objectObservation, roleName, text, type Lang } from './i18n.ts';
 
 /**
@@ -251,6 +252,50 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   const stageAt = (p: Point) => nearestWalkable(world, p, [...staticObstacles, ...keepOut]);
   let side: 'left' | 'right' = playerSpawn[0] < 50 ? 'right' : 'left';
 
+  /** Nobody shares a floor tile: two people on one spot read as one person. */
+  const ACTOR_SEPARATION = 5;
+  const clearOfActors = (p: Point) => actors.every(a => Math.hypot(a.spawn[0] - p[0], a.spawn[1] - p[1]) >= ACTOR_SEPARATION);
+  /**
+   * The nearest spot to `desired` that is walkable and not already occupied.
+   * Two people told to enter through the same door stand beside each other
+   * instead of inside each other.
+   */
+  const stageApart = (desired: Point): Point => {
+    const base = stageAt(desired);
+    if (clearOfActors(base)) return base;
+    for (const radius of [5, 7, 9, 12]) {
+      for (let step = 0; step < 12; step++) {
+        const angle = (step / 12) * Math.PI * 2;
+        const candidate: Point = [base[0] + Math.cos(angle) * radius, base[1] + Math.sin(angle) * radius * 0.6];
+        if (!isWalkable(world, candidate, [...staticObstacles, ...keepOut])) continue;
+        if (clearOfActors(candidate)) return candidate;
+      }
+    }
+    return base;
+  };
+
+  /**
+   * Where someone who just came through a door stands once they are inside: a
+   * step toward the player, close enough that nothing stands between them and
+   * the doorway. When the room offers no clear step they stay in the doorway
+   * rather than walk through furniture.
+   */
+  const stepIntoRoom = (from: Point): Point | undefined => {
+    const toward = Math.atan2(playerSpawn[1] - from[1], playerSpawn[0] - from[0]);
+    for (const distance of [6, 4.5, 3]) {
+      for (const spread of [0, 0.45, -0.45, 0.9, -0.9]) {
+        const candidate: Point = [
+          from[0] + Math.cos(toward + spread) * distance,
+          from[1] + Math.sin(toward + spread) * distance * 0.7,
+        ];
+        if (!isWalkable(world, candidate, staticObstacles)) continue;
+        if (!hasLineOfSight(world, from, candidate, staticObstacles)) continue;
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+
   input.c.forEach(([role, presence, count], castIndex) => {
     if (presence === 'off') return;
     if (presence === 'on') {
@@ -259,16 +304,16 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       let spawn: Point;
       let hiddenUntilMs: number | undefined;
       if (roleSlot) {
-        spawn = nearestWalkable(world, slotAnchor(roleSlot), staticObstacles);
+        spawn = stageApart(slotAnchor(roleSlot));
         notes.push(`${role}: stands at ${roleSlot} (world role slot)`);
       } else if (first && first[0] === 'enter') {
-        spawn = standOf(placeSlot(first[2] as string | undefined, know.door));
+        spawn = stageApart(standOf(placeSlot(first[2] as string | undefined, know.door)));
         hiddenUntilMs = 1e9; // revealed by the enter cue (finite so it survives JSON)
         notes.push(`${role}: arrives later through ${placeSlot(first[2] as string | undefined, know.door)}`);
       } else if (first && first[0] === 'exit') {
         // Partway along the line they will walk, so their exit reads as travel.
         const exitStand = standOf(placeSlot(first[2] as string | undefined, know.door));
-        spawn = stageAt([
+        spawn = stageApart([
           playerSpawn[0] + (exitStand[0] - playerSpawn[0]) * 0.45,
           playerSpawn[1] + (exitStand[1] - playerSpawn[1]) * 0.45,
         ]);
@@ -276,7 +321,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       } else {
         const preset: StagingPreset = staging === 'isolated_subject' || staging === 'public_pressure' ? 'normal_conversation' : staging;
         const pair = stagePair(playerSpawn, actors.length === 0 ? preset : 'normal_conversation', side);
-        spawn = stageAt(pair.counterpart);
+        spawn = stageApart(pair.counterpart);
         side = side === 'right' ? 'left' : 'right';
         notes.push(`${role}: staged ${preset} from the player`);
       }
@@ -393,6 +438,9 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
     }
     last = times[i];
   }
+  // A story whose last event is its cue leaves nothing to close the window;
+  // the pressure beat still has to land after it.
+  if (!pressureAssigned) pressureAtMs = Math.max(pressureAtMs, cueAtMs + 2500);
   // A clock placed before the cue still changes at the cue.
   events.forEach((ev, i) => {
     if (ev[0] === 'clock') times[i] = cueAtMs;
@@ -433,9 +481,16 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
 
   const doorFor = (slot: string) => resolveSemanticSlot(world, slot).diegeticType === 'door' || resolveSemanticSlot(world, slot).diegeticType === 'elevator';
 
+  /**
+   * Where someone appears when they come through a place. A doorway stand can
+   * sit inside the wall or the furniture beside it; a figure that starts there
+   * walks out through the furniture on its first step.
+   */
+  const appearAt = (slot: string): Point => nearestWalkable(world, standOf(slot), staticObstacles);
+
   const reenter = (actor: RuntimeActor, slot: string, at: number) => {
-    const stand = standOf(slot);
-    const doorway = nearestWalkable(world, [stand[0] - 2, stand[1] + 4], staticObstacles);
+    const stand = appearAt(slot);
+    const doorway = stepIntoRoom(stand);
     actorCues.push({ atMs: at, actor: actor.id, act: 'enter', to: stand, then: doorway });
     actorCues.push({ atMs: at + 1200, actor: actor.id, act: 'turn_to', target: 'player' });
     camera('npc_enter', at, { actor: actor.id, slot });
@@ -470,7 +525,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
           mod('door', at + 1800, slot, 'Door closes', { door: 'closed' });
         }
         const toward = stagePair(playerSpawn, 'confrontation', actor.spawn[0] > playerSpawn[0] ? 'right' : 'left').counterpart;
-        actorCues.push({ atMs: at, actor: actor.id, act: 'enter', to: standOf(slot), then: nearestWalkable(world, toward, staticObstacles) });
+        actorCues.push({ atMs: at, actor: actor.id, act: 'enter', to: appearAt(slot), then: nearestWalkable(world, toward, staticObstacles) });
         camera('npc_enter', at, { actor: actor.id, slot });
         break;
       }
@@ -689,39 +744,69 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
     (s): s is string => !!s
   );
 
+  /**
+   * Standing spots are allocated, not just resolved.
+   *
+   * Two semantically different choices can easily resolve near one piece of
+   * furniture — a phone and a photo on the same table, a door that is also the
+   * way out. Rather than spend a model turn on it, each choice is given its own
+   * reachable patch of floor near the thing it is about: walkable, clear of
+   * people, inside the mobile-safe frame and on a route the player can walk.
+   */
+  const standBounds = WORLD_COLLISIONS[world].bounds;
+  const takenStands: Point[] = actors.filter(a => a.cls !== 'background').map(a => a.spawn);
+  const reachableFromSpawn = (p: Point) => {
+    const path = findPath(world, playerSpawn, p, { extra: staticObstacles });
+    const end = path[path.length - 1];
+    return Math.hypot(end[0] - p[0], end[1] - p[1]) <= 2;
+  };
+  const standUsable = (p: Point, gap: number) =>
+    p[0] >= standBounds.minX + 3 &&
+    p[0] <= standBounds.maxX - 3 &&
+    isWalkable(world, p, staticObstacles, 2.6) &&
+    takenStands.every(q => Math.hypot(q[0] - p[0], q[1] - p[1]) >= gap) &&
+    reachableFromSpawn(p);
+
+  const allocateStand = (desired: Point, anchor: Point, label: string): Point => {
+    // A roomy gap first, then as tight as the floor allows before giving up.
+    for (const gap of [8, 6, 4.5]) {
+      if (standUsable(desired, gap)) return desired;
+      for (const radius of [7, 10, 13, 16]) {
+        for (let step = 0; step < 16; step++) {
+          const angle = (step / 16) * Math.PI * 2;
+          const candidate: Point = [anchor[0] + Math.cos(angle) * radius, anchor[1] + Math.sin(angle) * radius * 0.6];
+          if (standUsable(candidate, gap)) {
+            notes.push(`commitment ${label}: standing spot moved clear of the others`);
+            return candidate;
+          }
+        }
+      }
+    }
+    return desired;
+  };
+
   input.a.forEach((commitment: DslCommitment, i) => {
     const [verb, target, label, observation, outcome] = commitment;
+    const resolved = resolveCommitment(input, commitment);
     let slot: string;
     let actorId: string | undefined;
     let objectId: DslObject | undefined;
     let approach: string;
 
-    if (isObject(target)) {
-      slot = hostSlot(world, target);
-      objectId = target;
-      approach = slot === CARRIED ? carriedLabel(lang, target) : approachLabel(lang, { object: target, verb });
-    } else if (isRole(target)) {
-      const actor = actorByRole.get(target);
-      const presence = input.c.find(c => c[0] === target)?.[1];
-      if (actor && actor.cls !== 'background') {
-        actorId = actor.id;
-        slot = `actor:${actor.id}`;
-        approach = approachLabel(lang, { role: target, verb });
-      } else if (presence === 'off') {
-        // Someone only present through a device: you act on them through it.
-        const device = input.o.includes('intercom') ? 'intercom' : 'phone';
-        slot = hostSlot(world, device);
-        objectId = device;
-        approach = slot === CARRIED ? carriedLabel(lang, device) : approachLabel(lang, { object: device, verb });
-      } else {
-        slot = defaultSlotForVerb(world, verb, input.o);
-        approach = approachLabel(lang, { verb });
-      }
-    } else if (isPlace(target)) {
-      slot = resolvePlace(world, target) ?? defaultSlotForVerb(world, verb, input.o);
-      approach = approachLabel(lang, { place: target, verb });
+    const actor = resolved.actorRole ? actorByRole.get(resolved.actorRole) : undefined;
+    if (resolved.cls === 'ACTOR' && actor && actor.cls !== 'background') {
+      actorId = actor.id;
+      slot = `actor:${actor.id}`;
+      approach = approachLabel(lang, { role: resolved.actorRole!, verb });
+    } else if (resolved.objectId) {
+      slot = resolved.locus;
+      objectId = resolved.objectId;
+      approach = slot === CARRIED ? carriedLabel(lang, objectId) : approachLabel(lang, { object: objectId, verb });
+    } else if (resolved.placeWord) {
+      slot = resolved.locus;
+      approach = approachLabel(lang, { place: resolved.placeWord, verb });
     } else {
-      slot = defaultSlotForVerb(world, verb, input.o);
+      slot = resolved.locus;
       const placeWord = Object.entries(know.places).find(([, s]) => s === slot)?.[0] as DslPlace | undefined;
       // Waiting is not a place; it is staying put somewhere sensible.
       const placeless = verb === 'leave' || verb === 'hide' || ((verb === 'wait' || verb === 'stay') && placeWord === 'center');
@@ -767,8 +852,10 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
         diegeticType: 'person',
       };
     } else {
-      const resolved = resolveSemanticSlot(world, slot);
-      slotInfo = { ...resolved, interactionRadius: resolved.interactionRadius * grammar.interactionReach };
+      const base = resolveSemanticSlot(world, slot);
+      const [standX, standY] = allocateStand([base.standX, base.standY], [base.anchorX, base.anchorY], `${verb}:${slot}`);
+      takenStands.push([standX, standY]);
+      slotInfo = { ...base, standX, standY, interactionRadius: base.interactionRadius * grammar.interactionReach };
     }
 
     let id = options.actionIds?.[i] ?? `${verb}${target ? `_${target}` : ''}`;
@@ -866,6 +953,15 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   const author = options.author?.trim() || 'Anonymous';
   const authorHandle = options.authorHandle ?? (author.startsWith('@') ? author : `@${author.toLowerCase().replace(/\s+/g, '_')}`);
   const focusSlot = keyObjects[0]?.slot ?? actions.find(a => !a.actorId)?.targetSlot;
+
+  // A story whose events the camera has no opinion about still needs the cue to
+  // land somewhere: without a single event the director has nothing to cut on.
+  if (cameraEvents.length === 0) {
+    if (focusSlot && focusSlot !== CARRIED) camera('object_active', cueAtMs, { slot: focusSlot });
+    else camera('pressure', pressureAtMs);
+    cameraEvents.sort((x, y) => x.atMs - y.atMs);
+    notes.push('camera: no event asked for a shot; the cue itself is the beat');
+  }
   const theme = options.category ?? GRAMMAR_THEME[input.g] ?? 'Human Moment';
 
   const scenario: CanonicalScenario = {
