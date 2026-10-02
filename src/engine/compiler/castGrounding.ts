@@ -1,5 +1,5 @@
 import { WORLD_KNOWLEDGE } from './worldKnowledge.ts';
-import { ROLES, WORLDS, type DslPresence, type DslRole } from './vocabulary.ts';
+import { ROLES, WORLDS, type DslPresence, type DslRole, type DslWorld } from './vocabulary.ts';
 import type { ViviExperienceDSL } from './dsl.ts';
 import type { StoryHints } from './preprocess.ts';
 
@@ -30,9 +30,22 @@ export interface GroundedRole {
 
 /**
  * Roles that describe a person by their place in the scene rather than by
- * their relationship to the author. A story may imply one without naming it.
+ * their relationship to the author. A story may imply one without naming it —
+ * but only where that figure belongs: a building has neighbours, a platform
+ * has commuters, and an office has neither.
  */
-const UNNAMED_ROLES = new Set<DslRole>(['stranger', 'neighbor', 'commuter', 'guest', 'host']);
+const UNNAMED_ROLE_WORLDS: Partial<Record<DslRole, DslWorld[] | 'anywhere'>> = {
+  stranger: 'anywhere',
+  neighbor: ['hall', 'apt', 'bedroom', 'home', 'rental'],
+  commuter: ['station', 'street', 'park'],
+  guest: ['bar', 'home', 'rental', 'office'],
+  host: ['bar', 'rental', 'home', 'office'],
+};
+
+function belongsHere(role: DslRole, world: DslWorld): boolean {
+  const where = UNNAMED_ROLE_WORLDS[role];
+  return where === 'anywhere' || (!!where && where.includes(world));
+}
 
 /** Roles the same vocabulary spells two ways; one supports the other. */
 const SYNONYMS: Partial<Record<DslRole, DslRole[]>> = {
@@ -86,7 +99,7 @@ function supportFor(
     return { role, presence, support: 'STRONGLY_IMPLIED', reason: 'the place itself holds this role' };
   }
 
-  if (UNNAMED_ROLES.has(role)) {
+  if (belongsHere(role, dsl.w)) {
     const present = PERSON_PRESENT.test(hints.text) || hints.publicScene;
     const exists = present || OTHER_PERSON.test(hints.text);
     // Standing in the room is the expensive claim: it needs someone acting in

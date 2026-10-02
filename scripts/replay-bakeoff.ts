@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { EVAL_CORPUS } from '../src/data/evalCorpus.ts';
 import { BLIND_CORPUS } from '../src/data/blindCorpus.ts';
+import { HOLDOUT_CORPUS } from '../src/data/holdoutCorpus.ts';
 import { validateDSL, type ViviExperienceDSL } from '../src/engine/compiler/dsl.ts';
 import { compileExperience } from '../src/engine/compiler/ExperienceCompiler.ts';
 import { preprocessStory } from '../src/engine/compiler/preprocess.ts';
@@ -47,7 +48,9 @@ for (const e of EVAL_CORPUS) {
     expect: e.expect ?? {},
   });
 }
-for (const b of BLIND_CORPUS) stories.set(b.id, { story: b.story, outcome: b.outcome, lang: b.lang, expect: b.expect });
+for (const b of [...BLIND_CORPUS, ...HOLDOUT_CORPUS]) {
+  stories.set(b.id, { story: b.story, outcome: b.outcome, lang: b.lang, expect: b.expect });
+}
 
 /** The same faithfulness gate the bakeoff uses, so numbers stay comparable. */
 function faithful(failures: string[], faith: ReturnType<typeof scoreFaithfulness>, truthSafe: boolean): boolean {
@@ -118,7 +121,10 @@ for (const record of [...data.records, ...data.baseline] as BakeoffRecord[]) {
     };
   };
 
-  const review = reviewDsl(stored, hints);
+  // Stored DSL is a post-repair final, so the replay reviews it the way the
+  // pipeline reviews a reply the repair turn has already seen.
+  const review = reviewDsl(stored, hints, { enforce: true });
+  const reported = reviewDsl(stored, hints);
   const variety = commitmentVariety(review.dsl);
   const unsupportedOnStage = groundCast(review.dsl, hints)
     .filter(g => g.support === 'UNSUPPORTED' && g.presence !== 'bg')
@@ -136,7 +142,7 @@ for (const record of [...data.records, ...data.baseline] as BakeoffRecord[]) {
     before: { failures: record.playableFailures, faithful: faithful(record.playableFailures, record.faith!, record.truthSafe) },
     after: { failures: afterAll.failures, faithful: afterAll.faithful },
     afterLegacy: afterAll.legacy,
-    reviewErrors: review.errors,
+    reviewErrors: reported.errors,
     reviewNotes: review.notes,
     oneKind: variety.oneKind,
     oneSpot: variety.oneSpot,

@@ -143,11 +143,11 @@ export async function compileViviStory(
     semantic: string[];
     notes: string[];
   }
-  const check = (text: string): Checked => {
+  const check = (text: string, enforce = false): Checked => {
     try {
       const validated = validateDSL(stripModelOnlyFields(wireToDsl(parseModelJson(text))));
       if (!validated.ok) return { structural: false, errors: validated.errors, semantic: [], notes: [] };
-      const review = reviewDsl(validated.dsl, hints);
+      const review = reviewDsl(validated.dsl, hints, { enforce });
       return { structural: true, dsl: review.dsl, errors: [], semantic: review.errors, notes: review.notes };
     } catch (err) {
       return { structural: false, errors: [err instanceof Error ? err.message : 'Unparseable reply'], semantic: [], notes: [] };
@@ -183,10 +183,13 @@ export async function compileViviStory(
           repairUsage = fixed.usage;
           usage = addUsage(usage, fixed.usage);
           repaired = true;
-          const retry = check(fixed.text);
+          // The repair turn has had its chance, so this pass enforces what it
+          // did not fix rather than reporting it again.
+          const retry = check(fixed.text, true);
           // A repair that breaks the program is discarded; a first reply that
           // only read as a menu is still playable and is kept.
           if (retry.structural && (retry.semantic.length <= checked.semantic.length || !checked.structural)) checked = retry;
+          else if (checked.structural) checked = check(reply.text, true);
         }
 
         if (checked.structural && checked.dsl) {

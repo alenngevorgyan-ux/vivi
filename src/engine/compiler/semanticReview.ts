@@ -14,6 +14,16 @@ import { groundCast, referencedRoles } from './castGrounding.ts';
  * model, and then only once.
  */
 
+export interface ReviewOptions {
+  /**
+   * Last resort, after the model's one repair turn has had its chance: take
+   * the invented person out of the scene rather than play a story that now
+   * has a character in it the author never had. Only ever applied when what
+   * is left is still a scene — at least one event and two choices.
+   */
+  enforce?: boolean;
+}
+
 export interface SemanticReview {
   /** The DSL after deterministic repair. Always valid if the input was. */
   dsl: ViviExperienceDSL;
@@ -67,7 +77,19 @@ function referencedObjects(dsl: ViviExperienceDSL): Set<DslObject> {
   return used;
 }
 
-export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints): SemanticReview {
+/**
+ * Take a person out of a scene, along with everything that needed them.
+ * Returns null when the scene would stop being a scene.
+ */
+function withoutRole(dsl: ViviExperienceDSL, role: DslRole): ViviExperienceDSL | null {
+  const mentions = (value: unknown) => value === role;
+  const events = dsl.e.filter(event => !event.slice(1).some(mentions));
+  const commitments = dsl.a.filter(commitment => !mentions(commitment[1]));
+  if (!events.length || commitments.length < LIMITS.commitments.min) return null;
+  return { ...dsl, c: dsl.c.filter(([r]) => r !== role), e: events, a: commitments };
+}
+
+export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints, options: ReviewOptions = {}): SemanticReview {
   const errors: string[] = [];
   const notes: string[] = [];
   let current = dsl;
@@ -85,7 +107,18 @@ export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints): SemanticRe
     notes.push(`cast: dropped ${[...drop].join(', ')} — ${droppable[0].reason}`);
   }
 
-  const blocking = unsupported.filter(g => used.has(g.role) && g.presence !== 'bg');
+  let blocking = unsupported.filter(g => used.has(g.role) && g.presence !== 'bg');
+  if (blocking.length && options.enforce) {
+    const refused: DslRole[] = [];
+    for (const g of blocking) {
+      const without = withoutRole(current, g.role);
+      if (!without) continue;
+      current = without;
+      refused.push(g.role);
+    }
+    if (refused.length) notes.push(`cast: removed ${refused.join(', ')} and what needed them — ${blocking[0].reason}`);
+    blocking = blocking.filter(g => !refused.includes(g.role));
+  }
   if (blocking.length) {
     const names = blocking.map(g => g.role).join(', ');
     errors.push(

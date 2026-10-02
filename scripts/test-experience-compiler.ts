@@ -425,6 +425,39 @@ ok('A story that honestly offers one place is not rejected for being small');
   assert.ok(result.report.semanticNotes?.some(nt => /dropped host/.test(nt)), 'and the drop is recorded');
 }
 {
+  // The repair turn has had its chance and kept the invented person: the
+  // compiler takes them out rather than play a story the author never told.
+  const stubborn: ViviExperienceDSL = {
+    ...varied,
+    c: [['partner', 'on'], ['stranger', 'on']],
+    e: [['msg', 'phone', 'Hi'], ['say', 'stranger', 'I let myself in.'], ['stop', 'shower']],
+    a: [['read', 'phone', 'Read the message', 'The screen is still lit.', 'You read it.'],
+        ['confront', 'stranger', 'Confront them', 'They have not moved.', 'They meet your eye.'],
+        ['leave', null, 'Walk out', 'Your keys are by the door.', 'You step into the corridor.']],
+  };
+  const { provider, calls } = scripted(stubborn);
+  const result = await compileViviStory({ story: STORY_SHOWER }, { provider });
+  assert.equal(calls.length, 1, 'the model is asked once');
+  assert.ok(!result.compiled.dsl.c.some(c => c[0] === 'stranger'), 'then the person is removed');
+  assert.ok(!result.compiled.dsl.e.some(e => e.includes('stranger')), 'with the events that needed them');
+  assert.ok(!result.compiled.dsl.a.some(a => a[1] === 'stranger'), 'and the choices that needed them');
+  assert.ok(result.compiled.dsl.e.length >= 1 && result.compiled.dsl.a.length >= 2, 'what is left is still a scene');
+  assert.equal(validateDSL(result.compiled.dsl, { mode: 'stored' }).ok, true, 'and still a legal program');
+  assert.equal(result.report.semanticErrors, undefined, 'nothing is left to object to');
+}
+{
+  // A passer-by belongs where passers-by are. An office has no commuters.
+  const outOfPlace: ViviExperienceDSL = {
+    v: 1, w: 'office', g: 'credit', c: [['commuter', 'on']], o: ['screen'],
+    e: [['say', 'commuter', 'Whose deck is this?'], ['stare', 'crowd']],
+    a: [['speak_up', 'screen', 'Say it was yours', 'The deck is on the wall.', 'The room turns to you.'],
+        ['wait', null, 'Say nothing at all', 'The clock is behind you.', 'The moment passes you by.']],
+  };
+  const { provider } = scripted(outOfPlace);
+  const result = await compileViviStory({ story: 'During a meeting my coworker presented slides I had made as their own.' }, { provider });
+  assert.ok(!result.compiled.dsl.c.some(c => c[0] === 'commuter'), 'a commuter is not implied by an office');
+}
+{
   // A wedding has guests. Populating a public room invents nobody.
   const crowd: ViviExperienceDSL = {
     v: 1, w: 'bar', g: 'scrutiny', c: [['guest', 'bg', 3]], o: ['phone'],
