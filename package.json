@@ -10,9 +10,13 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts && node --import tsx scripts/test-experience-compiler.ts && node --import tsx scripts/eval-experience-compiler.ts",
+    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts && node --import tsx scripts/test-experience-compiler.ts && node --import tsx scripts/test-openrouter-provider.ts && node --import tsx scripts/eval-experience-compiler.ts",
     "eval": "node --import tsx scripts/eval-experience-compiler.ts",
-    "bench": "node --import tsx scripts/benchmark-experience-compiler.ts"
+    "bench": "node --import tsx scripts/benchmark-experience-compiler.ts",
+    "bench:openrouter": "node --import tsx scripts/openrouter-bakeoff.ts --configured --set corpus --runs 1 --out reports/data/bench-openrouter.json",
+    "eval:openrouter": "node --import tsx scripts/openrouter-bakeoff.ts --configured --set all --runs 1 --out reports/data/eval-openrouter.json",
+    "eval:models": "node --import tsx scripts/openrouter-bakeoff.ts --set all --runs 2 --out reports/data/openrouter-bakeoff.json --report reports/openrouter-model-bakeoff.md",
+    "report:models": "node --import tsx scripts/openrouter-report.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
