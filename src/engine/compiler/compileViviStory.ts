@@ -3,6 +3,7 @@ import { deterministicDSL } from './deterministicProvider.ts';
 import { serializeDSL, stripModelOnlyFields, validateDSL, type ViviExperienceDSL } from './dsl.ts';
 import { compileExperience, type CompiledExperience } from './ExperienceCompiler.ts';
 import { parseModelJson } from './modelContract.ts';
+import { wireToDsl } from './structuredContract.ts';
 import { addUsage, type ExperienceSemanticProvider, type ModelUsage } from './provider.ts';
 import { COMPILER_VERSION, DSL_VERSION } from './vocabulary.ts';
 import type { StoredPlayablePost } from '../runtime/generationPipeline.ts';
@@ -37,14 +38,27 @@ export interface CompileStoryOptions {
 export interface CachedSemantics {
   dsl: ViviExperienceDSL;
   model: string;
+  upstream?: string;
   usage?: ModelUsage;
   repaired: boolean;
 }
 
 export interface CompileStoryReport {
   source: 'model' | 'deterministic';
+  /** Configured semantic provider, e.g. `openrouter:qwen/qwen3.8-flash`. */
+  providerId?: string;
+  /** Model that actually answered (may differ from the configured one under router fallback). */
   model?: string;
+  /** Upstream host that served the model, when the router reports it. */
+  upstream?: string;
+  /** Total usage, first pass plus repair. */
   usage?: ModelUsage;
+  /** Usage of the repair turn alone, so repair cost can be measured independently. */
+  repairUsage?: ModelUsage;
+  /** The model's first reply validated without repair. Undefined when no model was called. */
+  firstPassValid?: boolean;
+  /** First-pass validation errors, kept even when the repair succeeded. */
+  firstPassErrors?: string[];
   repaired: boolean;
   cacheHit: boolean;
   fallbackReason?: string;
@@ -95,11 +109,23 @@ export async function compileViviStory(
   let dsl: ViviExperienceDSL | null = null;
   let source: 'model' | 'deterministic' = 'deterministic';
   let model: string | undefined;
+  let upstream: string | undefined;
   let usage: ModelUsage | undefined;
+  let repairUsage: ModelUsage | undefined;
   let repaired = false;
   let cacheHit = false;
+  let firstPassValid: boolean | undefined;
+  let firstPassErrors: string[] | undefined;
   let fallbackReason: string | undefined;
   let validationErrors: string[] | undefined;
+
+  const check = (text: string) => {
+    try {
+      return validateDSL(stripModelOnlyFields(wireToDsl(parseModelJson(text))));
+    } catch (err) {
+      return { ok: false as const, errors: [err instanceof Error ? err.message : 'Unparseable reply'] };
+    }
+  };
 
   if (provider) {
     const key = semanticCacheKey(input, provider.id);
@@ -107,6 +133,7 @@ export async function compileViviStory(
     if (cached) {
       dsl = cached.dsl;
       model = cached.model;
+      upstream = cached.upstream;
       usage = cached.usage;
       repaired = cached.repaired;
       source = 'model';
@@ -116,35 +143,24 @@ export async function compileViviStory(
         const request = { story, hints };
         const reply = await provider.compileStory(request);
         model = reply.model;
+        upstream = reply.upstream;
         usage = reply.usage;
-        let candidate: unknown;
-        let rawText = reply.text;
-        try {
-          candidate = stripModelOnlyFields(parseModelJson(reply.text));
-        } catch (err) {
-          candidate = undefined;
-          validationErrors = [err instanceof Error ? err.message : 'Unparseable reply'];
-        }
-        let validation = candidate !== undefined ? validateDSL(candidate) : ({ ok: false, errors: validationErrors ?? [] } as const);
+        let validation = check(reply.text);
+        firstPassValid = validation.ok;
+        if (!validation.ok) firstPassErrors = validation.errors;
 
         if (!validation.ok && provider.repair) {
-          validationErrors = validation.errors;
-          const fixed = await provider.repair(request, rawText, validation.errors);
+          const fixed = await provider.repair(request, reply.text, validation.errors);
+          repairUsage = fixed.usage;
           usage = addUsage(usage, fixed.usage);
-          rawText = fixed.text;
           repaired = true;
-          try {
-            validation = validateDSL(stripModelOnlyFields(parseModelJson(fixed.text)));
-          } catch (err) {
-            validation = { ok: false, errors: [err instanceof Error ? err.message : 'Unparseable repair'] };
-          }
+          validation = check(fixed.text);
         }
 
         if (validation.ok) {
           dsl = validation.dsl;
           source = 'model';
-          validationErrors = undefined;
-          options.cache?.set(key, { dsl, model: model ?? provider.id, usage, repaired });
+          options.cache?.set(key, { dsl, model: model ?? provider.id, upstream, usage, repaired });
         } else {
           validationErrors = validation.errors;
           fallbackReason = `model DSL invalid after ${repaired ? 'repair' : 'first attempt'}`;
@@ -192,8 +208,13 @@ export async function compileViviStory(
     hints,
     report: {
       source,
+      ...(provider ? { providerId: provider.id } : {}),
       model,
+      upstream,
       usage,
+      repairUsage,
+      firstPassValid,
+      firstPassErrors,
       repaired,
       cacheHit,
       fallbackReason,
