@@ -75,6 +75,7 @@ export function ViviPlay({
   const [committed, setCommitted] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [observations, setObservations] = useState<string[]>([]);
+  const [activeObservation, setActiveObservation] = useState<string | null>(null);
   const [commitAttemptWarning, setCommitAttemptWarning] = useState<string | null>(null);
 
   // Social interactions state (persisted in localStorage)
@@ -152,7 +153,14 @@ export function ViviPlay({
     setSelectedAction(action);
     setCommitAttemptWarning(null);
     setObservations(prev => (prev.includes(action.observation) ? prev : [action.observation, ...prev]));
+    setActiveObservation(action.observation);
   };
+
+  useEffect(() => {
+    if (!activeObservation) return;
+    const id = window.setTimeout(() => setActiveObservation(null), 5200);
+    return () => clearTimeout(id);
+  }, [activeObservation]);
 
   const handleCommit = (action: RuntimeAction) => {
     // Enforce physical discovery: action must have been physically inspected
@@ -250,6 +258,7 @@ export function ViviPlay({
     setCommitted(false);
     setRevealed(false);
     setObservations([]);
+    setActiveObservation(null);
     setIsReflectionSubmitted(false);
     setCommitAttemptWarning(null);
     beatRunner.reset();
@@ -271,7 +280,7 @@ export function ViviPlay({
       : 'НЕ РАСКРЫТО');
 
   return (
-    <main className="vivi-play min-h-screen">
+    <main className={`vivi-play min-h-screen ${committed ? 'is-debrief' : 'is-cinematic'}`}>
       {/* Top Bar with Story Metadata & Social Actions */}
       <header className="vivi-play-header">
         <button className="vivi-back" onClick={onExit}>
@@ -285,8 +294,8 @@ export function ViviPlay({
           <h1 className="text-xl sm:text-2xl font-serif text-stone-900">{canonicalScenario.title}</h1>
         </div>
 
-        {/* Action icons */}
-        <div className="flex items-center gap-2">
+        {/* Social chrome stays out of the way until the situation has resolved. */}
+        <div className="flex items-center gap-2 vivi-social-actions">
           <button
             onClick={toggleResonance}
             className={`p-2 rounded-lg flex items-center gap-1.5 text-xs transition-colors ${
@@ -345,10 +354,13 @@ export function ViviPlay({
             onActionInspected={handleActionInspected}
             committed={committed}
             revealed={revealed}
+            onCommit={handleCommit}
+            latestObservation={activeObservation}
           />
         </section>
 
-        {/* Right Authoritative Narrative Panel */}
+        {/* Right Authoritative Narrative Panel: reveal, compare and respond. */}
+        {committed && (
         <aside className="vivi-story-panel overflow-y-auto max-h-[85vh]">
           {/* Situation Setup */}
           <div className="vivi-panel-top">
@@ -680,6 +692,7 @@ export function ViviPlay({
             </div>
           )}
         </aside>
+        )}
       </div>
 
       {/* Footer */}

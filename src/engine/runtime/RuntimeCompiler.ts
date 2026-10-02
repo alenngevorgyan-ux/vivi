@@ -6,6 +6,7 @@ import type { ViviCharacterId } from '../../assets/characters/characters';
 import { resolveSemanticSlot, type SemanticSlotResolution } from './semanticSlots.ts';
 import { StoryBeat } from './StoryBeatRunner.ts';
 import type { AuthorTruth, AuthorTruthStatus } from './generationPipeline.ts';
+import type { ShotCue } from '../cinematic/shotTypes';
 export type { AuthorTruth, AuthorTruthStatus };
 
 export interface RuntimeAction {
@@ -61,6 +62,8 @@ export interface CanonicalScenario {
   };
   actions: RuntimeAction[];
   beats: StoryBeat[];
+  /** Authored camera cues, replayed from scene start. Optional: generated posts have none. */
+  shots?: ShotCue[];
   modifiers: ExperienceModifier[];
   endings: Record<string, string>;
   reality: string;
@@ -219,6 +222,7 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     playerSpawn: [38, 77],
     playerCharacter: 'young_adult_masc_01',
     timerAnchor: story.timerAnchor,
+    shots: story.shots,
     authorTruth: {
       status: 'fictional_demo',
       text: story.reality,
