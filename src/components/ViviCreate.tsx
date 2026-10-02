@@ -163,22 +163,22 @@ export function ViviCreate({
       )}
 
       <div className="vivi-create-heading">
-        <span className="vivi-eyebrow">СОЗДАТЬ ИНТЕРАКТИВНЫЙ ПОСТ · 2D ДИОРАМА</span>
+        <span className="vivi-eyebrow">РАССКАЖИТЕ, ЧТО С ВАМИ ПРОИЗОШЛО</span>
         <h1>
           Что произошло<br />
           <em>с вами?</em>
         </h1>
         <p>
-          Опишите ситуацию своими словами. Мы превратим ее в маленький осязаемый мир, в который сможет войти любой человек и сделать выбор до того, как узнает правду.
+          Расскажите своими словами. Vivi соберёт из этого маленький мир, куда можно войти и выбрать — до того, как узнаешь, чем всё кончилось.
         </p>
       </div>
 
       <div className="vivi-create-grid">
         <section className="vivi-create-form">
           <div className="vivi-create-step">
-            <span>01 / СИТУАЦИЯ И НАПРЯЖЕНИЕ</span>
+            <span>01</span>
             <h2>Что произошло?</h2>
-            <p>Опишите место, присутствующих, напряжение и решающий момент, когда нужно было сделать физический шаг.</p>
+            <p>Где это было, кто был рядом и в какой момент стало понятно, что придётся что-то сделать.</p>
             <textarea
               value={story}
               onChange={(e) => setStory(e.target.value)}
@@ -188,9 +188,9 @@ export function ViviCreate({
           </div>
 
           <div className="vivi-create-step">
-            <span>02 / РАЗВЯЗКА (ПОСЛЕ ВЫБОРА)</span>
-            <h2>Что вы сделали в реальности?</h2>
-            <p>Эту часть увидят только те, кто совершил выбор в вашей диораме.</p>
+            <span>02 · необязательно</span>
+            <h2>Что произошло потом?</h2>
+            <p>Это останется скрытым, пока человек не сделает свой выбор. Можно не отвечать.</p>
             <textarea
               value={reality}
               onChange={(e) => setReality(e.target.value)}
@@ -251,7 +251,7 @@ export function ViviCreate({
 
           {(generatedPost || generated) && (
             <div className="vivi-create-result">
-              <span className="vivi-eyebrow">МИР ГОТОВ · ГОТОВ К ИССЛЕДОВАНИЮ</span>
+              <span className="vivi-eyebrow">ИСТОРИЯ ГОТОВА</span>
               <h3>{generatedPost?.title || generated?.title}</h3>
               <p>{generatedPost?.synopsis || generated?.synopsis}</p>
               <button
@@ -277,7 +277,7 @@ export function ViviCreate({
             <span className="vivi-eyebrow">ФОРМУЛА VIVI</span>
             <h2>Не сценарий игры.<br />А человеческий момент.</h2>
             <p>
-              Где вы были? Что изменилось? Что заставило вас сомневаться? Движок Vivi сам создаст интерактивную сцену и точки физического взаимодействия.
+              Где вы были? Что изменилось? Что заставило вас сомневаться? Остальное Vivi соберёт само: комнату, людей и то, к чему можно подойти.
             </p>
           </div>
 

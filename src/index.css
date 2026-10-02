@@ -99,6 +99,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 .vivi-stage-shell { min-width:0; background:#262b30; border-radius:18px 0 0 18px; overflow:hidden; }
 .vivi-stage { position:relative; aspect-ratio:1000/600; width:100%; overflow:hidden; cursor:crosshair; }
 .vivi-stage .vivi-scene-art { width:100%; height:100%; }
+/* Entering a situation is a dissolve, not a page change: the room arrives out of
+   darkness and settles, so the feed card and the world feel like one motion. */
+.vivi-play.is-cinematic .vivi-stage { animation:vivi-world-arrive 980ms cubic-bezier(.19,.72,.16,1) both; }
+@keyframes vivi-world-arrive {
+  from { opacity:0; transform:scale(1.03); filter:brightness(.4); }
+  to { opacity:1; transform:scale(1); filter:brightness(1); }
+}
+.vivi-stage-freeze { animation:vivi-hold-fade 1600ms cubic-bezier(.19,.72,.16,1) both; }
+@keyframes vivi-hold-fade { 0% { opacity:0; } 42% { opacity:0; } 100% { opacity:1; } }
 .vivi-stage-frame { width:100%; display:flex; flex-direction:column; align-items:center; }
 .vivi-world { position:absolute; inset:0; transform-origin:0 0; will-change:transform; }
 .vivi-layer { position:absolute; inset:0; width:100%; height:100%; }
@@ -185,6 +194,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 .vivi-play.is-cinematic .vivi-play-header h1 { font-size:19px; opacity:.6; }
 .vivi-play.is-cinematic .vivi-play-header .vivi-eyebrow { display:none; }
 .vivi-social-actions { transition:opacity 420ms cubic-bezier(.22,.7,.18,1); }
+.vivi-play.is-debrief .vivi-social-actions { opacity:1; pointer-events:auto; }
 .vivi-commit-chip { position:absolute; left:50%; bottom:13%; transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:9px 17px; border:1px solid rgba(243,207,158,.5); border-radius:24px; background:rgba(18,14,12,.84); color:#f7e9d4; font:500 14px Newsreader,Georgia,serif; cursor:pointer; box-shadow:0 10px 34px rgba(0,0,0,.45); animation:vivi-fade-up 420ms cubic-bezier(.19,.72,.16,1); }
 .vivi-commit-chip:hover { background:rgba(184,95,73,.9); border-color:rgba(247,233,212,.7); }
 .vivi-subtitle-observation { bottom:20%; color:#ddd0bd; font-size:14px; font-style:italic; }
@@ -202,7 +212,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 }
 @media(max-width:950px) { .vivi-story-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .vivi-play-layout { grid-template-columns:1fr; } .vivi-stage-shell { border-radius:16px 16px 0 0; } .vivi-story-panel { border-radius:0 0 16px 16px; } .vivi-create-grid { grid-template-columns:1fr; } .vivi-create-aside { padding:0; } }
 @media(max-width:650px) { .vivi-feed { padding:28px 16px 50px; } .vivi-intro-row { display:block; } .vivi-intro-row h1 { font-size:53px; } .vivi-intro-row p { margin-top:18px; } .vivi-feature { min-height:420px; } .vivi-feature-art { transform:translateX(0); opacity:.35; } .vivi-feature:after { background:linear-gradient(90deg,rgba(37,38,50,.92),rgba(37,38,50,.4)); } .vivi-feature-content { padding:50px 25px; } .vivi-feature-content h2 { font-size:58px; } .vivi-feed-toolbar { display:block; margin-top:46px; } .vivi-search { width:100%; margin-top:17px; } .vivi-story-grid { grid-template-columns:1fr; } .vivi-card-art { height:190px; } .vivi-feed-end { display:block; } .vivi-feed-end .vivi-button { margin-top:19px; } .vivi-create { padding:35px 16px 50px; } .vivi-create-heading h1 { font-size:59px; } .vivi-create-form { padding:20px; } .vivi-create-fields { grid-template-columns:1fr; } .vivi-play-header { padding:10px 14px; height:76px; } .vivi-play-header h1 { font-size:25px; } .vivi-play-header .vivi-eyebrow { font-size:7px; } .vivi-play-layout { padding:0 8px 20px; } .vivi-action-label { font-size:8px; max-width:78px; white-space:normal; } .vivi-stage-under { font-size:8px; padding:10px; } .vivi-story-panel { padding:24px 18px; } .vivi-play-footer { font-size:8px; padding:0 12px 20px; } }
-@media(prefers-reduced-motion:reduce) { .vivi-world,.vivi-story-card,.vivi-button,.vivi-spot-dot { transition:none !important; } .vivi-subtitle,.vivi-phone-readout,.vivi-prompt { animation:none !important; } .vivi-prop-phone.is-vibrating { animation:none !important; } }
+@media(prefers-reduced-motion:reduce) { .vivi-play.is-cinematic .vivi-stage { animation:none !important; } .vivi-stage-freeze { animation:none !important; } .vivi-world,.vivi-story-card,.vivi-button,.vivi-spot-dot { transition:none !important; } .vivi-subtitle,.vivi-phone-readout,.vivi-prompt { animation:none !important; } .vivi-prop-phone.is-vibrating { animation:none !important; } }
 
 @layer utilities {
   .font-cinzel {
