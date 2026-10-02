@@ -34,6 +34,16 @@ export interface PhysicalModifierState {
   };
   ambientAudioCue: string | null;
   dynamicCollisions: CollisionBox[];
+  /** Ambient bed requested by structured modifiers; undefined when none has spoken. */
+  bed?: string | null;
+  /** Active lighting effect. */
+  lightMode?: 'flicker' | 'dim' | 'out';
+  /** The room has turned to look at the player. */
+  stare: boolean;
+  /** Slots whose key object is currently catching the light. */
+  glintSlots: string[];
+  /** Anchor of whoever is speaking right now. */
+  speakingAnchor?: string;
 }
 
 /**
@@ -76,6 +86,11 @@ export function computePhysicalModifiers(
 
   let ambientAudioCue: string | null = null;
   const dynamicCollisions: CollisionBox[] = [];
+  let bed: string | null | undefined = undefined;
+  let lightMode: PhysicalModifierState['lightMode'];
+  let stare = false;
+  const glintSlots: string[] = [];
+  let speakingAnchor: string | undefined;
 
   // Default timer anchor fallback if provided
   if (storyTimerAnchor) {
@@ -97,6 +112,66 @@ export function computePhysicalModifiers(
     const anchor = (m.anchor || '').toLowerCase();
     const payload = (m.payload || '').trim();
     const payloadLower = payload.toLowerCase();
+
+    // Structured modifiers say exactly what they do; no text is interpreted.
+    if (m.data) {
+      const d = m.data;
+      const live = m.durationMs === undefined || elapsedSinceMod < m.durationMs;
+      if (d.bed !== undefined) bed = d.bed;
+      if (d.screenText !== undefined) {
+        isScreenLit = true;
+        previewText = d.screenText;
+        isTyping = false;
+      }
+      if (d.typing) {
+        isScreenLit = true;
+        isTyping = live;
+        if (live) previewText = payload || 'Typing…';
+      }
+      if (d.vibrate && elapsedSinceMod < (m.durationMs ?? 4000)) isVibrating = true;
+      if (d.lockSec) {
+        const remaining = Math.max(0, d.lockSec - Math.floor(elapsedSinceMod / 1000));
+        lockCountdownSeconds = remaining;
+        timeText = remaining > 0 ? `LOCKS IN ${remaining}s` : 'LOCKED';
+        isExpiring = remaining < 15;
+        if (remaining === 0) isScreenLit = false;
+      }
+      if (d.door) {
+        doorState = d.door;
+        doorAnchor = m.anchor;
+        if (d.door === 'handle_moving') isExpiring = true;
+      }
+      if (d.floors) {
+        const [from, to] = d.floors;
+        const floor = Math.min(to, from + Math.floor(elapsedSinceMod / 2000));
+        currentFloor = floor;
+        elevatorText = `FL ${floor}`;
+        isDingActive = floor === to && elapsedSinceMod < (to - from) * 2000 + 1500;
+        if (elapsedSinceMod >= (to - from) * 2000 + 1800) doorsOpen = true;
+      }
+      if (d.clock !== undefined) timeText = d.clock;
+      if (d.countdownSec) {
+        const remaining = Math.max(0, d.countdownSec - Math.floor(elapsedSinceMod / 1000));
+        timeText = `${remaining}s`;
+        isExpiring = true;
+      }
+      if (d.doorsOpen) {
+        doorsOpen = true;
+        isExpiring = true;
+      }
+      if (d.speech && live) {
+        npcAction.speakingLine = d.speech;
+        npcAction.pose = 'talk';
+        speakingAnchor = m.anchor;
+      }
+      if (d.light) lightMode = live ? d.light : lightMode;
+      if (d.intercom) {
+        ambientAudioCue = 'intercom_ring';
+      }
+      if (d.stare) stare = live;
+      if (d.glint && live) glintSlots.push(d.glint);
+      continue;
+    }
 
     // 1. Phone & text messages & typing
     if (
@@ -261,5 +336,10 @@ export function computePhysicalModifiers(
     npcAction,
     ambientAudioCue,
     dynamicCollisions,
+    bed,
+    lightMode,
+    stare,
+    glintSlots,
+    speakingAnchor,
   };
 }

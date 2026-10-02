@@ -207,7 +207,8 @@ export function resolveCameraTarget(
   shot: ViviCameraShot,
   world: ViviWorldId,
   anchors: CameraAnchors,
-  slotOverride?: string
+  slotOverride?: string,
+  pointOverride?: [number, number]
 ): [number, number] {
   const preset = viviCameraLanguage[shot];
   const template = worldTemplates[world];
@@ -226,6 +227,7 @@ export function resolveCameraTarget(
       ];
     }
     case 'slot': {
+      if (pointOverride) return pointOverride;
       const wanted = slotOverride || preset.slot || DEFAULT_INSERT_SLOT[world];
       const found = template.slots.find(s => s.id === wanted);
       return found ? [found.x, found.y] : heroCamera;
@@ -254,10 +256,10 @@ export function buildCameraFrame(
   shot: ViviCameraShot,
   world: ViviWorldId,
   anchors: CameraAnchors,
-  options: { slot?: string; progress?: number; reducedMotion?: boolean; zoomScale?: number } = {}
+  options: { slot?: string; point?: [number, number]; progress?: number; reducedMotion?: boolean; zoomScale?: number } = {}
 ): CameraFrame {
   const preset = viviCameraLanguage[shot];
-  const [targetX, targetY] = resolveCameraTarget(shot, world, anchors, options.slot);
+  const [targetX, targetY] = resolveCameraTarget(shot, world, anchors, options.slot, options.point);
 
   const progress = options.progress ?? 1;
   const baseZoom =

@@ -17,87 +17,85 @@ export interface WalkableBounds {
   maxY: number;
 }
 
-// Geometric collision obstacles for each world (in percentage 0-100 coordinates)
+/**
+ * Geometric collision obstacles for each world (in percentage 0-100 coordinates).
+ *
+ * Every box traces furniture that is actually drawn in SceneArt — an invisible
+ * obstacle reads as a broken floor, and a drawn table without one lets people
+ * walk across it. Player movement and NPC navigation share this data.
+ */
 export const WORLD_COLLISIONS: Record<ViviWorldId, { bounds: WalkableBounds; obstacles: CollisionBox[] }> = {
   apartment_night: {
     bounds: { minX: 8, maxX: 92, minY: 48, maxY: 90 },
     obstacles: [
-      { id: 'sofa', name: 'Sofa', x1: 10, y1: 66, x2: 34, y2: 82, blocksMovement: true },
-      { id: 'phone_table', name: 'Coffee table with phone', x1: 46, y1: 66, x2: 60, y2: 76, blocksMovement: true },
-      { id: 'kitchen_counter', name: 'Kitchen counter', x1: 72, y1: 44, x2: 94, y2: 56, blocksMovement: true },
-      { id: 'wall_tv', name: 'Media console', x1: 20, y1: 44, x2: 44, y2: 52, blocksMovement: true },
+      { id: 'sofa', name: 'Sofa', x1: 10, y1: 66, x2: 35, y2: 82, blocksMovement: true },
+      { id: 'phone_table', name: 'Coffee table with phone', x1: 44, y1: 67, x2: 69, y2: 76, blocksMovement: true },
+      { id: 'kitchen_counter', name: 'Kitchen counter', x1: 83, y1: 47, x2: 100, y2: 60, blocksMovement: true },
     ],
   },
   hallway_night: {
-    bounds: { minX: 10, maxX: 90, minY: 47, maxY: 88 },
+    // The corridor floor is a trapezoid converging on the elevator; the stepped
+    // boxes below are its two side walls.
+    bounds: { minX: 6, maxX: 94, minY: 66, maxY: 90 },
     obstacles: [
-      { id: 'front_door_frame', name: 'Apartment entry nook', x1: 10, y1: 47, x2: 22, y2: 62, blocksMovement: true },
-      { id: 'stair_railing', name: 'Stairwell rail', x1: 86, y1: 66, x2: 92, y2: 86, blocksMovement: true },
-      { id: 'wall_recess', name: 'Utility cabinet', x1: 48, y1: 47, x2: 58, y2: 55, blocksMovement: true },
+      { id: 'left_wall_1', name: 'Left wall', x1: 0, y1: 60, x2: 29, y2: 70, blocksMovement: true },
+      { id: 'left_wall_2', name: 'Left wall', x1: 0, y1: 70, x2: 22, y2: 75, blocksMovement: true },
+      { id: 'left_wall_3', name: 'Left wall', x1: 0, y1: 75, x2: 16, y2: 80, blocksMovement: true },
+      { id: 'left_wall_4', name: 'Left wall', x1: 0, y1: 80, x2: 10, y2: 85, blocksMovement: true },
+      { id: 'right_wall_1', name: 'Right wall', x1: 71, y1: 60, x2: 100, y2: 70, blocksMovement: true },
+      { id: 'right_wall_2', name: 'Right wall', x1: 78, y1: 70, x2: 100, y2: 75, blocksMovement: true },
+      { id: 'right_wall_3', name: 'Right wall', x1: 84, y1: 75, x2: 100, y2: 80, blocksMovement: true },
+      { id: 'right_wall_4', name: 'Right wall', x1: 90, y1: 80, x2: 100, y2: 85, blocksMovement: true },
     ],
   },
   bar_or_party: {
     bounds: { minX: 6, maxX: 94, minY: 48, maxY: 90 },
     obstacles: [
-      { id: 'bar_counter', name: 'Bar counter', x1: 58, y1: 44, x2: 92, y2: 54, blocksMovement: true },
-      { id: 'table_cluster_1', name: 'High-top tables', x1: 34, y1: 62, x2: 46, y2: 72, blocksMovement: true },
-      { id: 'table_cluster_2', name: 'Corner booth', x1: 12, y1: 72, x2: 24, y2: 84, blocksMovement: true },
+      { id: 'bar_counter', name: 'Bar counter', x1: 35, y1: 68, x2: 92, y2: 76, blocksMovement: true },
+      { id: 'round_table', name: 'Round table', x1: 13, y1: 75, x2: 39, y2: 84, blocksMovement: true },
     ],
   },
   office_night: {
-    bounds: { minX: 8, maxX: 92, minY: 48, maxY: 90 },
+    bounds: { minX: 6, maxX: 94, minY: 48, maxY: 92 },
     obstacles: [
-      { id: 'conference_table', name: 'Conference table', x1: 38, y1: 56, x2: 76, y2: 74, blocksMovement: true },
-      { id: 'director_desk', name: 'Director chair area', x1: 66, y1: 48, x2: 78, y2: 56, blocksMovement: true },
-      { id: 'presentation_display', name: 'Main display wall', x1: 14, y1: 44, x2: 34, y2: 52, blocksMovement: true },
+      { id: 'conference_table', name: 'Conference table', x1: 18, y1: 66, x2: 86, y2: 84, blocksMovement: true },
     ],
   },
   train_station: {
-    bounds: { minX: 6, maxX: 94, minY: 50, maxY: 90 },
+    bounds: { minX: 6, maxX: 94, minY: 58, maxY: 90 },
     obstacles: [
-      { id: 'station_bench', name: 'Wooden bench', x1: 16, y1: 62, x2: 28, y2: 72, blocksMovement: true },
-      { id: 'support_pillar', name: 'Platform pillar', x1: 42, y1: 48, x2: 48, y2: 60, blocksMovement: true },
-      { id: 'platform_edge_gate', name: 'Track edge safety zone', x1: 82, y1: 48, x2: 94, y2: 58, blocksMovement: true },
+      { id: 'station_bench', name: 'Wooden bench', x1: 17, y1: 66, x2: 34, y2: 72, blocksMovement: true },
     ],
   },
   city_rain: {
-    bounds: { minX: 6, maxX: 94, minY: 50, maxY: 90 },
-    obstacles: [
-      { id: 'bus_shelter', name: 'Glass rain shelter', x1: 12, y1: 52, x2: 24, y2: 66, blocksMovement: true },
-      { id: 'parked_car', name: 'Parked car', x1: 72, y1: 48, x2: 88, y2: 60, blocksMovement: true },
-      { id: 'streetlight_post', name: 'Streetlight', x1: 48, y1: 48, x2: 52, y2: 58, blocksMovement: true },
-    ],
+    bounds: { minX: 6, maxX: 94, minY: 60, maxY: 90 },
+    obstacles: [],
   },
   family_home: {
     bounds: { minX: 6, maxX: 94, minY: 48, maxY: 90 },
     obstacles: [
-      { id: 'dining_table', name: 'Dining table with archive', x1: 36, y1: 62, x2: 54, y2: 76, blocksMovement: true },
-      { id: 'credenza', name: 'Family cabinet', x1: 14, y1: 48, x2: 28, y2: 58, blocksMovement: true },
-      { id: 'stair_entry', name: 'Stairwell door', x1: 84, y1: 48, x2: 92, y2: 60, blocksMovement: true },
+      { id: 'dining_table', name: 'Dining table with archive', x1: 28, y1: 70, x2: 69, y2: 83, blocksMovement: true },
     ],
   },
   hotel_or_rental: {
     bounds: { minX: 8, maxX: 92, minY: 48, maxY: 90 },
     obstacles: [
-      { id: 'kitchen_island', name: 'Kitchen table with photo', x1: 56, y1: 62, x2: 72, y2: 74, blocksMovement: true },
-      { id: 'luggage_pile', name: 'Suitcase on floor', x1: 22, y1: 72, x2: 32, y2: 82, blocksMovement: true },
-      { id: 'balcony_threshold', name: 'Balcony door threshold', x1: 78, y1: 46, x2: 90, y2: 54, blocksMovement: true },
+      { id: 'kitchen_island', name: 'Kitchen table with photo', x1: 41, y1: 71, x2: 65, y2: 79, blocksMovement: true },
+      { id: 'luggage_pile', name: 'Suitcase on floor', x1: 14, y1: 82, x2: 30, y2: 92, blocksMovement: true },
     ],
   },
   neighborhood_sunset: {
-    bounds: { minX: 6, maxX: 94, minY: 48, maxY: 90 },
+    bounds: { minX: 6, maxX: 94, minY: 60, maxY: 90 },
     obstacles: [
-      { id: 'park_bench', name: 'Old street bench', x1: 18, y1: 62, x2: 30, y2: 72, blocksMovement: true },
-      { id: 'large_oak', name: 'Oak tree trunk', x1: 8, y1: 48, x2: 18, y2: 60, blocksMovement: true },
-      { id: 'bus_sign', name: 'Bus stop post', x1: 78, y1: 50, x2: 86, y2: 62, blocksMovement: true },
+      { id: 'park_bench', name: 'Old street bench', x1: 17, y1: 70, x2: 34, y2: 80, blocksMovement: true },
+      { id: 'bus_shelter', name: 'Bus shelter', x1: 82, y1: 58, x2: 93, y2: 74, blocksMovement: true },
     ],
   },
   bedroom_night: {
     bounds: { minX: 8, maxX: 92, minY: 48, maxY: 90 },
     obstacles: [
-      { id: 'bed', name: 'Double bed', x1: 16, y1: 58, x2: 38, y2: 82, blocksMovement: true },
-      { id: 'nightstand', name: 'Nightstand with phone', x1: 58, y1: 60, x2: 70, y2: 72, blocksMovement: true },
-      { id: 'wardrobe', name: 'Wardrobe', x1: 80, y1: 46, x2: 92, y2: 60, blocksMovement: true },
+      { id: 'bed', name: 'Double bed', x1: 9, y1: 68, x2: 42, y2: 86, blocksMovement: true },
+      { id: 'nightstand', name: 'Table with phone', x1: 43, y1: 70, x2: 64, y2: 78, blocksMovement: true },
     ],
   },
 };
@@ -125,6 +123,20 @@ export function isPointColliding(
   return false;
 }
 
+/** Signed distance from a point to the nearest blocking box; negative when inside one. */
+export function clearance(x: number, y: number, obstacles: CollisionBox[]): number {
+  let best = Infinity;
+  for (const obs of obstacles) {
+    if (!obs.blocksMovement) continue;
+    const dx = Math.max(obs.x1 - x, 0, x - obs.x2);
+    const dy = Math.max(obs.y1 - y, 0, y - obs.y2);
+    const outside = Math.hypot(dx, dy);
+    const inside = outside > 0 ? 0 : Math.min(x - obs.x1, obs.x2 - x, y - obs.y1, obs.y2 - y);
+    best = Math.min(best, outside > 0 ? outside : -inside);
+  }
+  return best;
+}
+
 /**
  * Smooth continuous sliding collision resolution.
  * If moving in (dx, dy) causes collision, tries sliding along X only or Y only.
@@ -147,6 +159,14 @@ export function resolveMovement(
 
   const targetX = clampX(currentX + dx);
   const targetY = clampY(currentY + dy);
+
+  // 0. A figure that is already overlapping something (a bad spawn, a person
+  // who walked into them) must be able to step out rather than freeze.
+  if (isPointColliding(currentX, currentY, radius, obstacles)) {
+    return clearance(targetX, targetY, obstacles) >= clearance(currentX, currentY, obstacles)
+      ? [targetX, targetY]
+      : [currentX, currentY];
+  }
 
   // 1. Try full movement
   if (!isPointColliding(targetX, targetY, radius, obstacles)) {
