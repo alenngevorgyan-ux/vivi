@@ -6,7 +6,7 @@ deterministic fallback, the Experience Compiler, playback — is unchanged and
 vendor-free.
 
 ```
-story ─▶ preprocess ─▶ semantic provider ─▶ DSL ─▶ validate (≤1 repair) ─▶ ExperienceCompiler ─▶ PlayablePost
+story ─▶ preprocess ─▶ semantic provider ─▶ DSL ─▶ validate ─▶ semantic review (≤1 repair) ─▶ ExperienceCompiler ─▶ PlayablePost
                         │                                   │
                         ├ openrouter  (src/server/openRouterProvider.ts)
                         ├ gemini      (src/server/geminiProvider.ts, legacy)
@@ -23,6 +23,11 @@ playable vs 43.1% for the runner-up `qwen/qwen3-235b-a22b-2507`), best in EN,
 RU and HY, 92% model-authored, p95 ≈ 10.6 s, ≈ $0.0007 per story
 (≈ $0.70 per 1,000). Full method and numbers:
 [`reports/openrouter-model-bakeoff.md`](../reports/openrouter-model-bakeoff.md).
+
+The model has not changed since, but the engine around it has: the same model
+on the same corpus now scores **82.8%** with a 1.7% fallback rate, at
+≈ $0.00077 per story. The bottleneck was never the model. See
+[`reports/compiler-quality-hardening-v1.md`](../reports/compiler-quality-hardening-v1.md).
 
 The code default and `.env.example` still name `qwen/qwen3.8-flash`, the
 pre-bakeoff hypothesis, as requested. It could not be tested: this account's
@@ -72,7 +77,11 @@ One chat request per story (plus at most one repair):
   where the model allows it; `usage: { include: true }`.
 
 The **repair** request carries only a one-line system instruction, the
-validator errors and the invalid JSON — never the story or the full prompt.
+objections and the previous JSON — never the story or the full prompt. The
+objections are either validator errors or the semantic review's: a scene whose
+choices all reach for the same thing, or a person the story never had. They are
+written as one short, actionable sentence each, and the variety one names what
+else the scene already offers so there is somewhere to move a choice to.
 
 **Never sent:** the author's *What really happened?* (`actualOutcome`). It
 does not reach the provider, the repair, or the semantic cache key. Tests and

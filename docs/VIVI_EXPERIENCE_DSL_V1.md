@@ -51,8 +51,12 @@ Stamped by the pipeline, never accepted from a model: `tr` (truth status) and
 | `lp` | `domestic_warm_night` `cold_hallway` `sterile_office` `rain_city` `family_evening` `hotel_unease` `station_midnight` `golden_hour` `party_low` |
 
 Places are words, not slots. The compiler resolves each against the chosen
-world (`door` is the bathroom in one room and the front door in another); a
-place that does not exist in that world is a validation error.
+world (`door` is the bathroom in one room and the front door in another), and
+every place word resolves in every world. A family home has a bedroom even
+though its template draws no bedroom slot, so naming one is never an error: the
+word falls back along its own kind — a room you cannot see is reached through
+the door, a place to sit becomes the room's resting place, a way out becomes
+the way out.
 
 ## Events
 
@@ -81,8 +85,13 @@ Events carry no time. Order is story order; the grammar assigns timing.
 ## Rules the validator enforces
 
 - Unknown top-level or text fields are rejected (strict).
-- Every enum is checked. Roles used by events/commitments must be in the cast.
-  Places must exist in the world. Objects referenced anywhere are added to `o`.
+- Every enum is checked. Objects referenced anywhere are added to `o`, and a
+  role used by an event or a commitment but missing from `c` is added the same
+  way — a reference without a declaration is an omission, not an invention, and
+  presence follows the use: someone who speaks, enters, leaves, approaches or
+  stares is in the room, anyone else is reachable through a device. Whether the
+  story supports that person at all is then the semantic review's question, not
+  the validator's.
 - **Coordinates are rejected, never converted.** Keys such as `x`, `y`,
   `pos`, `zoom`, `left`, `atMs`, `duration` anywhere in the document, or a
   number where a place or target belongs, fail validation.

@@ -6,9 +6,10 @@ compiler turns that into a staged, lit, scored, playable scene, deterministicall
 ## One pipeline
 
 ```text
-story ─ preprocess ─┬─ semantic provider (Gemini today) ─┐
-                    └─ deterministic fallback ───────────┴─ DSL ─ validate (≤1 repair)
-  ─ ExperienceCompiler ─ ExperiencePlan ─ CanonicalScenario ─ StoredPlayablePost ─ ViviPlay
+story ─ preprocess ─┬─ semantic provider (OpenRouter today) ─┐
+                    └─ deterministic fallback ───────────────┴─ DSL
+  ─ validate ─ semantic review (≤1 repair) ─ ExperienceCompiler
+  ─ ExperiencePlan ─ CanonicalScenario ─ StoredPlayablePost ─ ViviPlay
 ```
 
 [`compileViviStory()`](../src/engine/compiler/compileViviStory.ts) is the whole
@@ -102,7 +103,10 @@ Role slots first (a boss at the head of the table, a presenter at the screen),
 then: someone about to leave stands partway along the line they will walk;
 others are placed by the staging preset relative to the player; background
 figures take the world's seats. Every mark is snapped to walkable floor, kept
-off the story's objects and off other people.
+off the story's objects and off other people — two people told to come in
+through the same door stand beside each other instead of inside each other, and
+someone appearing in a doorway steps in along a line that is clear or stays in
+the doorway rather than walking through furniture.
 
 ## Camera
 
@@ -128,9 +132,56 @@ Target an object → its host slot (or the player's own hand: a carried phone is
 usable anywhere, but any spot in the room wins); a person → the action follows
 that person, and while they are behind a door it reads as that door; a place →
 that place; nothing → a verb default (wait → somewhere to sit, leave → the way
-out, return → the stairs). Two commitments never share a spot; the later one is
-moved and relabelled. Walking-up labels are derived in the story's language;
-commit labels, observations and outcomes come from the DSL.
+out, return → the stairs), except that a verb addressed at someone — ask,
+confront, comfort, tell, refuse, accept, follow — binds to the one person on
+stage rather than to the middle of the room. Walking-up labels are derived in
+the story's language; commit labels, observations and outcomes come from the DSL.
+
+[`commitmentClasses.ts`](../src/engine/compiler/commitmentClasses.ts) is the one
+place that decides what a choice reaches for — `OBJECT`, `ACTOR`, `PLACE`,
+`EXIT`, `WAIT_STATE`, `COMMUNICATION` — and the spot it is staged at. It reads
+the verb, the target, the cast and the world's own vocabulary, never the label
+text, which is free prose in any language. The validator that demands variety
+and the compiler that stages the scene call the same function, so they cannot
+disagree.
+
+Standing spots are then **allocated, not just resolved**. Two semantically
+different choices often resolve near one piece of furniture — a phone and a
+photo on the same table, a door that is also the way out. Each choice is given
+its own patch of floor near the thing it is about: walkable, clear of people,
+inside the mobile-safe frame, and on a route the player can actually walk. Only
+when no such spot exists does the older behaviour apply and the later choice is
+moved to another slot and relabelled.
+
+## The semantic review
+
+`validateDSL` answers "is this a legal program?".
+[`semanticReview.ts`](../src/engine/compiler/semanticReview.ts) answers "is this
+a situation?" — the two questions a small model gets wrong in different ways.
+
+- **Variety.** A scene whose choices all reach for the same kind of thing, or
+  all happen in one spot, is a menu. Both are refused, and the repair message
+  names what else the scene already offers so the model has somewhere to move a
+  choice to.
+- **Cast grounding.** [`castGrounding.ts`](../src/engine/compiler/castGrounding.ts)
+  compares the proposed cast against the evidence the preprocessor found in the
+  author's own words: `EXPLICIT`, `STRONGLY_IMPLIED`, `BACKGROUND_ALLOWED`,
+  `UNSUPPORTED`. Crowds stay permissive — a wedding has guests, a platform has
+  commuters — but an unnamed figure is only implied where that figure belongs,
+  and a named relation the story never gave is refused.
+- **Focus.** Key objects beyond the limit that nothing in the scene uses are
+  dropped.
+
+Everything settleable without a model is settled for free: an invented role
+nothing refers to is dropped, a background figure that the model then uses as a
+character is staged properly rather than deleted with the crowd, unused objects
+are pruned. Only a change that alters meaning goes back to the model, through
+the existing single repair turn. After that turn has had its chance, an invented
+person still on stage is removed along with the events and choices that needed
+them — but only while what is left is still a scene: one event and two choices
+at minimum. A scene that merely still reads thin is played rather than thrown
+away for a generic fallback: a structural failure can force a fallback, a
+semantic one cannot.
 
 ## Key objects and MEMORY_ECHO
 
@@ -182,9 +233,14 @@ compiler.
 
 - The deterministic fallback is generic: titles, labels and lines come from
   templates; some stories land in the nearest world rather than the right one
-  (an exam in an apartment). A model is what makes generated scenes specific.
-- No live model usage has been measured here (the key in this environment is
-  not a valid Gemini API key); all token figures are estimates.
+  (an exam in an apartment). A model is what makes generated scenes specific. It
+  does hold itself to the same grounding rule as a model: when the story shows
+  nobody in the room, whoever the grammar needed becomes a voice on a device
+  rather than a person standing there.
+- The remaining quality gap is the repair turn, not detection. Grounding finds
+  every invented actor; one small-model turn rarely restructures the scene to
+  remove one, which is why the compiler now enforces it afterwards. See
+  [the hardening report](../reports/compiler-quality-hardening-v1.md).
 - Only the apartment, hallway and office have deep art; the station gained a
   train and a live board, other worlds are structural.
 - Actors do not avoid the player while walking (paths are planned against
