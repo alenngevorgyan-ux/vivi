@@ -105,6 +105,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
 
   const beatState = beatRunner.getState();
 
+
   /* ----------------------------------------------------------- camera --- */
 
   const shotTimeline = useMemo(() => resolveShotTimeline(scenario.shots), [scenario.shots]);
@@ -128,15 +129,36 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     return { shot: 'SOFT_FOLLOW', locked: false };
   }, [revealed, committed, insertFocus, elapsedMs, shotTimeline, beatState.pressureTriggered]);
 
+  // A narrow stage shows less world at the same zoom, so the lens pulls back on it.
+  const [stageWidth, setStageWidth] = useState(1000);
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) setStageWidth(entry.contentRect.width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  // Figures are drawn in pixels but live in a 1000-unit world, so their size has
+  // to track the stage or a phone renders everyone three times life size.
+  const figureSize = Math.max(44, Math.min(130, stageWidth * 0.098));
+
   const cameraFrame = useMemo(
     () =>
       buildCameraFrame(
         activeShot.shot,
         scenario.world,
         { player: playerPos, npc: scenario.npc ? npcPos : undefined },
-        { slot: activeShot.slot, progress: 1, reducedMotion }
+        {
+          slot: activeShot.slot,
+          progress: 1,
+          reducedMotion,
+          zoomScale: stageWidth < 560 ? 0.78 : 1,
+        }
       ),
-    [activeShot, scenario.world, scenario.npc, playerPos, npcPos, reducedMotion]
+    [activeShot, scenario.world, scenario.npc, playerPos, npcPos, reducedMotion, stageWidth]
   );
 
   const controlLocked = activeShot.locked || committed;
@@ -430,7 +452,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
             className={`vivi-figure ${npcHasExited ? 'has-exited' : ''}`}
             style={{ left: `${npcPos[0]}%`, top: `${npcPos[1]}%`, '--depth': depthScale(npcPos[1]) } as React.CSSProperties}
           >
-            <CharacterFigure id={scenario.npc.character} facing={npcFacing} pose={npcPose} size={110} />
+            <CharacterFigure id={scenario.npc.character} facing={npcFacing} pose={npcPose} size={figureSize} />
           </div>
         ),
       });
@@ -448,7 +470,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
             id={scenario.playerCharacter}
             facing={playerFacing}
             pose={playerPose}
-            size={112}
+            size={figureSize}
             phase={playerPose === 'walk' ? walkPhase : undefined}
           />
         </div>
@@ -470,6 +492,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     playerFacing,
     playerPose,
     walkPhase,
+    figureSize,
   ]);
 
   const committableAction =
@@ -484,7 +507,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
   const openingLine = elapsedMs < 5200 ? scenario.setup : null;
 
   return (
-    <div className="vivi-stage-shell relative select-none">
+    <div className="vivi-stage-frame relative select-none">
       <div className="vivi-stage relative overflow-hidden" ref={stageRef}>
         <div
           className="vivi-world"

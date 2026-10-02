@@ -254,16 +254,19 @@ export function buildCameraFrame(
   shot: ViviCameraShot,
   world: ViviWorldId,
   anchors: CameraAnchors,
-  options: { slot?: string; progress?: number; reducedMotion?: boolean } = {}
+  options: { slot?: string; progress?: number; reducedMotion?: boolean; zoomScale?: number } = {}
 ): CameraFrame {
   const preset = viviCameraLanguage[shot];
   const [targetX, targetY] = resolveCameraTarget(shot, world, anchors, options.slot);
 
   const progress = options.progress ?? 1;
-  const zoom =
+  const baseZoom =
     preset.zoomTo !== undefined
       ? preset.zoom + (preset.zoomTo - preset.zoom) * Math.min(1, Math.max(0, progress))
       : preset.zoom;
+  // Never below 1: the camera may widen for a small screen but must not reveal
+  // the world's own edges.
+  const zoom = Math.max(1, baseZoom * (options.zoomScale ?? 1));
 
   // Keep the framed point inside the world so the camera never shows past an edge.
   const halfW = 50 / zoom;

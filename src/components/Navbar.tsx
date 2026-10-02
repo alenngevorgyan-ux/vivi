@@ -80,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Gamepad2 className="w-4 h-4" />
-              <span className="max-w-[120px] sm:max-w-[160px] truncate">
+              <span className="hidden sm:inline max-w-[160px] truncate">
                 {activeGameTitle ? activeGameTitle : 'Сессия'}
               </span>
             </button>

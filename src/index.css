@@ -99,6 +99,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 .vivi-stage-shell { min-width:0; background:#262b30; border-radius:18px 0 0 18px; overflow:hidden; }
 .vivi-stage { position:relative; aspect-ratio:1000/600; width:100%; overflow:hidden; cursor:crosshair; }
 .vivi-stage .vivi-scene-art { width:100%; height:100%; }
+.vivi-stage-frame { width:100%; display:flex; flex-direction:column; align-items:center; }
 .vivi-world { position:absolute; inset:0; transform-origin:0 0; will-change:transform; }
 .vivi-layer { position:absolute; inset:0; width:100%; height:100%; }
 .vivi-layer-lighting { pointer-events:none; }
@@ -188,6 +189,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 .vivi-commit-chip:hover { background:rgba(184,95,73,.9); border-color:rgba(247,233,212,.7); }
 .vivi-subtitle-observation { bottom:20%; color:#ddd0bd; font-size:14px; font-style:italic; }
 .vivi-play-footer { display:flex; justify-content:space-between; width:min(1400px,100%); margin:auto; padding:5px 34px 26px; color:#8d8176; font:500 10px 'IBM Plex Mono',monospace; letter-spacing:.1em; }
+/* On a phone the world keeps its native 1000:600 frame and the controls sit below
+   it. Letting the stage fill a portrait viewport crops the composition away. */
+@media(max-width:950px) {
+  .vivi-play.is-cinematic .vivi-play-layout { padding:0 10px 14px; }
+  .vivi-play.is-cinematic .vivi-stage { height:auto; width:100%; max-width:100%; aspect-ratio:1000/600; max-height:none; border-radius:14px 14px 0 0; }
+  .vivi-play.is-cinematic .vivi-play-header h1 { font-size:16px; }
+  .vivi-play.is-cinematic .vivi-stage-shell { border-radius:14px; }
+  .vivi-subtitle { font-size:13px; max-width:82%; bottom:9%; }
+  .vivi-commit-chip { font-size:13px; padding:8px 14px; bottom:11%; }
+  .vivi-prop-phone-text { font-size:10px; white-space:normal; max-width:44vw; text-align:center; }
+}
 @media(max-width:950px) { .vivi-story-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .vivi-play-layout { grid-template-columns:1fr; } .vivi-stage-shell { border-radius:16px 16px 0 0; } .vivi-story-panel { border-radius:0 0 16px 16px; } .vivi-create-grid { grid-template-columns:1fr; } .vivi-create-aside { padding:0; } }
 @media(max-width:650px) { .vivi-feed { padding:28px 16px 50px; } .vivi-intro-row { display:block; } .vivi-intro-row h1 { font-size:53px; } .vivi-intro-row p { margin-top:18px; } .vivi-feature { min-height:420px; } .vivi-feature-art { transform:translateX(0); opacity:.35; } .vivi-feature:after { background:linear-gradient(90deg,rgba(37,38,50,.92),rgba(37,38,50,.4)); } .vivi-feature-content { padding:50px 25px; } .vivi-feature-content h2 { font-size:58px; } .vivi-feed-toolbar { display:block; margin-top:46px; } .vivi-search { width:100%; margin-top:17px; } .vivi-story-grid { grid-template-columns:1fr; } .vivi-card-art { height:190px; } .vivi-feed-end { display:block; } .vivi-feed-end .vivi-button { margin-top:19px; } .vivi-create { padding:35px 16px 50px; } .vivi-create-heading h1 { font-size:59px; } .vivi-create-form { padding:20px; } .vivi-create-fields { grid-template-columns:1fr; } .vivi-play-header { padding:10px 14px; height:76px; } .vivi-play-header h1 { font-size:25px; } .vivi-play-header .vivi-eyebrow { font-size:7px; } .vivi-play-layout { padding:0 8px 20px; } .vivi-action-label { font-size:8px; max-width:78px; white-space:normal; } .vivi-stage-under { font-size:8px; padding:10px; } .vivi-story-panel { padding:24px 18px; } .vivi-play-footer { font-size:8px; padding:0 12px 20px; } }
 @media(prefers-reduced-motion:reduce) { .vivi-world,.vivi-story-card,.vivi-button,.vivi-spot-dot { transition:none !important; } .vivi-subtitle,.vivi-phone-readout,.vivi-prompt { animation:none !important; } .vivi-prop-phone.is-vibrating { animation:none !important; } }
@@ -246,3 +258,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
   animation: vivi-handle-jiggle 0.18s infinite;
 }
 
+
+@media(max-width:650px) { .vivi-play-footer { display:none; } }
+
+@media(max-width:650px) {
+  .vivi-play.is-cinematic .vivi-stage { aspect-ratio:4/3; }
+}

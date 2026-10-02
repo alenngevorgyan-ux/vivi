@@ -43,14 +43,14 @@ export const MobileVirtualJoystick: React.FC<MobileVirtualJoystickProps> = ({
   };
 
   return (
-    <div className="absolute inset-x-0 bottom-6 z-40 pointer-events-none flex items-end justify-between px-6 sm:px-12 select-none">
+    <div className="relative z-40 flex items-center justify-between gap-4 px-6 pb-4 pt-1 select-none">
       {/* Virtual D-pad / Joystick */}
       <div
         ref={containerRef}
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
         onTouchEnd={handleEnd}
-        className="pointer-events-auto relative w-28 h-28 rounded-full bg-slate-900/60 border border-slate-700/60 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+        className="relative w-24 h-24 rounded-full bg-slate-900/60 border border-slate-700/60 backdrop-blur-md flex items-center justify-center shadow-lg active:scale-95 transition-transform"
       >
         {/* Direction Arrows */}
         <span className="absolute top-2 text-slate-400 font-code text-xs">▲</span>
@@ -59,17 +59,17 @@ export const MobileVirtualJoystick: React.FC<MobileVirtualJoystickProps> = ({
         <span className="absolute right-2.5 text-slate-400 font-code text-xs">▶</span>
 
         {/* Center Knob */}
-        <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500/80 to-amber-400/80 border border-amber-300/60 shadow-md flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500/80 to-amber-400/80 border border-amber-300/60 shadow-md flex items-center justify-center">
           <div className="w-4 h-4 rounded-full bg-slate-950/40" />
         </div>
       </div>
 
       {/* Right Side Action Button */}
-      <div className="pointer-events-auto flex flex-col items-center gap-1.5">
+      <div className="flex flex-col items-center gap-1.5">
         <button
           onClick={onInteract}
           disabled={!canInteract}
-          className={`w-18 h-18 rounded-full flex flex-col items-center justify-center font-bold text-xs shadow-xl backdrop-blur-md border transition-all active:scale-90 ${
+          className={`w-16 h-16 rounded-full flex flex-col items-center justify-center font-bold text-xs shadow-xl backdrop-blur-md border transition-all active:scale-90 ${
             canInteract
               ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-amber-500/30 animate-pulse'
               : 'bg-slate-900/40 text-slate-600 border-slate-800 cursor-not-allowed'
