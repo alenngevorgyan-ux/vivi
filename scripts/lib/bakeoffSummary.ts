@@ -27,6 +27,12 @@ export interface BakeoffRecord {
   servedModel?: string;
   firstPassValid: boolean;
   firstPassErrors?: string[];
+  /** The first reply was a legal program AND a situation (no semantic objection). */
+  firstPassClean?: boolean;
+  /** Semantic objections that survived the repair turn; the scene is still played. */
+  semanticErrors?: string[];
+  /** Roles the grounding layer refused, measured on the scene that was played. */
+  unsupportedRoles?: string[];
   repaired: boolean;
   fallbackReason?: string;
   usage?: ModelUsage;
@@ -68,6 +74,12 @@ export interface ModelSummary {
   apiCalls: number;
   success: number;
   firstPass: number;
+  /** Share of runs whose first reply needed no repair of any kind. */
+  firstPassClean: number;
+  /** Share of runs still carrying a semantic objection after the one repair turn. */
+  semanticResidual: number;
+  /** Share of runs whose played scene stages a person the story never gave. */
+  unsupportedActors: number;
   repairRate: number;
   repairSuccess: number;
   fallback: number;
@@ -151,6 +163,9 @@ function summariseModel(model: string, rs: BakeoffRecord[]): ModelSummary {
     apiCalls: rs.filter(r => r.usage || r.fallbackReason?.startsWith('provider')).length + repaired.length,
     success: rate(rs.map(r => r.source === 'model')),
     firstPass: rate(rs.map(r => r.firstPassValid)),
+    firstPassClean: rate(rs.map(r => r.firstPassClean ?? r.firstPassValid)),
+    semanticResidual: rate(rs.map(r => !!r.semanticErrors?.length)),
+    unsupportedActors: rate(modelRuns.map(r => !!r.unsupportedRoles?.length)),
     repairRate: rate(rs.map(r => r.repaired)),
     repairSuccess: repaired.length ? rate(repaired.map(r => r.source === 'model')) : 0,
     fallback: rate(rs.map(r => r.source !== 'model')),
@@ -238,7 +253,7 @@ export function renderConsole(data: BakeoffData, s: Summary): string {
   lines.push(`\n${data.records.length} story runs · ${data.requestsSent} API requests · reported spend ${usd(data.reportedSpend, 4)} · key usage ${usd(data.keyUsageStart, 4)} → ${data.keyUsageEnd !== undefined ? usd(data.keyUsageEnd, 4) : '?'}${data.stopped ? ` · STOPPED: ${data.stopped}` : ''}`);
   lines.push(`outcome leaks into requests: ${data.outcomeLeaks}`);
   lines.push('');
-  lines.push(['model'.padEnd(30), 'score', 'model%', '1st%', 'repair', 'fallbk', 'in', 'out', 'rsn', 'ms', 'p95', '$/story', 'EN', 'RU', 'HY'].join('  '));
+  lines.push(['model'.padEnd(30), 'score', 'model%', '1st%', 'clean%', 'resid', 'badcast', 'repair', 'fallbk', 'in', 'out', 'rsn', 'ms', 'p95', '$/story', 'EN', 'RU', 'HY'].join('  '));
   for (const m of [...s.models, s.baseline]) {
     lines.push(
       [
@@ -246,6 +261,9 @@ export function renderConsole(data: BakeoffData, s: Summary): string {
         pct(m.score).padStart(5),
         pct(m.success).padStart(6),
         pct(m.firstPass).padStart(5),
+        pct(m.firstPassClean).padStart(6),
+        pct(m.semanticResidual).padStart(5),
+        pct(m.unsupportedActors).padStart(7),
         pct(m.repairRate).padStart(6),
         pct(m.fallback).padStart(6),
         String(Math.round(m.avgIn)).padStart(4),
@@ -312,10 +330,10 @@ export function renderMarkdown(data: BakeoffData, s: Summary, notesPath = 'repor
   out.push('');
   out.push('*Score* = share of ALL story runs that produced a model-authored experience which passes every playability check (`scripts/lib/scenarioChecks.ts`, the same checks as `npm run eval`) and every applicable faithfulness check (`scripts/lib/faithfulness.ts`): world, required objects, required people, no invented on-stage character, a plausible central event, copy in the story language, at most 4 key objects, and real commitment copy (label not a bare symbol; observation and outcome of 3+ words; distinct labels). Fallbacks count as failures. Rates in the faithfulness columns are over model-authored runs only; — means no story in the set carried that expectation.');
   out.push('');
-  out.push('| model | score | structural score (no copy check) | score when the provider answered | model-authored | 1st-pass valid | repair rate | repair success | fallback | provider errors | playable | world | objects | people | no invented character | central event | copy language | ≤4 objects | meaningful commitment copy | valid commitments | truth safe | runs w/ invalid enum |');
-  out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  out.push('| model | score | structural score (no copy check) | score when the provider answered | model-authored | 1st-pass valid | 1st-pass clean | semantic residual | unsupported actors | repair rate | repair success | fallback | provider errors | playable | world | objects | people | no invented character | central event | copy language | ≤4 objects | meaningful commitment copy | valid commitments | truth safe | runs w/ invalid enum |');
+  out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const m of all) {
-    out.push(`| ${m.model}${m.reference ? ' *(ref)*' : ''} | **${pct(m.score)}** | ${pct(m.scoreStructural)} | ${pct(m.scoreWhenAnswered)} | ${pct(m.success)} | ${pct(m.firstPass)} | ${pct(m.repairRate)} | ${m.repairRate ? pct(m.repairSuccess) : '—'} | ${pct(m.fallback)} | ${pct(m.providerErrors)} | ${pct(m.playable)} | ${pct(m.world)} | ${pct(m.objects)} | ${pct(m.people)} | ${pct(m.noInvented)} | ${pct(m.centralEvent)} | ${pct(m.language)} | ${pct(m.focusedObjects)} | ${pct(m.meaningfulCommitments)} | ${pct(m.validCommitments)} | ${pct(m.truthSafe)} | ${pct(m.invalidEnumRuns)} |`);
+    out.push(`| ${m.model}${m.reference ? ' *(ref)*' : ''} | **${pct(m.score)}** | ${pct(m.scoreStructural)} | ${pct(m.scoreWhenAnswered)} | ${pct(m.success)} | ${pct(m.firstPass)} | ${pct(m.firstPassClean)} | ${pct(m.semanticResidual)} | ${pct(m.unsupportedActors)} | ${pct(m.repairRate)} | ${m.repairRate ? pct(m.repairSuccess) : '—'} | ${pct(m.fallback)} | ${pct(m.providerErrors)} | ${pct(m.playable)} | ${pct(m.world)} | ${pct(m.objects)} | ${pct(m.people)} | ${pct(m.noInvented)} | ${pct(m.centralEvent)} | ${pct(m.language)} | ${pct(m.focusedObjects)} | ${pct(m.meaningfulCommitments)} | ${pct(m.validCommitments)} | ${pct(m.truthSafe)} | ${pct(m.invalidEnumRuns)} |`);
   }
   out.push('');
   out.push('### By language and set (score)');

@@ -47,7 +47,19 @@ assert.equal(validateDSL({ ...base, g: 'heist' }).ok, false, 'unknown grammar re
 assert.equal(validateDSL({ ...base, e: [['teleport', 'partner']] }).ok, false, 'unknown event rejected');
 assert.equal(validateDSL({ ...base, a: [['dance', null, 'x'], ['wait', null, 'y']] }).ok, false, 'unknown verb rejected');
 assert.equal(validateDSL({ ...base, c: [['butler', 'on']] }).ok, false, 'unknown role rejected');
-assert.equal(validateDSL({ ...base, e: [['say', 'boss', 'hello']] }).ok, false, 'event role must be in the cast');
+// A role used without being declared is an omission, not an invention: the
+// validator closes the cast (as it already does for objects) and the grounding
+// layer decides whether the story supports that person at all.
+{
+  const undeclared = validateDSL({ ...base, e: [['say', 'boss', 'hello'], ['msg', 'phone', 'Hi']] });
+  assert.ok(undeclared.ok, 'a role used in an event is declared rather than rejected');
+  if (undeclared.ok) {
+    assert.ok(undeclared.dsl.c.some(c => c[0] === 'boss' && c[1] === 'on'), 'someone who speaks is in the room');
+    assert.ok(undeclared.warnings.some(w => /boss/.test(w)), 'the omission is recorded as a warning');
+  }
+  const remote = validateDSL({ ...base, a: [['read', 'phone', 'Read it'], ['call', 'boss', 'Call them']] });
+  assert.ok(remote.ok && remote.dsl.c.some(c => c[0] === 'boss' && c[1] === 'off'), 'a role only acted on is reachable, not present');
+}
 assert.equal(validateDSL({ ...base, e: [['exit', 'partner', 'platform']] }).ok, false, 'place must exist in the world');
 assert.equal(validateDSL({ ...base, notes: 'hi' }).ok, false, 'unknown top-level field rejected');
 assert.equal(validateDSL({ ...base, a: [['read', 'phone', 'Read it']] }).ok, false, 'fewer than 2 commitments rejected');

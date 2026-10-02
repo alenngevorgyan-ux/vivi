@@ -24,6 +24,7 @@ import { preprocessStory } from '../src/engine/compiler/preprocess.ts';
 import { serializeDSL } from '../src/engine/compiler/dsl.ts';
 import { createOpenRouterProvider, fetchModelCapabilities, type ReasoningMode } from '../src/server/openRouterProvider.ts';
 import { checkScenario } from './lib/scenarioChecks.ts';
+import { unsupportedRoles } from '../src/engine/compiler/semanticReview.ts';
 import { scoreFaithfulness, type FaithfulnessExpect, type Lang } from './lib/faithfulness.ts';
 import { readKeyUsage } from './lib/openrouterAccount.ts';
 import { summarise, renderConsole, renderMarkdown, type BakeoffRecord, type BakeoffData } from './lib/bakeoffSummary.ts';
@@ -167,6 +168,9 @@ async function runTask(task: (typeof tasks)[number]) {
     servedModel: r.model,
     firstPassValid: r.firstPassValid ?? false,
     firstPassErrors: r.firstPassErrors,
+    firstPassClean: r.firstPassClean ?? r.firstPassValid ?? false,
+    semanticErrors: r.semanticErrors,
+    unsupportedRoles: unsupportedRoles(result.compiled.dsl, result.hints),
     repaired: r.repaired,
     fallbackReason: r.fallbackReason,
     usage: r.usage,
@@ -216,6 +220,7 @@ for (const item of items) {
   baseline.push({
     model: 'deterministic', reference: true, id: item.id, set: item.set, lang: item.lang, category: item.category, run: 0,
     source: 'deterministic', firstPassValid: false, repaired: false, dslBytes: result.report.dslBytes, playableFailures: failures,
+    unsupportedRoles: unsupportedRoles(result.compiled.dsl, result.hints),
     truthSafe: !failures.some(f => /truth|outcome/.test(f)), faith: scoreFaithfulness(result.compiled.dsl, item.lang, item.expect),
     dsl: serializeDSL(result.compiled.dsl), wallMs: 0,
   });

@@ -193,6 +193,46 @@ export function validateDSL(input: unknown, options: ValidateOptions = {}): DslV
     });
   }
 
+  /*
+   * Undeclared roles.
+   *
+   * A role used in an event or a commitment but missing from `c` is an
+   * omission, not an invention — the same way an object named by an event is
+   * added to `o` rather than rejected. The cast is closed here so the rest of
+   * validation has one list, and `castGrounding` still decides whether the
+   * story supports that person at all. Presence follows the use: someone who
+   * speaks, enters, leaves, approaches or stares is in the room; anyone else
+   * is only reachable through a device.
+   */
+  if (Array.isArray(raw.e) || Array.isArray(raw.a)) {
+    const IN_ROOM = new Set(['enter', 'exit', 'approach', 'say', 'stare']);
+    const discovered = new Map<DslRole, DslPresence>();
+    const note = (role: unknown, inRoom: boolean) => {
+      if (!has(ROLES, role) || roles.has(role)) return;
+      if (inRoom || !discovered.has(role)) discovered.set(role, inRoom ? 'on' : 'off');
+    };
+    if (Array.isArray(raw.e)) {
+      for (const event of raw.e) {
+        if (!Array.isArray(event) || typeof event[0] !== 'string') continue;
+        const signature = EVENT_SIGNATURES[event[0] as DslEventKind] as readonly string[] | undefined;
+        if (!signature) continue;
+        const inRoom = IN_ROOM.has(event[0]);
+        signature.forEach((spec, j) => {
+          if (spec.replace('?', '') === 'role') note(event[j + 1], inRoom);
+        });
+      }
+    }
+    if (Array.isArray(raw.a)) {
+      for (const commitment of raw.a) if (Array.isArray(commitment)) note(commitment[1], false);
+    }
+    for (const [role, presence] of discovered) {
+      if (cast.length >= LIMITS.cast) break;
+      roles.add(role);
+      cast.push([role, presence]);
+      warnings.push(`Role "${role}" was used without being listed in the cast; added as "${presence}".`);
+    }
+  }
+
   /* objects */
   const objects = new Set<DslObject>();
   if (!Array.isArray(raw.o)) {
