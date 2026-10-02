@@ -1,6 +1,7 @@
 import type { ViviExperienceDSL } from './dsl.ts';
 import type { StoryHints } from './preprocess.ts';
-import { LIMITS, type DslObject, type DslRole } from './vocabulary.ts';
+import { LIMITS, WORLDS, type DslObject, type DslRole } from './vocabulary.ts';
+import { WORLD_KNOWLEDGE } from './worldKnowledge.ts';
 import { commitmentVariety, resolveCommitment, resolveCommitments } from './commitmentClasses.ts';
 import { groundCast, referencedRoles } from './castGrounding.ts';
 
@@ -124,6 +125,23 @@ export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints, options: Re
     errors.push(
       `The story never mentions ${names}. Use only people the story gives, and drop every event and choice that needs ${names}.`
     );
+  }
+
+  /* ------------------------------------------- background that acts --- */
+
+  // Background cast is scenery, and a room with no crowd in it drops them. A
+  // model that then points an event or a choice at one of those figures meant
+  // a person, not scenery — so in a private room they are staged properly
+  // rather than silently deleted, leaving a choice aimed at nobody.
+  if (!WORLD_KNOWLEDGE[WORLDS[current.w]].public) {
+    const acting = current.c.filter(([role, presence]) => presence === 'bg' && used.has(role)).map(([role]) => role);
+    if (acting.length) {
+      current = {
+        ...current,
+        c: current.c.map(m => (acting.includes(m[0]) ? [m[0], 'on'] : m)) as typeof current.c,
+      };
+      notes.push(`cast: ${acting.join(', ')} acts in the scene, so stands in it rather than being dropped as a crowd`);
+    }
   }
 
   /* -------------------------------------------------- object focus --- */

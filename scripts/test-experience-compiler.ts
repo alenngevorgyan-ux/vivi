@@ -527,6 +527,35 @@ ok('An invented person on stage is refused or dropped; a public crowd is not');
 }
 ok('Standing spots are unique and reachable; people entering together stand apart');
 
+/* ------------------------------------- a generated scene plays through */
+
+{
+  // The same chain the player walks: arrive, the cue lands, inspect a choice,
+  // commit it, and the author's own words come back as the reveal.
+  const outcome = 'I put the phone face down and said nothing.';
+  const { provider } = scripted(varied);
+  const played = await compileViviStory({ story: STORY_SHOWER, actualOutcome: outcome }, { provider });
+  const scene = played.post.scenario;
+  const runner = new StoryBeatRunner(scene.beats);
+  const first = scene.actions[0];
+
+  assert.equal(runner.getState().canCommit, false, 'no commitment before the cue');
+  runner.checkTick(scene.cinematic!.cueAtMs + 500);
+  assert.equal(runner.getState().cueTriggered, true, 'the cue lands on the compiled timeline');
+  runner.onObjectInspected(first.targetSlot, first.id, first.observation);
+  assert.equal(runner.getState().canCommit, true, 'a choice the player walked to can be taken');
+  runner.commitDecision(first.id);
+  assert.equal(runner.getState().committedChoiceId, first.id);
+  runner.triggerReveal();
+  assert.equal(runner.getState().currentBeat?.type, 'reveal', 'the reveal follows the commitment');
+  assert.equal(runner.getState().currentBeat?.description, outcome, "and it is the author's own words");
+  assert.ok(scene.endings[first.id], 'the choice has a consequence to show');
+
+  runner.reset();
+  assert.equal(runner.getState().committedChoiceId, null, 'and a reload starts clean');
+}
+ok('A generated scene plays through: cue, inspect, commit, reveal, reload');
+
 /* ------------------------------------------------- no story-id branches */
 
 const coreDirs = ['src/engine', 'src/components/world', 'src/assets/worlds', 'src/assets/characters'];
