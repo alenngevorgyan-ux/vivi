@@ -44,6 +44,7 @@ export const MODEL_SYSTEM_PROMPT = [
   '',
   'Rules:',
   '- Events in story order: what is set up, the moment something changes, then what closes the window. At most 9.',
+  '- HINTS are read from the author\'s own words: take world~ and people= unless the story plainly says otherwise.',
   '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
   '- Write label, observation, outcome, title and lines in the story\'s language. Label ≤6 words; observation and outcome a phrase of 3-20 words, never a fragment.',
   '- The outcome is only the next moment after the player acts. Never say what really happened afterwards.',

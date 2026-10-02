@@ -147,6 +147,7 @@ export const STRUCTURED_SYSTEM_PROMPT = [
   '',
   'Rules:',
   '- Only people the story gives. Every role used in e or a must be in c. Crowds (bg) are fine in public places.',
+  '- HINTS are read from the author\'s own words: take world~ and people= unless the story plainly says otherwise.',
   '- Events: what is set up, the moment something changes, then what closes the window. 3-9 events.',
   '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
   "- Write l, ob, out, x and spoken lines in the story's language. l ≤6 words; ob and out a phrase of 3-20 words, never a fragment.",
