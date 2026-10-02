@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts"
+    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts && node --import tsx scripts/test-experience-compiler.ts && node --import tsx scripts/eval-experience-compiler.ts",
+    "eval": "node --import tsx scripts/eval-experience-compiler.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

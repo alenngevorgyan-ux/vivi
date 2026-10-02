@@ -1,4 +1,4 @@
-import type { HeroStory, HeroAction } from '../../data/heroStories';
+import type { HeroStory } from '../../data/heroStories';
 import type { GameSpec } from '../../types/gameSpec';
 import { worldTemplates, type ViviWorldId } from '../../world/templates';
 import type { ExperienceModifier } from '../modifiers/types';
@@ -7,6 +7,13 @@ import { resolveSemanticSlot, type SemanticSlotResolution } from './semanticSlot
 import { StoryBeat } from './StoryBeatRunner.ts';
 import type { AuthorTruth, AuthorTruthStatus } from './generationPipeline.ts';
 import type { ShotCue } from '../cinematic/shotTypes';
+import { validateDSL } from '../compiler/dsl.ts';
+import { compileExperience } from '../compiler/ExperienceCompiler.ts';
+import { WORLD_KNOWLEDGE } from '../compiler/worldKnowledge.ts';
+import type { RuntimeActor, ActorCue } from './actors.ts';
+import type { CameraEvent, CameraGrammarId } from '../cinematic/director.ts';
+import type { StagingPreset } from '../cinematic/staging.ts';
+import type { LightingProfileDef } from '../compiler/grammars.ts';
 export type { AuthorTruth, AuthorTruthStatus };
 
 export interface RuntimeAction {
@@ -16,6 +23,54 @@ export interface RuntimeAction {
   label: string;
   observation: string;
   commitLabel: string;
+  /** The action is a person, not a place: its standing spot follows that actor. */
+  actorId?: string;
+  /** Semantic verb this action commits to (compiled experiences). */
+  verb?: string;
+  /** Key object the action is about, if any. */
+  objectId?: string;
+  /** Label used while the action's person is out of sight (behind the door they left through). */
+  awayLabel?: string;
+}
+
+/** A first-class story object: the phone, the envelope, the photograph. */
+export interface RuntimeKeyObject {
+  id: string;
+  kind: string;
+  slot: string;
+  /** World anchor of the hosting slot. */
+  pos: [number, number];
+  /** When the object becomes active (lights up, rings, is noticed). */
+  activeAtMs?: number;
+  /** Whether the engine draws a prop for it; architecture (doors, screens) is already in the art. */
+  prop: boolean;
+  /** Actions that physically involve this object. */
+  actionIds: string[];
+}
+
+/** How a compiled experience is filmed, lit and heard. */
+export interface ScenarioCinematics {
+  grammar: string;
+  tone: string;
+  cameraGrammar: CameraGrammarId;
+  staging: StagingPreset;
+  cameraEvents: CameraEvent[];
+  /** Slot the opening and the main inserts favour. */
+  focusSlot?: string;
+  lighting: string;
+  lightingDef: LightingProfileDef;
+  bed: string;
+  soundRestraint: number;
+  cueAtMs: number;
+  pressureAtMs: number;
+  revealHoldMs: number;
+}
+
+export interface ScenarioProvenance {
+  dslVersion: number;
+  compilerVersion: string;
+  source: 'model' | 'deterministic' | 'hero_fixture' | 'manual' | 'legacy';
+  model?: string;
 }
 
 export interface CrowdStat {
@@ -75,55 +130,101 @@ export interface CanonicalScenario {
   responsePrompt: string;
   themeKey: string;
   responseToPostId?: string;
+  /** Everyone on stage. When absent, `npc` is adapted into a single actor. */
+  actors?: RuntimeActor[];
+  actorCues?: ActorCue[];
+  keyObjects?: RuntimeKeyObject[];
+  cinematic?: ScenarioCinematics;
+  provenance?: ScenarioProvenance;
 }
 
-// Maps authored hero stories or generated stories to canonical runtime format
-/**
- * Which flagship situations physically stage a second person.
- *
- * This is a casting decision, not engine logic: 03:17, The Photo and The Location
- * are built on the player being alone, and putting a figure in frame destroys the
- * premise the scene is holding. Everything else has someone really in the room.
- */
-const STORIES_WITH_ON_STAGE_COMPANION = new Set([
-  'the-message',
-  'the-presentation',
-  'last-walk',
-  'the-secret',
-  'the-screenshot',
-  'the-envelope',
-  'the-wedding',
-  'the-family-document',
-  'the-last-train',
-]);
+/** Believable demo comparison numbers for curated stories, explicitly tagged as seed data. */
+function heroSeededStats(story: HeroStory, actions: Array<{ id: string; commitLabel: string }>): CrowdStat[] {
+  const totalVotes = 1200 + Math.floor(Math.sin(story.id.length) * 400 + 400);
+  const rawWeights = [0.44, 0.28, 0.18, 0.10, 0.08].slice(0, actions.length);
+  const sumWeights = rawWeights.reduce((a, b) => a + b, 0);
+  const percentages = rawWeights.map(w => Math.round((w / sumWeights) * 100));
+  return actions.map((act, idx) => ({
+    choiceId: act.id,
+    label: act.commitLabel,
+    percentage: percentages[idx] || 15,
+    count: Math.round(totalVotes * ((percentages[idx] || 15) / 100)),
+    source: 'seed_demo',
+  }));
+}
 
+function heroReflections(story: HeroStory): CommunityReflection[] {
+  const curated = story.curation?.reflections ?? [
+    {
+      id: 'ref_gen_1',
+      authorHandle: '@thoughtful_human',
+      authorName: 'Elena',
+      text: 'Having to decide in real-time shows you who you really are under pressure.',
+      timestamp: 'Yesterday',
+      upvotes: 24,
+    },
+  ];
+  return curated.map(r => ({ ...r, source: 'seed_demo' as const }));
+}
+
+/**
+ * Maps a curated hero story to the canonical runtime format.
+ *
+ * Stories with a golden DSL fixture compile through the same Experience
+ * Compiler as generated posts; their curated copy rides along as data. The
+ * rest are adapted from their authored fields.
+ */
 export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
+  const authorHandle = `@demo_${story.id.replace(/-/g, '_')}`;
+  const reflections = heroReflections(story);
+
+  if (story.dsl) {
+    const validation = validateDSL(story.dsl.dsl, { mode: 'model' });
+    if (!validation.ok) {
+      throw new Error(`Golden DSL fixture "${story.id}" is invalid: ${validation.errors.join('; ')}`);
+    }
+    const compiled = compileExperience(validation.dsl, {
+      id: story.id,
+      story: story.hook,
+      author: story.author,
+      authorHandle,
+      truth: { status: 'fictional_demo', text: story.reality, sourceLabel: 'Заданная для демо развязка' },
+      category: story.pillar,
+      source: 'hero_fixture',
+      lang: 'en',
+      authorChoice: story.dsl.authorChoice,
+      actionIds: story.dsl.actionIds,
+      seededReflections: reflections,
+      responsePrompt: 'Have you lived through a moment like this?',
+      duration: story.duration,
+      createdAt: 0,
+    });
+    return {
+      ...compiled.scenario,
+      hook: story.hook,
+      setup: story.setup,
+      synopsis: story.hook,
+      seededStats: heroSeededStats(story, compiled.scenario.actions),
+    };
+  }
+
   // Infer semantic slots for hero actions if not already explicit
   const slotMap: Record<string, string> = {
-    // the-message
     phone: 'phone_table',
     bathroom: 'bathroom_door',
     sofa: 'sofa',
     away: 'bedroom',
-
-    // 0317
     intercom: 'intercom',
     peephole: 'front_door',
     window: 'window',
-
-    // the-presentation
     interrupt: 'presentation_screen',
     laptop: 'player_laptop',
     director: 'director',
     wait: 'decision_center',
-
-    // last-walk
     friend: 'path',
     bench: 'bench',
     stop: 'bus_stop',
     quiet: 'decision_center',
-
-    // generic
     table: 'tables',
     exit: 'exit',
     envelope: 'street',
@@ -155,78 +256,12 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
 
   // Build event-driven beats from story cue & pressure timings
   const beats: StoryBeat[] = [
-    {
-      id: 'beat_arrival',
-      type: 'arrival',
-      trigger: 'time_elapsed',
-      triggerPayload: 0,
-      title: 'Arrival',
-      description: story.openingLine,
-    },
-    {
-      id: 'beat_cue',
-      type: 'cue',
-      trigger: 'time_elapsed',
-      triggerPayload: story.cueAtMs,
-      title: 'The Cue',
-      description: story.cue,
-      isCue: true,
-    },
-    {
-      id: 'beat_pressure',
-      type: 'pressure',
-      trigger: 'time_elapsed',
-      triggerPayload: story.pressureAtMs,
-      title: 'Tension Escalation',
-      description: story.pressure,
-      isPressure: true,
-    },
-    {
-      id: 'beat_commitment',
-      type: 'commitment',
-      trigger: 'player_committed',
-      title: 'Physical Commitment',
-      description: 'The moment of decision',
-    },
-    {
-      id: 'beat_reveal',
-      type: 'reveal',
-      trigger: 'previous_beat_complete',
-      title: 'The Reality',
-      description: story.reality,
-    },
+    { id: 'beat_arrival', type: 'arrival', trigger: 'time_elapsed', triggerPayload: 0, title: 'Arrival', description: story.openingLine },
+    { id: 'beat_cue', type: 'cue', trigger: 'time_elapsed', triggerPayload: story.cueAtMs, title: 'The Cue', description: story.cue, isCue: true },
+    { id: 'beat_pressure', type: 'pressure', trigger: 'time_elapsed', triggerPayload: story.pressureAtMs, title: 'Tension Escalation', description: story.pressure, isPressure: true },
+    { id: 'beat_commitment', type: 'commitment', trigger: 'player_committed', title: 'Physical Commitment', description: 'The moment of decision' },
+    { id: 'beat_reveal', type: 'reveal', trigger: 'previous_beat_complete', title: 'The Reality', description: story.reality },
   ];
-
-  // Seed realistic community comparison stats
-  const totalVotes = 1200 + Math.floor(Math.sin(story.id.length) * 400 + 400);
-  const actionCount = story.actions.length;
-  // Distribute percentages believable for human moral dilemmas
-  const rawWeights = [0.44, 0.28, 0.18, 0.10, 0.08].slice(0, actionCount);
-  const sumWeights = rawWeights.reduce((a, b) => a + b, 0);
-  const percentages = rawWeights.map(w => Math.round((w / sumWeights) * 100));
-
-  // Determine which choice the author took based on reality
-  let authorChoiceId = story.actions[0]?.id;
-  if (story.id === 'the-message') authorChoiceId = 'bathroom'; // author asked directly
-  if (story.id === '0317') authorChoiceId = 'window'; // stayed inside
-  if (story.id === 'the-presentation') authorChoiceId = 'wait'; // sent files later
-  if (story.id === 'last-walk') authorChoiceId = 'quiet'; // hugged in silence
-
-  const seededStats: CrowdStat[] = story.actions.map((act, idx) => ({
-    choiceId: act.id,
-    label: act.commit,
-    percentage: percentages[idx] || 15,
-    count: Math.round(totalVotes * ((percentages[idx] || 15) / 100)),
-    source: 'seed_demo',
-  }));
-
-  // Seed realistic reflections
-  const reflections = getSeededReflections(story.id, story.author).map(r => ({
-    ...r,
-    source: 'seed_demo' as const,
-  }));
-
-  const authorHandle = `@demo_${story.id.replace(/-/g, '_')}`;
 
   return {
     id: story.id,
@@ -238,7 +273,7 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     duration: story.duration,
     pillar: story.pillar,
     world: story.world,
-    playerSpawn: [38, 77],
+    playerSpawn: WORLD_KNOWLEDGE[story.world]?.spawn ?? [38, 77],
     playerCharacter: 'young_adult_masc_01',
     timerAnchor: story.timerAnchor,
     shots: story.shots,
@@ -247,23 +282,26 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
       text: story.reality,
       sourceLabel: 'Заданная для демо развязка',
     },
-    npc: !STORIES_WITH_ON_STAGE_COMPANION.has(story.id) ? undefined : {
-      id: 'partner_or_other',
-      character: story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01',
-      slot: story.world === 'office_night' ? 'director' : story.world === 'hallway_night' ? 'elevator' : 'bathroom_door',
-      initialPose: 'wait',
-    },
+    npc: story.curation?.companion
+      ? {
+          id: 'partner_or_other',
+          character: story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01',
+          slot: story.world === 'office_night' ? 'director' : story.world === 'hallway_night' ? 'elevator' : 'bathroom_door',
+          initialPose: 'wait',
+        }
+      : undefined,
     actions: runtimeActions,
     beats,
     modifiers: story.modifiers,
     endings: story.endings,
     reality: story.reality,
     crowdQuestion: story.crowdQuestion,
-    authorChoiceId,
-    seededStats,
+    authorChoiceId: story.curation?.authorChoiceId ?? story.actions[0]?.id,
+    seededStats: heroSeededStats(story, runtimeActions),
     communityReflections: reflections,
     responsePrompt: 'Have you lived through a moment like this?',
     themeKey: story.pillar,
+    provenance: { dslVersion: 0, compilerVersion: 'legacy', source: 'legacy' },
   };
 }
 
@@ -432,72 +470,4 @@ export function compileGameSpecToRuntime(gameSpec: GameSpec): CanonicalScenario 
     responsePrompt: 'Did you experience something similar?',
     themeKey: 'experience',
   };
-}
-
-function getSeededReflections(storyId: string, author: string): CommunityReflection[] {
-  if (storyId === 'the-message') {
-    return [
-      {
-        id: 'ref_msg_1',
-        authorHandle: author.toLowerCase().includes('alex') ? '@alex_k' : '@author_verified',
-        authorName: 'Author Note',
-        text: 'Looking back, what hurt most wasn’t the notification itself, but how instantly trust felt like glass. We stayed together for another year, but that silence while the shower ran never really left me.',
-        timestamp: 'Pinned by author',
-        isAuthorResponse: true,
-        upvotes: 142,
-      },
-      {
-        id: 'ref_msg_2',
-        authorHandle: '@clara_m',
-        authorName: 'Clara',
-        choiceLabel: 'Open the message',
-        text: 'I voted to look. Everyone says trust until it’s your gut screaming at 11 PM. You can’t unsee it, but living in doubt is worse.',
-        timestamp: '3 hours ago',
-        upvotes: 56,
-      },
-      {
-        id: 'ref_msg_3',
-        authorHandle: '@mark_d',
-        authorName: 'Mark',
-        choiceLabel: 'Ask them directly',
-        text: 'Knocking on the bathroom door is the only way to retain your own dignity. If they lie, that’s on them.',
-        timestamp: '5 hours ago',
-        upvotes: 38,
-      },
-    ];
-  }
-
-  if (storyId === '0317') {
-    return [
-      {
-        id: 'ref_0317_1',
-        authorHandle: '@author_verified',
-        authorName: 'Author Note',
-        text: 'I didn’t sleep normally for two weeks after this. The sound of the elevator counting up was the scariest part.',
-        timestamp: 'Pinned by author',
-        isAuthorResponse: true,
-        upvotes: 89,
-      },
-      {
-        id: 'ref_0317_2',
-        authorHandle: '@night_owl_99',
-        authorName: 'Viktor',
-        choiceLabel: 'Stay inside and call for help',
-        text: 'Never open a door at 3 AM. No curiosity is worth that risk.',
-        timestamp: '1 day ago',
-        upvotes: 67,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: 'ref_gen_1',
-      authorHandle: '@thoughtful_human',
-      authorName: 'Elena',
-      text: 'Having to decide in real-time shows you who you really are under pressure.',
-      timestamp: 'Yesterday',
-      upvotes: 24,
-    },
-  ];
 }

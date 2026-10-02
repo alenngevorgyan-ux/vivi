@@ -4,17 +4,22 @@ import type { ExperienceModifier, ModifierKind } from '../modifiers/types.ts';
 import type { StoryBeat, BeatTrigger, BeatType } from './StoryBeatRunner.ts';
 import { resolveSemanticSlot } from './semanticSlots.ts';
 import type { CanonicalScenario, RuntimeAction, CrowdStat, CommunityReflection } from './RuntimeCompiler.ts';
+import type { ViviExperienceDSL } from '../compiler/dsl.ts';
 
 export type AuthorTruthStatus =
   | 'author_supplied'
   | 'withheld'
-  | 'fictional_demo';
+  | 'fictional_demo'
+  /** Reserved for documented-history experiences; only set when source references exist. */
+  | 'documented_source';
 
 export interface AuthorTruth {
   status: AuthorTruthStatus;
   text?: string;
   sourceLabel?: string;
   withheldReason?: string;
+  /** Required for `documented_source`; never produced by a model. */
+  sourceRefs?: string[];
 }
 
 export interface StoryAnalysis {
@@ -63,6 +68,23 @@ export interface ExperiencePlan {
   authorTruth: AuthorTruth;
   crowdQuestion: string;
   responsePrompt: string;
+  /** The semantic program this plan was compiled from (compiled experiences only). */
+  dsl?: ViviExperienceDSL;
+  compiler?: CompilerStamp;
+}
+
+/** Which compiler produced a post, from which DSL, and where that DSL came from. */
+export interface CompilerStamp {
+  dslVersion: number;
+  compilerVersion: string;
+  source: 'model' | 'deterministic' | 'hero_fixture' | 'manual' | 'legacy';
+  model?: string;
+  /** Authoritative model usage when the provider reports it. */
+  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+  /** Serialized DSL size in bytes. */
+  dslBytes?: number;
+  repaired?: boolean;
+  fallbackReason?: string;
 }
 
 export interface StoredPlayablePost {
@@ -82,6 +104,9 @@ export interface StoredPlayablePost {
   themeKey?: string;
   inspirationPrompt?: string;
   createdAt: number;
+  /** Compiled posts keep their semantic program so a newer compiler can replay it. */
+  dsl?: ViviExperienceDSL;
+  compiler?: CompilerStamp;
 }
 
 export function isStoredPlayablePost(item: any): item is StoredPlayablePost {
@@ -164,6 +189,11 @@ export const VALID_CHARACTER_POSES: Set<string> = new Set([
 ]);
 
 /**
+ * Legacy ExperiencePlan (pre-DSL) compatibility. New experiences are compiled
+ * from the Experience DSL (src/engine/compiler); this validator and
+ * `compileExperiencePlanToScenario` remain so plans written in the older,
+ * verbose format still load.
+ *
  * Validates an ExperiencePlan ensuring semantic correctness, safety, and strict slot matching.
  * Strictly rejects any raw x/y coordinates and impossible slots for the chosen world.
  */
@@ -382,161 +412,4 @@ export function compileExperiencePlanToScenario(
     authorTruth: plan.authorTruth,
     responseToPostId,
   };
-}
-
-/**
- * Deterministic fallback compiler that guarantees:
- * - Valid StoryAnalysis & ExperiencePlan
- * - Real contextual modifiers based on theme
- * - Semantic slots
- * - ZERO author truth fabrication (if whatReallyHappened is empty, authorTruth is strictly 'missing')
- */
-export function generateDeterministicExperiencePlan(
-  prompt: string,
-  whatReallyHappened: string,
-  genre: string,
-  author: string
-): { analysis: StoryAnalysis; plan: ExperiencePlan } {
-  const p = prompt.toLowerCase();
-  let worldTemplate: ViviWorldId = 'apartment_night';
-  let themeKey = 'Relationships';
-
-  // Determine appropriate world template
-  if (p.includes('work') || p.includes('meeting') || p.includes('office') || p.includes('boss') || p.includes('presentation')) {
-    worldTemplate = 'office_night';
-    themeKey = 'Work';
-  } else if (p.includes('door') || p.includes('intercom') || p.includes('hallway') || p.includes('elevator') || p.includes('night')) {
-    worldTemplate = 'hallway_night';
-    themeKey = 'Creepy';
-  } else if (p.includes('friend') || p.includes('walk') || p.includes('bus') || p.includes('bench') || p.includes('leave')) {
-    worldTemplate = 'neighborhood_sunset';
-    themeKey = 'Memory';
-  } else if (p.includes('party') || p.includes('bar') || p.includes('secret') || p.includes('friend') || p.includes('cheat')) {
-    worldTemplate = 'bar_or_party';
-    themeKey = 'Social';
-  } else if (p.includes('train') || p.includes('station') || p.includes('late') || p.includes('track')) {
-    worldTemplate = 'train_station';
-    themeKey = 'Romance';
-  } else if (p.includes('money') || p.includes('rain') || p.includes('street') || p.includes('envelope')) {
-    worldTemplate = 'city_rain';
-    themeKey = 'Money';
-  }
-
-  const id = `exp_${Date.now()}`;
-  const firstSentence = prompt.split('.')[0] || prompt;
-  const title = firstSentence.length > 5 && firstSentence.length < 42 ? firstSentence : 'The Unspoken Choice';
-
-  const hasRealOutcome = !!whatReallyHappened && whatReallyHappened.trim().length > 5;
-  const authorTruth: AuthorTruth = hasRealOutcome
-    ? { status: 'author_supplied', text: whatReallyHappened.trim(), sourceLabel: 'со слов автора' }
-    : { status: 'withheld' };
-
-  const analysis: StoryAnalysis = {
-    setting: worldTemplate.replace('_', ' '),
-    people: ['Player', 'Other'],
-    emotionalCore: 'Tension between hesitation and decisive truth',
-    centralTension: prompt,
-    pivotalMoment: 'The moment where doing nothing becomes its own decision',
-    importantObjects: ['decision center', 'door', 'clock'],
-    actualOutcome: hasRealOutcome ? whatReallyHappened.trim() : undefined,
-    experienceGrammar: 'Explore space, observe cues, commit to action',
-    themeKey: genre || themeKey,
-  };
-
-  // Build context-rich modifiers based on world template
-  const modifiers: ExperienceModifier[] = [];
-  let interactions: InteractionPlan[] = [];
-  let commitments: CommitmentPlan[] = [];
-
-  if (worldTemplate === 'apartment_night') {
-    modifiers.push(
-      { id: 'm_shower', kind: 'sound', atMs: 3000, anchor: 'bathroom_door', payload: 'Shower starts', visibleToPlayer: true },
-      { id: 'm_msg', kind: 'message', atMs: 6500, anchor: 'phone_table', payload: 'Message preview arrives', visibleToPlayer: true },
-      { id: 'm_door', kind: 'door', atMs: 25000, anchor: 'bathroom_door', payload: 'Handle moves', visibleToPlayer: true }
-    );
-    interactions = [
-      { id: 'act_phone', targetSlot: 'phone_table', label: 'Approach the table', observation: 'A phone sits face up on the table, lit with incoming activity.', commitLabel: 'Read the screen directly' },
-      { id: 'act_door', targetSlot: 'bathroom_door', label: 'Go to the bathroom door', observation: 'Water runs behind the closed door. The handle is still.', commitLabel: 'Ask aloud through the door' },
-      { id: 'act_sofa', targetSlot: 'sofa', label: 'Stay on the sofa', observation: 'The silence between you and the room feels heavy.', commitLabel: 'Wait and say nothing tonight' },
-    ];
-    commitments = [
-      { id: 'act_phone', targetSlot: 'phone_table', label: 'Look at the message', outcome: 'You read the preview. A single sentence replaces uncertainty with uncomfortable reality.' },
-      { id: 'act_door', targetSlot: 'bathroom_door', label: 'Confront through the door', outcome: 'You ask directly. The water stops. The answer is given before you see their face.' },
-      { id: 'act_sofa', targetSlot: 'sofa', label: 'Let it pass', outcome: 'You remain seated. The screen goes dark, but the question remains.' },
-    ];
-  } else if (worldTemplate === 'office_night') {
-    modifiers.push(
-      { id: 'm_screen', kind: 'npcPressure', atMs: 6000, anchor: 'director', payload: 'Director nods', visibleToPlayer: true },
-      { id: 'm_timer', kind: 'timer', atMs: 22000, anchor: 'meeting_clock', payload: 'Ten seconds remaining', visibleToPlayer: true }
-    );
-    interactions = [
-      { id: 'act_screen', targetSlot: 'presentation_screen', label: 'Step toward the display', observation: 'Your exact diagrams are shown on the screen under another name.', commitLabel: 'Speak up in the room' },
-      { id: 'act_laptop', targetSlot: 'player_laptop', label: 'Open your laptop files', observation: 'Your dated files and revision timestamps are one click away.', commitLabel: 'Present your draft timestamps' },
-      { id: 'act_director', targetSlot: 'director', label: 'Look at the director', observation: 'They are looking around the room, waiting for any comments.', commitLabel: 'Request a private conversation' },
-    ];
-    commitments = [
-      { id: 'act_screen', targetSlot: 'presentation_screen', label: 'Claim the work aloud', outcome: 'You state your authorship in front of the team. The room turns.' },
-      { id: 'act_laptop', targetSlot: 'player_laptop', label: 'Display draft evidence', outcome: 'You share your draft timestamps. The presentation is paused.' },
-      { id: 'act_director', targetSlot: 'director', label: 'Speak privately later', outcome: 'You stay quiet for now, reserving your claim for a one-on-one meeting.' },
-    ];
-  } else if (worldTemplate === 'train_station') {
-    modifiers.push(
-      { id: 'm_board', kind: 'timer', atMs: 7000, anchor: 'station_board', payload: '00:46 BOARDING', visibleToPlayer: true },
-      { id: 'm_train', kind: 'arrival', atMs: 25000, anchor: 'train', payload: 'Doors open', visibleToPlayer: true }
-    );
-    interactions = [
-      { id: 'act_board', targetSlot: 'station_board', label: 'Check departure board', observation: 'This is the final service heading out tonight.', commitLabel: 'Board the train immediately' },
-      { id: 'act_person', targetSlot: 'platform_edge', label: 'Stay beside them', observation: 'They are waiting for your reaction, their ticket in hand.', commitLabel: 'Miss the train and stay' },
-      { id: 'act_bench', targetSlot: 'bench', label: 'Sit on the bench', observation: 'Cold night air fills the platform as passengers hurry past.', commitLabel: 'Ask for five more minutes' },
-    ];
-    commitments = [
-      { id: 'act_board', targetSlot: 'station_board', label: 'Take the train', outcome: 'You step through the closing doors. The conversation stays unfinished.' },
-      { id: 'act_person', targetSlot: 'platform_edge', label: 'Miss the train', outcome: 'The train departs. The silence gives you room to speak honestly.' },
-      { id: 'act_bench', targetSlot: 'bench', label: 'Sit down together', outcome: 'You sit together. The rush of departure recedes.' },
-    ];
-  } else {
-    // Generic fallback for any other world
-    modifiers.push(
-      { id: 'm_cue', kind: 'timer', atMs: 6000, anchor: 'decision_center', payload: 'The moment arrives', visibleToPlayer: true },
-      { id: 'm_press', kind: 'timer', atMs: 22000, anchor: 'decision_center', payload: 'Decisive seconds', visibleToPlayer: true }
-    );
-    interactions = [
-      { id: 'act_1', targetSlot: 'front_door', label: 'Inspect the door', observation: 'The exit is clear, offering a safe departure.', commitLabel: 'Step away from the situation' },
-      { id: 'act_2', targetSlot: 'decision_center', label: 'Stand your ground', observation: 'You are at the focal point of the room.', commitLabel: 'Face the moment directly' },
-      { id: 'act_3', targetSlot: 'window', label: 'Look through the window', observation: 'Outside, the city continues unaffected.', commitLabel: 'Wait and observe in silence' },
-    ];
-    commitments = [
-      { id: 'act_1', targetSlot: 'front_door', label: 'Step away', outcome: 'You leave before the conflict deepens.' },
-      { id: 'act_2', targetSlot: 'decision_center', label: 'Face directly', outcome: 'You step forward. Your action defines the next chapter.' },
-      { id: 'act_3', targetSlot: 'window', label: 'Wait silently', outcome: 'You let the silence do the work.' },
-    ];
-  }
-
-  const beats: StoryBeat[] = [
-    { id: 'b_arrival', type: 'arrival', trigger: 'time_elapsed', triggerPayload: 0, title: 'Arrival', description: prompt },
-    { id: 'b_cue', type: 'cue', trigger: 'time_elapsed', triggerPayload: 6000, title: 'The Cue', description: 'The situation unfolds and asks for your choice.', isCue: true },
-    { id: 'b_press', type: 'pressure', trigger: 'time_elapsed', triggerPayload: 22000, title: 'Pressure', description: 'Hesitation has its own consequences.', isPressure: true },
-    { id: 'b_commit', type: 'commitment', trigger: 'player_committed', title: 'Commitment', description: 'Decision made.' },
-    { id: 'b_reveal', type: 'reveal', trigger: 'previous_beat_complete', title: 'The Outcome', description: hasRealOutcome ? whatReallyHappened : 'Truth not revealed.' },
-  ];
-
-  const plan: ExperiencePlan = {
-    id,
-    title,
-    synopsis: prompt.length > 130 ? prompt.slice(0, 127) + '…' : prompt,
-    worldTemplate,
-    durationMinutes: 3,
-    cast: [
-      { role: 'other', character: 'adult_fem_01', slot: 'decision_center', pose: 'wait' },
-    ],
-    beats,
-    interactions,
-    modifiers,
-    commitments,
-    authorTruth,
-    crowdQuestion: 'What would you do in this moment?',
-    responsePrompt: 'Have you lived through a moment like this?',
-  };
-
-  return { analysis, plan };
 }

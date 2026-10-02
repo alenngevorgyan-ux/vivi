@@ -10,13 +10,14 @@ import { resolveSemanticSlot } from '../src/engine/runtime/semanticSlots.ts';
 import { StoryBeatRunner } from '../src/engine/runtime/StoryBeatRunner.ts';
 import {
   validateExperiencePlan,
-  generateDeterministicExperiencePlan,
   compileExperiencePlanToScenario,
   isStoredPlayablePost,
+  type ExperiencePlan,
+  type StoryAnalysis,
   type StoredPlayablePost,
-  WORLD_ALLOWED_SLOTS,
 } from '../src/engine/runtime/generationPipeline.ts';
 import { telemetry } from '../src/engine/runtime/telemetry.ts';
+import { compileViviStory } from '../src/engine/compiler/compileViviStory.ts';
 
 console.log('Testing Canonical Runtime & Physical Engine Hardening...\n');
 
@@ -110,31 +111,35 @@ console.log('✓ 3. StoryBeatRunner authoritative gating verified (cue + physica
 // ============================================================================
 // 4. Acceptance Test: ModifierEngine 100% Generic Execution (0 storyId branching)
 // ============================================================================
-// The Message modifiers
-const msgModifiers = testScenario.modifiers;
+// Authored (legacy, text-interpreted) modifiers. The flagship scenes now compile
+// from DSL with structured modifiers; the text interpretation must keep working
+// for every older post, so it is tested against the authored data directly.
+const messageStory = heroStories.find(s => s.id === 'the-message')!;
+const msgModifiers = messageStory.modifiers;
+const msgTimer = messageStory.timerAnchor;
 // 0ms
-const mod0 = computePhysicalModifiers(msgModifiers, 0, testScenario.timerAnchor);
+const mod0 = computePhysicalModifiers(msgModifiers, 0, msgTimer);
 assert.equal(mod0.phone.isScreenLit, false, 'phone dark at start');
 assert.equal(mod0.door.state, 'closed', 'door closed at start');
 
 // 5000ms (shower audio active from payload/anchor)
-const mod5s = computePhysicalModifiers(msgModifiers, 5000, testScenario.timerAnchor);
+const mod5s = computePhysicalModifiers(msgModifiers, 5000, msgTimer);
 assert.equal(mod5s.ambientAudioCue, 'shower_water', 'shower water sounds active');
 
 // 8000ms (message arrives on phone)
-const mod8s = computePhysicalModifiers(msgModifiers, 8000, testScenario.timerAnchor);
+const mod8s = computePhysicalModifiers(msgModifiers, 8000, msgTimer);
 assert.equal(mod8s.phone.isScreenLit, true, 'phone screen is illuminated');
 assert.equal(mod8s.phone.previewText, 'I still smell like you.', 'preview text is on phone');
 assert.equal(mod8s.phone.isVibrating, true, 'phone is physically vibrating');
 
 // 32000ms (handle moves)
-const mod32s = computePhysicalModifiers(msgModifiers, 32000, testScenario.timerAnchor);
+const mod32s = computePhysicalModifiers(msgModifiers, 32000, msgTimer);
 assert.equal(mod32s.door.state, 'handle_moving', 'bathroom door handle jiggles');
 assert.equal(mod32s.timeDisplay.isExpiring, true, 'lock countdown expiring');
 
 // 03:17 modifiers without storyId branching
 const story0317 = heroStories.find(s => s.id === '0317')!;
-const scenario0317 = compileHeroStoryToRuntime(story0317);
+const scenario0317 = { modifiers: story0317.modifiers, timerAnchor: story0317.timerAnchor };
 
 const mod0317_early = computePhysicalModifiers(scenario0317.modifiers, 2000, scenario0317.timerAnchor);
 assert.equal(mod0317_early.timeDisplay.text, '03:16', '03:16 before cue');
@@ -201,75 +206,98 @@ console.log('✓ 6. Physical collision and sliding resolution verified');
 // ============================================================================
 // 7. Acceptance Test: Zero Author Truth Fabrication & Truth Provenance Model
 // ============================================================================
-// When user does NOT supply what happened in real life:
-const emptyOutcomeGen = generateDeterministicExperiencePlan(
-  'I was in the kitchen when the doorbell rang twice at night.',
-  '', // empty outcome!
-  'Creepy',
-  'Anonymous'
-);
-
-assert.equal(emptyOutcomeGen.plan.authorTruth.status, 'withheld', 'authorTruth is strictly withheld');
-assert.equal(emptyOutcomeGen.plan.authorTruth.text, undefined, 'no invented text in authorTruth');
-
-const emptyScenario = compileExperiencePlanToScenario(emptyOutcomeGen.plan, emptyOutcomeGen.analysis);
+// When the user does NOT supply what happened in real life:
+const emptyOutcomeGen = await compileViviStory({
+  story: 'I was in the kitchen when the doorbell rang twice at night.',
+  actualOutcome: '',
+  category: 'Creepy',
+  author: 'Anonymous',
+});
+const emptyScenario = emptyOutcomeGen.post.scenario;
+assert.equal(emptyOutcomeGen.compiled.plan.authorTruth.status, 'withheld', 'authorTruth is strictly withheld');
+assert.equal(emptyOutcomeGen.compiled.plan.authorTruth.text, undefined, 'no invented text in authorTruth');
 assert.equal(emptyScenario.authorTruth?.status, 'withheld', 'scenario authorTruth status is withheld');
 assert.equal(emptyScenario.reality, '', 'scenario reality is empty string');
+assert.equal(emptyOutcomeGen.compiled.dsl.tr, 'withheld', 'stamped DSL provenance is withheld');
 assert.ok(
-  !emptyScenario.reality.includes('The author shared this moment'),
+  !JSON.stringify(emptyScenario.beats).includes('The author shared this moment'),
   'never fabricates placeholder reality text'
 );
 
-// When user DOES supply what happened in real life:
-const realOutcomeGen = generateDeterministicExperiencePlan(
-  'My coworker took credit for my slides during a meeting.',
-  'I sent the original Figma timestamped links directly to the VP after the call.',
-  'Work',
-  'Alice'
-);
-assert.equal(realOutcomeGen.plan.authorTruth.status, 'author_supplied', 'authorTruth is author_supplied');
+// When the user DOES supply what happened in real life:
+const realOutcomeGen = await compileViviStory({
+  story: 'My coworker took credit for my slides during a meeting.',
+  actualOutcome: 'I sent the original Figma timestamped links directly to the VP after the call.',
+  category: 'Work',
+  author: 'Alice',
+});
+assert.equal(realOutcomeGen.compiled.plan.authorTruth.status, 'author_supplied', 'authorTruth is author_supplied');
 assert.equal(
-  realOutcomeGen.plan.authorTruth.text,
+  realOutcomeGen.compiled.plan.authorTruth.text,
   'I sent the original Figma timestamped links directly to the VP after the call.',
   'authorTruth matches reality text'
 );
-assert.equal(
-  realOutcomeGen.plan.authorTruth.sourceLabel,
-  'со слов автора',
-  'authorTruth has correct source label'
-);
+assert.equal(realOutcomeGen.compiled.plan.authorTruth.sourceLabel, 'со слов автора', 'authorTruth has correct source label');
 console.log('✓ 7. Truth provenance model verified (author_supplied with sourceLabel vs withheld with zero fabrication)');
 
 // ============================================================================
-// 8. Acceptance Test: ExperiencePlan Schema Validation & World Semantic Slots
+// 8. Acceptance Test: legacy ExperiencePlan schema validation & world semantic slots
 // ============================================================================
+// Plans written in the pre-DSL format must still validate exactly as before.
+const legacyPlan: ExperiencePlan = {
+  id: 'legacy_plan',
+  title: 'Legacy plan',
+  synopsis: 'A plan stored before the Experience DSL existed.',
+  worldTemplate: 'apartment_night',
+  durationMinutes: 3,
+  cast: [{ role: 'other', character: 'adult_fem_01', slot: 'decision_center', pose: 'wait' }],
+  beats: [
+    { id: 'b_arrival', type: 'arrival', trigger: 'time_elapsed', triggerPayload: 0, title: 'Arrival', description: 'You arrive.' },
+    { id: 'b_cue', type: 'cue', trigger: 'time_elapsed', triggerPayload: 6000, title: 'Cue', description: 'The phone lights up.', isCue: true },
+    { id: 'b_commit', type: 'commitment', trigger: 'player_committed', title: 'Commit', description: 'Decision.' },
+  ],
+  interactions: [
+    { id: 'act_phone', targetSlot: 'phone_table', label: 'Approach the table', observation: 'A phone.', commitLabel: 'Read it' },
+    { id: 'act_door', targetSlot: 'bathroom_door', label: 'Go to the door', observation: 'Water runs.', commitLabel: 'Ask' },
+  ],
+  modifiers: [{ id: 'm1', kind: 'message', atMs: 6500, anchor: 'phone_table', payload: 'Preview', visibleToPlayer: true }],
+  commitments: [
+    { id: 'act_phone', targetSlot: 'phone_table', label: 'Read', outcome: 'You read it.' },
+    { id: 'act_door', targetSlot: 'bathroom_door', label: 'Ask', outcome: 'You ask.' },
+  ],
+  authorTruth: { status: 'withheld' },
+  crowdQuestion: 'What would you do?',
+  responsePrompt: 'Have you lived through this?',
+};
+const legacyAnalysis: StoryAnalysis = {
+  setting: 'apartment', people: ['player'], emotionalCore: 'doubt', centralTension: 'a phone',
+  pivotalMoment: 'the message', importantObjects: ['phone'], experienceGrammar: 'betrayal', themeKey: 'Relationships',
+};
+
 // Raw coordinates must be strictly rejected
 const invalidCoordPlan = {
-  ...emptyOutcomeGen.plan,
+  ...legacyPlan,
   interactions: [
     { id: 'act_1', targetSlot: 'phone_table', label: 'Phone', observation: 'lit', commitLabel: 'Read', x: 50, y: 70 },
     { id: 'act_2', targetSlot: 'sofa', label: 'Sofa', observation: 'soft', commitLabel: 'Wait' },
   ],
 };
-const coordValidation = validateExperiencePlan(invalidCoordPlan);
-assert.equal(coordValidation.valid, false, 'rejects raw x/y coordinates');
+assert.equal(validateExperiencePlan(invalidCoordPlan).valid, false, 'rejects raw x/y coordinates');
 
 // Less than 2 commitments must be rejected
-const invalidCommitPlan = {
-  ...emptyOutcomeGen.plan,
-  commitments: [{ id: 'c1', targetSlot: 'sofa', label: 'Wait', outcome: 'Waited' }],
-};
-const commitValidation = validateExperiencePlan(invalidCommitPlan);
-assert.equal(commitValidation.valid, false, 'rejects less than 2 commitments');
+const invalidCommitPlan = { ...legacyPlan, commitments: [{ id: 'c1', targetSlot: 'sofa', label: 'Wait', outcome: 'Waited' }] };
+assert.equal(validateExperiencePlan(invalidCommitPlan).valid, false, 'rejects less than 2 commitments');
 
 // Invalid semantic slot for the chosen world template must be rejected
 const invalidSlotPlan = {
-  ...emptyOutcomeGen.plan,
+  ...legacyPlan,
   worldTemplate: 'train_station' as const,
+  cast: [],
   interactions: [
     { id: 'act_1', targetSlot: 'bathroom_door', label: 'Door', observation: 'locked', commitLabel: 'Knock' },
     { id: 'act_2', targetSlot: 'train', label: 'Train', observation: 'waiting', commitLabel: 'Board' },
   ],
+  modifiers: [],
   commitments: [
     { id: 'c1', targetSlot: 'bathroom_door', label: 'Knock', outcome: 'Nothing' },
     { id: 'c2', targetSlot: 'train', label: 'Board', outcome: 'Departed' },
@@ -278,14 +306,16 @@ const invalidSlotPlan = {
 const slotValidation = validateExperiencePlan(invalidSlotPlan);
 assert.equal(slotValidation.valid, false, 'rejects invalid slot bathroom_door for train_station world');
 assert.ok(
-  slotValidation.errors.some(e => e.includes('bathroom_door') && e.includes('train_station')),
+  !slotValidation.valid && slotValidation.errors.some(e => e.includes('bathroom_door') && e.includes('train_station')),
   'validator error specifically mentions the invalid slot and world'
 );
 
-// Valid plan passes
-const validValidation = validateExperiencePlan(emptyOutcomeGen.plan);
-assert.equal(validValidation.valid, true, 'valid ExperiencePlan passes validation');
-console.log('✓ 8. ExperiencePlan schema validation verified (rejects invalid semantic slots for world, raw x/y, enforces commitments)');
+// Valid plan passes and still compiles to a playable scenario
+assert.equal(validateExperiencePlan(legacyPlan).valid, true, 'valid legacy ExperiencePlan passes validation');
+const legacyPlanScenario = compileExperiencePlanToScenario(legacyPlan, legacyAnalysis);
+assert.equal(legacyPlanScenario.authorTruth.status, 'withheld', 'legacy plan keeps withheld truth');
+assert.equal(legacyPlanScenario.actions.length, 2, 'legacy plan compiles its interactions');
+console.log('✓ 8. Legacy ExperiencePlan validation verified (rejects invalid semantic slots for world, raw x/y, enforces commitments)');
 
 // ============================================================================
 // 9. Acceptance Test: Gated Research Telemetry Export
@@ -338,7 +368,7 @@ console.log('✓ 10. StoryBeatRunner.reset() verified (all flags, sets, and comm
 // ============================================================================
 // 11. Acceptance Test: Generated Demo Data Provenance (source: seed_demo)
 // ============================================================================
-const demoPlanScenario = compileExperiencePlanToScenario(realOutcomeGen.plan, realOutcomeGen.analysis, 'Bob');
+const demoPlanScenario = realOutcomeGen.post.scenario;
 for (const stat of demoPlanScenario.seededStats) {
   assert.equal(stat.source, 'seed_demo', 'generated crowd stat explicitly tagged source: seed_demo');
 }
@@ -350,12 +380,14 @@ console.log('✓ 11. Generated demo data provenance verified (seed_demo tags on 
 // ============================================================================
 // 12. Acceptance Test: Response Chain Persistence & StoredPlayablePost Preservation
 // ============================================================================
-const responseScenario = compileExperiencePlanToScenario(
-  realOutcomeGen.plan,
-  realOutcomeGen.analysis,
-  'Charlie',
-  'parent_post_456'
-);
+const responseGen = await compileViviStory({
+  story: 'My coworker took credit for my slides during a meeting.',
+  actualOutcome: 'I sent the original Figma timestamped links directly to the VP after the call.',
+  category: 'Work',
+  author: 'Charlie',
+  responseToPostId: 'parent_post_456',
+});
+const responseScenario = responseGen.post.scenario;
 assert.equal(responseScenario.responseToPostId, 'parent_post_456', 'responseToPostId persisted in scenario');
 
 const storedPost: StoredPlayablePost = {
@@ -368,8 +400,9 @@ const storedPost: StoredPlayablePost = {
   pillar: responseScenario.pillar,
   world: responseScenario.world,
   scenario: responseScenario,
-  analysis: realOutcomeGen.analysis,
-  experiencePlan: realOutcomeGen.plan,
+  analysis: responseGen.post.analysis,
+  experiencePlan: responseGen.compiled.plan,
+  dsl: responseGen.compiled.dsl,
   legacyGameSpec: { id: responseScenario.id, title: responseScenario.title } as any,
   responseToPostId: 'parent_post_456',
   themeKey: 'Work',
@@ -386,6 +419,8 @@ assert.equal(parsedPost.schemaVersion, 2, 'schemaVersion 2 preserved');
 assert.equal(parsedPost.responseToPostId, 'parent_post_456', 'responseToPostId preserved in StoredPlayablePost');
 assert.equal(parsedPost.scenario.authorTruth?.status, 'author_supplied', 'scenario authorTruth status preserved');
 assert.equal(parsedPost.scenario.actions.length, responseScenario.actions.length, 'all runtime actions preserved');
+assert.equal(responseGen.post.responseToPostId, 'parent_post_456', 'responseToPostId survives compileViviStory');
+assert.equal(parsedPost.dsl?.v, 1, 'DSL version survives storage');
 console.log('✓ 12. Response chain and StoredPlayablePost serialization verified end-to-end');
 
 // ============================================================================
