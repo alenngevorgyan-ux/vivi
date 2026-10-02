@@ -320,7 +320,11 @@ export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
       objects.add(thing);
       const giver = grammar === 'temptation' ? firstRole(h, ['stranger', 'boss', 'friend'], 'stranger') : null;
       if (giver) addCast(giver, 'on');
-      events.push(['notice', thing]);
+      // Someone the found thing belongs to is part of the story even when they are not in the room.
+      const owner = h.roles.find(r => r !== giver && r !== 'stranger');
+      if (owner) addCast(owner, 'off');
+      // A photograph or a letter carries someone else's past: it echoes when you reach it.
+      events.push([thing === 'photo' || thing === 'letter' ? 'echo' : 'notice', thing]);
       if (giver) events.push(['say', giver, h.quote ?? line(lang, 'demand')]);
       events.push(['sound', 'footsteps']);
       if (w === 'hall') events.push(['elevator', 'arrive']);
@@ -346,7 +350,7 @@ export function deterministicDSL(h: StoryHints): ViviExperienceDSL {
       if (grammar === 'family') {
         const doc: DslObject = h.objects.find((o): o is DslObject => ['document', 'letter', 'photo'].includes(o)) ?? 'document';
         objects.add(doc);
-        events.push(['notice', doc]);
+        events.push([doc === 'document' ? 'notice' : 'echo', doc]);
         events.push(['say', keeper, line(lang, 'downstairs')]);
         if (!isRemote) events.push(['approach', keeper]);
         else events.push(['sound', 'footsteps']);

@@ -179,6 +179,16 @@ function firstSentence(story: string | undefined, max: number): string | undefin
   return cut.length <= max ? cut : `${cut.slice(0, max - 1).trimEnd()}…`;
 }
 
+/** A fallback title: the story's first clause, or its first few words. Models normally supply `x.ti`. */
+function shortTitle(story: string | undefined): string | undefined {
+  const first = firstSentence(story, 200);
+  if (!first) return undefined;
+  const clause = first.split(/[,;:—–]/)[0].replace(/[.!?…]+$/, '').trim();
+  if (clause.length >= 6 && clause.length <= 36) return clause;
+  const words = clause.split(/\s+/).slice(0, 5).join(' ');
+  return words.length < clause.length ? `${words}…` : words;
+}
+
 function clampText(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
 }
@@ -408,6 +418,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
     cameraEvents.push({ kind, atMs: Math.round(atMs), ...extra });
 
   const objectActiveAt = new Map<DslObject, number>();
+  const echoObjects = new Set<DslObject>();
   const markObject = (obj: DslObject, at: number) => {
     if (!objectActiveAt.has(obj) || objectActiveAt.get(obj)! > at) objectActiveAt.set(obj, at);
   };
@@ -621,10 +632,12 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
         break;
       }
       case 'echo': {
+        // The object glints on the timeline; the memory itself plays when the player reaches it.
         const obj = a1 as DslObject;
         const slot = hostSlot(world, obj);
-        mod('lighting', at, slot, 'memory', { light: 'dim', glint: slot }, 3600);
+        mod('lighting', at, slot, 'memory', { glint: slot }, 6000);
         markObject(obj, at);
+        echoObjects.add(obj);
         camera('memory', at, { slot });
         break;
       }
@@ -645,6 +658,13 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
 
   /* -------------------------------------------------------- key objects --- */
 
+  // Who a memory shows: the player and the first person the story is about, even one who is only on the phone.
+  const remembered = input.c.find(c => c[1] !== 'bg')?.[0];
+  const echoCast: ViviCharacterId[] = [
+    PLAYER_CHARACTER,
+    remembered ? actorByRole.get(remembered)?.character ?? ROLE_CHARACTERS[remembered][0] : 'memory_child_01',
+  ];
+
   const keyObjects: RuntimeKeyObject[] = input.o.map(obj => {
     const slot = hostSlot(world, obj);
     return {
@@ -655,6 +675,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       ...(objectActiveAt.has(obj) ? { activeAtMs: objectActiveAt.get(obj) } : {}),
       prop: slot !== CARRIED && PROP_OBJECTS.has(obj) && !(ARCHITECTURE_PROPS[world] ?? []).includes(obj),
       actionIds: [],
+      ...(echoObjects.has(obj) ? { echo: { characters: echoCast } } : {}),
     };
   });
 
@@ -799,7 +820,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   /* ------------------------------------------------------------ beats --- */
 
   const story = options.story?.trim();
-  const title = input.x?.ti ?? firstSentence(story, 42) ?? text(lang, 'untitled');
+  const title = input.x?.ti ?? shortTitle(story) ?? text(lang, 'untitled');
   const opening = input.x?.op ?? firstSentence(story, 110) ?? '';
   const synopsis = story ? clampText(story.replace(/\s+/g, ' '), 140) : opening;
   const cueText = input.x?.cu ?? cueLine ?? text(lang, 'cue');

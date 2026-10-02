@@ -48,6 +48,8 @@ interface CanonicalViviEngineProps {
   onDirected?: (shot: DirectedShot) => void;
 }
 
+/** How long a memory echo plays before it dissolves. */
+const ECHO_MS = 3600;
 /** World units per second at full walking pace. */
 const PLAYER_SPEED = 27;
 /** World units per full two-step cycle; the cycle is driven by distance so feet never skate. */
@@ -83,6 +85,8 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
   const [walkPhase, setWalkPhase] = useState(0);
   const [tooFarNotice, setTooFarNotice] = useState<string | null>(null);
   const [insertFocus, setInsertFocus] = useState<{ slot: string; atMs: number } | null>(null);
+  /** MEMORY_ECHO in progress: translucent figures replaying a moment at an object. */
+  const [echo, setEcho] = useState<{ atMs: number; pos: [number, number]; characters: string[] } | null>(null);
 
   const keysPressed = useRef<{ [key: string]: boolean }>({});
   const mobileDir = useRef<'up' | 'down' | 'left' | 'right' | null>(null);
@@ -264,9 +268,13 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
       beatRunner.onObjectInspected(actionToInspect.targetSlot, actionToInspect.id, actionToInspect.observation);
       telemetry.recordEvent('object_inspected', elapsedMs, { objectId: actionToInspect.id });
       setInsertFocus({ slot: actionToInspect.targetSlot, atMs: elapsedMs });
+      const echoObject = cast.keyObjects.find(k => k.id === actionToInspect.objectId && k.echo);
+      if (echoObject?.echo && !reducedMotion) {
+        setEcho({ atMs: elapsedMs, pos: echoObject.pos, characters: echoObject.echo.characters });
+      }
       setPlayerPose(actionToInspect.slotInfo.diegeticType === 'phone' ? 'look_at_phone' : 'turn');
     },
-    [playerPos, onActionInspected, beatRunner, elapsedMs, standFor]
+    [playerPos, onActionInspected, beatRunner, elapsedMs, standFor, cast.keyObjects, reducedMotion]
   );
 
   /* ------------------------------------------------------------ loop --- */
@@ -546,6 +554,32 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     ),
   });
 
+  // MEMORY_ECHO: two translucent figures replay a few seconds at the object, then dissolve.
+  const echoAge = echo ? elapsedMs - echo.atMs : Infinity;
+  if (echo && echoAge >= 0 && echoAge < ECHO_MS) {
+    const [ex, ey] = echo.pos;
+    echo.characters.forEach((character, i) => {
+      const side = i === 0 ? -1 : 1;
+      const drift = Math.min(1, echoAge / ECHO_MS) * 2.2 * side;
+      const x = ex + side * 5.5 + drift;
+      const y = Math.min(88, Math.max(52, ey + 7 + i * 1.5));
+      depthEntities.push({
+        key: `echo-${i}`,
+        y,
+        node: (
+          <div className="vivi-figure vivi-echo-figure" style={{ left: `${x}%`, top: `${y}%`, '--depth': depthScale(y) } as React.CSSProperties}>
+            <CharacterFigure
+              id={character as never}
+              facing={side < 0 ? 'right' : 'left'}
+              pose={Math.floor(echoAge / 1100) % 2 === i ? 'talk' : 'wait'}
+              size={figureSize}
+            />
+          </div>
+        ),
+      });
+    });
+  }
+
   depthEntities.sort((a, b) => a.y - b.y);
 
   const committableAction =
@@ -565,6 +599,8 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         data-elapsed={Math.round(elapsedMs)}
         data-shot={directed.shot}
         data-shot-reason={directed.reason}
+        data-player={`${playerPos[0].toFixed(1)},${playerPos[1].toFixed(1)}`}
+        data-near={nearbyAction?.id ?? ''}
       >
         <div className="vivi-world" style={{ transform: cameraFrame.transform, transition: cameraFrame.transition }}>
           <SceneBackdrop world={scenario.world} state={sceneState} />
@@ -608,7 +644,10 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
 
         {/* Grade sits outside the lens: it is the light in the room, not a thing in it. */}
         {grade && (
-          <div className={`vivi-grade ${lightMode === 'flicker' ? 'is-flicker' : ''}`} aria-hidden="true">
+          <div
+            className={`vivi-grade ${lightMode === 'flicker' ? 'is-flicker' : ''} ${echoAge >= 0 && echoAge < ECHO_MS ? 'is-echo' : ''}`}
+            aria-hidden="true"
+          >
             <div className="vivi-grade-tint" style={{ background: grade.tint, opacity: grade.tintStrength }} />
             <div className="vivi-grade-dark" style={{ opacity: Math.min(0.75, gradeDarkness) }} />
             <div className="vivi-grade-vignette" style={{ opacity: grade.vignette }} />

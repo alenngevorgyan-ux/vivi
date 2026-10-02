@@ -279,6 +279,8 @@ export function ViviPlay({
       ? 'со слов автора'
       : truthStatus === 'fictional_demo'
       ? 'Заданная для демо развязка'
+      : truthStatus === 'documented_source'
+      ? 'по документальным источникам'
       : 'НЕ РАСКРЫТО');
 
   return (
@@ -490,6 +492,8 @@ export function ViviPlay({
                           ? 'ЧТО АВТОР РАССКАЗАЛ О РЕАЛЬНОМ ИСХОДЕ'
                           : truthStatus === 'fictional_demo'
                           ? 'ДЕМОНСТРАЦИОННЫЙ СЦЕНАРИЙ'
+                          : truthStatus === 'documented_source'
+                          ? 'ЧТО ГОВОРЯТ ИСТОЧНИКИ'
                           : 'ПРАВДА АВТОРА'}
                       </span>
                       <span className="text-[10px] text-stone-500 font-mono">
@@ -505,6 +509,17 @@ export function ViviPlay({
                       <div className="space-y-1">
                         <p className="text-xs text-stone-500 font-medium">Ниже — заданная для демо развязка.</p>
                         <p>{truthText}</p>
+                      </div>
+                    )}
+
+                    {truthStatus === 'documented_source' && (
+                      <div className="space-y-1">
+                        <p>{truthText}</p>
+                        <ul className="text-[11px] text-stone-500 font-mono">
+                          {(canonicalScenario.authorTruth?.sourceRefs ?? []).map(ref => (
+                            <li key={ref}>· {ref}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
 

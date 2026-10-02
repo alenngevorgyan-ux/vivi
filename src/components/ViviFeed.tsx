@@ -135,7 +135,7 @@ export function ViviFeed({
       )}
 
       {/* Social Feed Navigation Tabs */}
-      <div className="flex items-center gap-3 mt-10 border-b border-stone-300 pb-3">
+      <div className="flex items-center gap-3 mt-10 border-b border-stone-300 pb-3 overflow-x-auto">
         <button
           onClick={() => setFeedTab('curated')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${

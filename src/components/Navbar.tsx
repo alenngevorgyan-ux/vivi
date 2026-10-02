@@ -27,11 +27,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="vivi-navbar sticky top-0 z-50 w-full border-b backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand / Logo */}
         <div
           onClick={() => setActiveTab('feed')}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-3 cursor-pointer group shrink-0"
         >
           <div className="vivi-brand-symbol" aria-hidden="true">
             V<span>.</span>
@@ -48,6 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <nav className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => setActiveTab('feed')}
+            aria-label="Лента"
             className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all ${
               activeTab === 'feed'
                 ? 'bg-stone-800 text-stone-100 shadow-sm'
@@ -55,11 +56,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Compass className="w-4 h-4" />
-            <span>Лента</span>
+            <span className="hidden min-[420px]:inline">Лента</span>
           </button>
 
           <button
             onClick={() => setActiveTab('create')}
+            aria-label="Создать историю"
             className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all ${
               activeTab === 'create'
                 ? 'bg-stone-800 text-stone-100 shadow-sm'
@@ -67,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Создать историю</span>
+            <span className="hidden min-[420px]:inline">Создать историю</span>
           </button>
 
           {hasActiveGame && (

@@ -319,3 +319,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
 .vivi-lab-inspector pre { max-height:340px; overflow:auto; font-size:11px; background:#f3ebdd; padding:8px; border-radius:6px; white-space:pre-wrap; word-break:break-word; }
 .vivi-lab-dsl { background:#1f2a2e !important; color:#e9dfcd; }
 .vivi-lab-error { color:#a2392b; }
+/* MEMORY_ECHO: the room warms and drops, the past stands in it for a moment, then dissolves. */
+.vivi-echo-figure { opacity:0; filter:sepia(.75) saturate(.7) brightness(1.15) blur(.3px) drop-shadow(0 0 10px rgba(246,220,174,.45)); animation:vivi-echo 3.6s cubic-bezier(.22,.68,.16,1) forwards; }
+@keyframes vivi-echo { 0%{opacity:0} 14%{opacity:.42} 76%{opacity:.38} 100%{opacity:0} }
+.vivi-grade.is-echo .vivi-grade-tint { background:#8a5a22 !important; opacity:.3 !important; }
+.vivi-grade.is-echo .vivi-grade-dark { opacity:.22 !important; }

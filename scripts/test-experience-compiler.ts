@@ -158,6 +158,19 @@ assert.equal(computePhysicalModifiers(msgScenario.modifiers, 12000).bed, 'shower
 assert.equal(computePhysicalModifiers(msgScenario.modifiers, 30500).bed, null, 'silence after the water stops');
 ok('One semantic event expands into coordinated actor, door, sound and silence');
 
+const echoDsl: ViviExperienceDSL = {
+  v: 1, w: 'home', g: 'family', c: [['parent', 'off']], o: ['photo'],
+  e: [['echo', 'photo'], ['sound', 'footsteps']],
+  a: [['look', 'photo', 'Look at the photo'], ['leave', null, 'Leave it']],
+};
+const echoed = compileExperience(echoDsl, { source: 'manual', createdAt: 0 });
+const photo = echoed.scenario.keyObjects!.find(k => k.id === 'photo')!;
+assert.deepEqual(photo.echo?.characters, ['young_adult_masc_01', 'older_adult_01'], 'echo replays the player and the remembered person');
+assert.ok(echoed.scenario.cinematic!.cameraEvents.some(e => e.kind === 'memory'), 'memory gets its own camera event');
+assert.ok(echoed.scenario.modifiers.some(m => m.data?.glint === photo.slot), 'the object glints to invite approach');
+assert.ok(echoed.scenario.beats.some(b => b.type === 'memoryEcho'), 'memory echo beat');
+ok('MEMORY_ECHO: one word in the DSL becomes a glint, a camera beat and a replay at the object');
+
 /* ---------------------------------------------------------------- camera */
 
 const cin = msgScenario.cinematic!;

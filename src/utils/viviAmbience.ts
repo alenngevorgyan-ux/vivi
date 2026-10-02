@@ -361,3 +361,8 @@ class ViviAmbience {
 }
 
 export const ambience = new ViviAmbience();
+
+// Development only: lets QA scripts and the Director Lab read audio state.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __viviAmbience?: ViviAmbience }).__viviAmbience = ambience;
+}

@@ -46,6 +46,8 @@ export interface RuntimeKeyObject {
   prop: boolean;
   /** Actions that physically involve this object. */
   actionIds: string[];
+  /** MEMORY_ECHO: approaching this object replays a few seconds of the past with these people. */
+  echo?: { characters: ViviCharacterId[] };
 }
 
 /** How a compiled experience is filmed, lit and heard. */
