@@ -305,6 +305,172 @@ for (const [id, f] of Object.entries(HERO_DSL)) {
 assert.ok(estimateTokens(MODEL_SYSTEM_PROMPT) < 1000, 'model system prompt stays under ~1000 tokens');
 ok('DSL size budget holds (fallback < 500, curated golden < 800 estimated tokens; prompt < 1000)');
 
+/* --------------------------------------------- semantic review of a scene */
+
+const STORY_SHOWER = 'My partner went into the shower and a message from a stranger appeared on their phone.';
+const STORY_KNOCK = 'Someone knocked on my door three times at 2:40 AM. The peephole showed an empty landing.';
+const STORY_WEDDING = 'At the wedding everyone stared at me when I was asked to give a toast.';
+
+/** A provider that answers with `first`, then with `second` if a repair is asked for. */
+const scripted = (first: object, second?: object) => {
+  const calls: string[][] = [];
+  const provider: ExperienceSemanticProvider = {
+    id: 'scripted',
+    compileStory: async () => ({ text: JSON.stringify(first), model: 'scripted-model', usage: { inputTokens: 100, outputTokens: 50 } }),
+    repair: async (_r, _json, errors) => {
+      calls.push(errors);
+      return { text: JSON.stringify(second ?? first), model: 'scripted-model', usage: { inputTokens: 40, outputTokens: 50 } };
+    },
+  };
+  return { provider, calls };
+};
+
+const allObjects: ViviExperienceDSL = {
+  v: 1, w: 'apt', g: 'betrayal', c: [['partner', 'on']], o: ['phone', 'letter'],
+  e: [['msg', 'phone', 'Hi'], ['notice', 'letter'], ['stop', 'shower']],
+  a: [['read', 'phone', 'Read the message', 'The screen is still lit.', 'You read it.'],
+      ['look', 'letter', 'Look at the letter', 'It is face down.', 'You turn it over.'],
+      ['open', 'letter', 'Open the letter', 'The flap is unsealed.', 'You open it.']],
+};
+const varied: ViviExperienceDSL = {
+  ...allObjects,
+  a: [['read', 'phone', 'Read the message', 'The screen is still lit.', 'You read it.'],
+      ['ask', 'partner', 'Ask them about it', 'They are still in the doorway.', 'They stop and look at you.'],
+      ['leave', null, 'Walk out', 'Your keys are by the door.', 'You step into the corridor.']],
+};
+
+{
+  const { provider, calls } = scripted(allObjects, varied);
+  const result = await compileViviStory({ story: STORY_SHOWER }, { provider });
+  assert.equal(result.report.firstPassValid, true, 'an all-object scene is a legal program');
+  assert.equal(result.report.firstPassClean, false, 'but it is not a situation');
+  assert.equal(result.report.repaired, true, 'it costs exactly one repair turn');
+  assert.equal(calls.length, 1, 'never more than one repair turn');
+  assert.ok(calls[0].some(e => /same kind of thing/.test(e)), `repair message names the defect: ${calls[0].join(' | ')}`);
+  assert.ok(calls[0].every(e => e.length < 240), 'repair messages stay compact');
+  assert.deepEqual(result.compiled.dsl.a.map(a => a[0]), ['read', 'ask', 'leave'], 'the repaired scene is the one that is played');
+  assert.equal(result.report.semanticErrors, undefined, 'nothing left to object to');
+}
+{
+  const { provider, calls } = scripted(varied);
+  const result = await compileViviStory({ story: STORY_SHOWER }, { provider });
+  assert.equal(result.report.firstPassClean, true, 'object + person + way out passes first time');
+  assert.equal(result.report.repaired, false);
+  assert.equal(calls.length, 0, 'a real situation costs no repair');
+}
+ok('All-object choices cost one repair turn; object + person + way out passes first time');
+
+{
+  // One room, one object, nobody else: the scene may not be rejected for being small.
+  const oneLocus: ViviExperienceDSL = {
+    v: 1, w: 'hall', g: 'intrusion', c: [], o: ['door'],
+    e: [['clock', '02:40'], ['sound', 'knock'], ['handle', 'front_door']],
+    a: [['open', 'door', 'Open the door', 'The landing light is off.', 'The door swings in.'],
+        ['wait', null, 'Stay perfectly still', 'Your hand is on the latch.', 'The knocking stops.']],
+  };
+  const { provider, calls } = scripted(oneLocus);
+  const result = await compileViviStory({ story: STORY_KNOCK }, { provider });
+  assert.equal(result.report.source, 'model', 'a story with one physical locus still plays');
+  assert.equal(calls.length, 0, 'a legitimately confined story is not sent back');
+  assert.equal(result.report.firstPassClean, true);
+}
+ok('A story that honestly offers one place is not rejected for being small');
+
+/* ------------------------------------------------------- cast grounding */
+
+{
+  // "stranger" is a person standing in the room that the story never had.
+  const invented: ViviExperienceDSL = {
+    ...varied,
+    c: [['partner', 'on'], ['stranger', 'on']],
+    a: [['read', 'phone', 'Read the message', 'The screen is still lit.', 'You read it.'],
+        ['confront', 'stranger', 'Confront them', 'They have not moved.', 'They meet your eye.'],
+        ['leave', null, 'Walk out', 'Your keys are by the door.', 'You step into the corridor.']],
+  };
+  const { provider, calls } = scripted(invented, varied);
+  const result = await compileViviStory({ story: STORY_SHOWER }, { provider });
+  assert.ok(calls[0]?.some(e => /never mentions stranger/.test(e)), `grounding names the invented person: ${calls[0]?.join(' | ')}`);
+  assert.ok(!result.compiled.dsl.c.some(c => c[0] === 'stranger'), 'the invented person is not in the played scene');
+}
+{
+  // The same invented person, used by nothing: dropped for free, no repair turn.
+  const spare: ViviExperienceDSL = { ...varied, c: [['partner', 'on'], ['host', 'on']] };
+  const { provider, calls } = scripted(spare);
+  const result = await compileViviStory({ story: STORY_SHOWER }, { provider });
+  assert.equal(calls.length, 0, 'an unused invented role costs no model turn');
+  assert.deepEqual(result.compiled.dsl.c, [['partner', 'on']], 'it is simply dropped');
+  assert.ok(result.report.semanticNotes?.some(nt => /dropped host/.test(nt)), 'and the drop is recorded');
+}
+{
+  // A wedding has guests. Populating a public room invents nobody.
+  const crowd: ViviExperienceDSL = {
+    v: 1, w: 'bar', g: 'scrutiny', c: [['guest', 'bg', 3]], o: ['phone'],
+    e: [['sound', 'music'], ['stop', 'music'], ['stare', 'crowd']],
+    a: [['speak_up', null, 'Give the toast', 'Every face is turned to you.', 'You lift the glass.'],
+        ['read', 'phone', 'Check your phone', 'The notes app is still open.', 'You scroll for the name.'],
+        ['leave', null, 'Walk out', 'The door is behind the band.', 'You put the glass down.']],
+  };
+  const { provider, calls } = scripted(crowd);
+  const result = await compileViviStory({ story: STORY_WEDDING }, { provider });
+  assert.equal(calls.length, 0, 'background guests in a public place are never questioned');
+  assert.deepEqual(result.compiled.dsl.c, [['guest', 'bg', 3]], 'the crowd survives');
+}
+ok('An invented person on stage is refused or dropped; a public crowd is not');
+
+/* ----------------------------------------------- deterministic staging */
+
+{
+  const crowded: ViviExperienceDSL = {
+    v: 1, w: 'bar', g: 'message', c: [['friend', 'on']], o: ['phone', 'photo', 'document'],
+    e: [['notice', 'photo'], ['msg', 'phone', 'Look at this'], ['stare', 'crowd']],
+    a: [['read', 'photo', 'Look at the photo', 'It was taken tonight.', 'You study it.'],
+        ['show', 'document', 'Show the printout', 'It is folded in your pocket.', 'You unfold it.'],
+        ['open', 'phone', 'Open the thread', 'The chat is still open.', 'You scroll up.']],
+  };
+  assert.ok(validateDSL(crowded).ok, 'the crowded fixture is a legal program');
+  const compiled = compileExperience(crowded, { source: 'model', createdAt: 0 });
+  const spots = compiled.scenario.actions.filter(a => !a.slotInfo.carried && !a.actorId).map(a => [a.slotInfo.standX, a.slotInfo.standY] as const);
+  for (let i = 0; i < spots.length; i++) {
+    for (let j = i + 1; j < spots.length; j++) {
+      assert.ok(Math.hypot(spots[i][0] - spots[j][0], spots[i][1] - spots[j][1]) >= 3, 'every choice gets its own patch of floor');
+    }
+  }
+  const cast = scenarioCast(compiled.scenario);
+  for (const spot of spots) {
+    const path = findPath(compiled.scenario.world, compiled.scenario.playerSpawn, [spot[0], spot[1]], { extra: cast.staticObstacles });
+    const end = path[path.length - 1];
+    assert.ok(Math.hypot(end[0] - spot[0], end[1] - spot[1]) <= 2, 'and the player can walk to it');
+    assert.ok(!pathCollides(compiled.scenario.world, path, cast.staticObstacles), 'without crossing furniture');
+  }
+  assert.ok(compiled.scenario.cinematic!.cameraEvents.length > 0, 'the camera always has something to cut on');
+  assert.ok(compiled.scenario.cinematic!.cueAtMs < compiled.scenario.cinematic!.pressureAtMs, 'pressure follows the cue');
+}
+{
+  // Two people told to come in through the same door must not become one person.
+  const sameDoor: ViviExperienceDSL = {
+    v: 1, w: 'office', g: 'credit', c: [['boss', 'on'], ['coworker', 'on']], o: ['screen'],
+    e: [['enter', 'boss', 'exit'], ['enter', 'coworker', 'exit'], ['say', 'boss', 'Whose slides are these?'], ['stare', 'crowd']],
+    a: [['speak_up', 'screen', 'Say it was yours', 'The deck is still on the wall.', 'The room turns.'],
+        ['ask', 'coworker', 'Ask them directly', 'They will not look up.', 'They shrug.'],
+        ['wait', null, 'Say nothing', 'The clock is behind you.', 'The moment passes.']],
+  };
+  const compiled = compileExperience(sameDoor, { source: 'model', createdAt: 0 });
+  const staged = scenarioCast(compiled.scenario).actors.filter(a => a.cls !== 'background');
+  for (let i = 0; i < staged.length; i++) {
+    for (let j = i + 1; j < staged.length; j++) {
+      const d = Math.hypot(staged[i].spawn[0] - staged[j].spawn[0], staged[i].spawn[1] - staged[j].spawn[1]);
+      assert.ok(d >= 3, `two people through one door stand apart (${d.toFixed(1)})`);
+    }
+  }
+  const cast = scenarioCast(compiled.scenario);
+  for (const cue of cast.cues.filter(c => c.act === 'enter' && c.then)) {
+    const extra = cast.staticObstacles.filter(o => o.id !== `actor:${cue.actor}`);
+    assert.ok(!pathCollides(compiled.scenario.world, findPath(compiled.scenario.world, cue.to!, cue.then!, { extra }), extra),
+      `${cue.actor} walks in without crossing furniture`);
+  }
+}
+ok('Standing spots are unique and reachable; people entering together stand apart');
+
 /* ------------------------------------------------- no story-id branches */
 
 const coreDirs = ['src/engine', 'src/components/world', 'src/assets/worlds', 'src/assets/characters'];
