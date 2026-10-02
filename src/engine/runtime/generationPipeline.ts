@@ -1,9 +1,21 @@
-import { worldTemplates, type ViviWorldId } from '../../world/templates';
-import type { ViviCharacterId, CharacterPose } from '../../assets/characters/characters';
-import type { ExperienceModifier, ModifierKind } from '../modifiers/types';
-import type { StoryBeat, BeatTrigger, BeatType } from './StoryBeatRunner';
-import { resolveSemanticSlot } from './semanticSlots';
-import type { CanonicalScenario, RuntimeAction, CrowdStat, CommunityReflection } from './RuntimeCompiler';
+import { worldTemplates, type ViviWorldId } from '../../world/templates/index.ts';
+import type { ViviCharacterId, CharacterPose } from '../../assets/characters/characters.ts';
+import type { ExperienceModifier, ModifierKind } from '../modifiers/types.ts';
+import type { StoryBeat, BeatTrigger, BeatType } from './StoryBeatRunner.ts';
+import { resolveSemanticSlot } from './semanticSlots.ts';
+import type { CanonicalScenario, RuntimeAction, CrowdStat, CommunityReflection } from './RuntimeCompiler.ts';
+
+export type AuthorTruthStatus =
+  | 'author_supplied'
+  | 'withheld'
+  | 'fictional_demo';
+
+export interface AuthorTruth {
+  status: AuthorTruthStatus;
+  text?: string;
+  sourceLabel?: string;
+  withheldReason?: string;
+}
 
 export interface StoryAnalysis {
   setting: string;
@@ -32,11 +44,6 @@ export interface CommitmentPlan {
   outcome: string;
 }
 
-export interface AuthorTruth {
-  status: 'verified' | 'missing';
-  text?: string;
-}
-
 export interface ExperiencePlan {
   id: string;
   title: string;
@@ -58,22 +65,107 @@ export interface ExperiencePlan {
   responsePrompt: string;
 }
 
-const VALID_MODIFIER_KINDS: Set<string> = new Set([
+export interface StoredPlayablePost {
+  id: string;
+  schemaVersion: 2;
+  title: string;
+  author: string;
+  authorHandle?: string;
+  pillar?: string;
+  world?: string;
+  synopsis: string;
+  scenario: CanonicalScenario;
+  analysis?: StoryAnalysis;
+  experiencePlan?: ExperiencePlan;
+  legacyGameSpec?: any;
+  responseToPostId?: string;
+  themeKey?: string;
+  inspirationPrompt?: string;
+  createdAt: number;
+}
+
+export function isStoredPlayablePost(item: any): item is StoredPlayablePost {
+  return (
+    item != null &&
+    typeof item === 'object' &&
+    item.schemaVersion === 2 &&
+    typeof item.scenario === 'object' &&
+    typeof item.scenario?.id === 'string'
+  );
+}
+
+export const WORLD_ALLOWED_SLOTS: Record<ViviWorldId, Set<string>> = {
+  apartment_night: new Set([
+    'sofa', 'phone_table', 'kitchen', 'bathroom_door', 'window', 'hallway',
+    'front_door', 'bedroom', 'decision_center', 'phone_screen', 'door'
+  ]),
+  hallway_night: new Set([
+    'front_door', 'elevator', 'stairs', 'camera', 'intercom',
+    'emergency_light', 'window', 'long_sight_line', 'decision_center', 'door'
+  ]),
+  bar_or_party: new Set([
+    'tables', 'bar', 'bathroom_corridor', 'exit', 'crowd_clusters',
+    'phone_area', 'quiet_corner', 'decision_center', 'entrance'
+  ]),
+  office_night: new Set([
+    'presentation_screen', 'director', 'coworker', 'player_laptop',
+    'meeting_clock', 'exit', 'decision_center'
+  ]),
+  train_station: new Set([
+    'station_board', 'platform_edge', 'bench', 'clock', 'train',
+    'exit', 'decision_center'
+  ]),
+  city_rain: new Set([
+    'shelter', 'crossing', 'street', 'car', 'window', 'decision_center'
+  ]),
+  family_home: new Set([
+    'documents', 'stair_door', 'photo_wall', 'window', 'dining_table',
+    'decision_center'
+  ]),
+  hotel_or_rental: new Set([
+    'photo', 'front_door', 'kitchen', 'balcony', 'bedroom',
+    'decision_center', 'door'
+  ]),
+  neighborhood_sunset: new Set([
+    'bench', 'bus_stop', 'tree', 'path', 'clock', 'friend', 'decision_center'
+  ]),
+  bedroom_night: new Set([
+    'bed', 'phone_screen', 'door', 'window', 'nightstand', 'decision_center'
+  ]),
+};
+
+const GENERAL_MODIFIER_ANCHORS = new Set(['audio', 'room', 'player', 'lighting', 'ambient']);
+
+export const VALID_MODIFIER_KINDS: Set<string> = new Set([
   'timer', 'message', 'typing', 'incoming_call', 'call',
   'door_state', 'door', 'sound', 'elevator', 'npc_move',
   'npc_dialogue', 'npcPressure', 'lighting', 'weather',
   'arrival', 'exit', 'crowd',
 ]);
 
-const VALID_BEAT_TRIGGERS: Set<string> = new Set([
+export const VALID_BEAT_TRIGGERS: Set<string> = new Set([
   'time_elapsed', 'player_entered_zone', 'object_inspected',
   'npc_reached_slot', 'dialogue_finished', 'modifier_finished',
   'player_committed', 'previous_beat_complete',
 ]);
 
+export const VALID_BEAT_TYPES: Set<string> = new Set([
+  'arrival', 'freeExplore', 'cue', 'interaction', 'conversation',
+  'movement', 'silence', 'memoryEcho', 'pressure', 'commitment',
+  'reveal', 'compare', 'response',
+]);
+
+export const VALID_CHARACTER_IDS: Set<string> = new Set([
+  'young_adult_masc_01', 'adult_fem_01', 'young_adult_masc_02', 'elder_masc_01',
+]);
+
+export const VALID_CHARACTER_POSES: Set<string> = new Set([
+  'idle', 'wait', 'talk', 'turn', 'leave', 'look_at_phone', 'confront', 'read',
+]);
+
 /**
- * Validates an ExperiencePlan ensuring semantic correctness and safety.
- * Strictly rejects any raw x/y coordinates.
+ * Validates an ExperiencePlan ensuring semantic correctness, safety, and strict slot matching.
+ * Strictly rejects any raw x/y coordinates and impossible slots for the chosen world.
  */
 export function validateExperiencePlan(input: any): { valid: true; plan: ExperiencePlan } | { valid: false; errors: string[] } {
   const errors: string[] = [];
@@ -88,14 +180,7 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
   }
 
   const worldId = (input.worldTemplate as ViviWorldId) || 'apartment_night';
-  const worldConfig = worldTemplates[worldId];
-  const knownSlots = new Set(worldConfig ? worldConfig.slots.map(s => s.id) : []);
-  // Common aliases allowed
-  knownSlots.add('decision_center');
-  knownSlots.add('phone_table');
-  knownSlots.add('phone_screen');
-  knownSlots.add('front_door');
-  knownSlots.add('exit');
+  const allowedSlots = WORLD_ALLOWED_SLOTS[worldId] || new Set(['decision_center']);
 
   // 2. Reject raw coordinates
   const jsonStr = JSON.stringify(input);
@@ -106,6 +191,14 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
   // 3. Commitments count validation (2 to 5)
   if (!Array.isArray(input.commitments) || input.commitments.length < 2 || input.commitments.length > 5) {
     errors.push(`ExperiencePlan must have between 2 and 5 commitments (found ${input.commitments?.length || 0}).`);
+  } else {
+    for (const commit of input.commitments) {
+      if (!commit.targetSlot) {
+        errors.push(`Commitment "${commit.id}" missing targetSlot.`);
+      } else if (!allowedSlots.has(commit.targetSlot)) {
+        errors.push(`Commitment slot "${commit.targetSlot}" is invalid for world template "${worldId}".`);
+      }
+    }
   }
 
   // 4. Validate interactions
@@ -115,6 +208,8 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
     for (const inter of input.interactions) {
       if (!inter.targetSlot) {
         errors.push(`Interaction "${inter.id}" missing targetSlot.`);
+      } else if (!allowedSlots.has(inter.targetSlot)) {
+        errors.push(`Interaction slot "${inter.targetSlot}" is invalid for world template "${worldId}".`);
       }
       if (!inter.label || inter.label.length > 45) {
         errors.push(`Interaction "${inter.id}" label must be between 1 and 45 characters.`);
@@ -122,7 +217,22 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
     }
   }
 
-  // 5. Validate modifiers
+  // 5. Validate cast
+  if (Array.isArray(input.cast)) {
+    for (const castMember of input.cast) {
+      if (castMember.slot && !allowedSlots.has(castMember.slot)) {
+        errors.push(`Cast slot "${castMember.slot}" is invalid for world template "${worldId}".`);
+      }
+      if (castMember.character && !VALID_CHARACTER_IDS.has(castMember.character)) {
+        errors.push(`Invalid character ID: "${castMember.character}".`);
+      }
+      if (castMember.pose && !VALID_CHARACTER_POSES.has(castMember.pose)) {
+        errors.push(`Invalid character pose: "${castMember.pose}".`);
+      }
+    }
+  }
+
+  // 6. Validate modifiers
   if (Array.isArray(input.modifiers)) {
     for (const mod of input.modifiers) {
       if (!VALID_MODIFIER_KINDS.has(mod.kind)) {
@@ -131,15 +241,33 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
       if (typeof mod.atMs !== 'number' || mod.atMs < 0) {
         errors.push(`Modifier "${mod.id}" must have a non-negative atMs timing.`);
       }
+      if (mod.anchor && !allowedSlots.has(mod.anchor) && !GENERAL_MODIFIER_ANCHORS.has(mod.anchor)) {
+        errors.push(`Modifier anchor "${mod.anchor}" is invalid for world template "${worldId}".`);
+      }
     }
   }
 
-  // 6. Validate author truth
+  // 7. Validate beats
+  if (Array.isArray(input.beats)) {
+    for (const beat of input.beats) {
+      if (beat.type && !VALID_BEAT_TYPES.has(beat.type)) {
+        errors.push(`Invalid beat type: "${beat.type}".`);
+      }
+      if (beat.trigger && !VALID_BEAT_TRIGGERS.has(beat.trigger)) {
+        errors.push(`Invalid beat trigger: "${beat.trigger}".`);
+      }
+    }
+  }
+
+  // 8. Validate author truth
   if (!input.authorTruth || typeof input.authorTruth !== 'object') {
-    errors.push('ExperiencePlan must specify authorTruth with status "verified" or "missing".');
+    errors.push('ExperiencePlan must specify authorTruth with status "author_supplied", "withheld", or "fictional_demo".');
   } else {
-    if (input.authorTruth.status === 'verified' && (!input.authorTruth.text || !input.authorTruth.text.trim())) {
-      errors.push('AuthorTruth marked as verified but contains empty text.');
+    const status = input.authorTruth.status;
+    if (status !== 'author_supplied' && status !== 'withheld' && status !== 'fictional_demo') {
+      errors.push(`Invalid authorTruth status: "${status}". Must be "author_supplied", "withheld", or "fictional_demo".`);
+    } else if ((status === 'author_supplied' || status === 'fictional_demo') && (!input.authorTruth.text || !input.authorTruth.text.trim())) {
+      errors.push(`AuthorTruth status is "${status}" but contains empty text.`);
     }
   }
 
@@ -156,7 +284,8 @@ export function validateExperiencePlan(input: any): { valid: true; plan: Experie
 export function compileExperiencePlanToScenario(
   plan: ExperiencePlan,
   analysis: StoryAnalysis,
-  author: string = 'Anonymous'
+  author: string = 'Anonymous',
+  responseToPostId?: string
 ): CanonicalScenario {
   const world = plan.worldTemplate;
 
@@ -184,7 +313,7 @@ export function compileExperiencePlanToScenario(
     }
   }
 
-  // Seed honest demo stats
+  // Seed honest demo stats with explicit provenance
   const totalDemoVotes = 100;
   const count = actions.length;
   const rawP = [52, 28, 20, 10, 10].slice(0, count);
@@ -196,6 +325,7 @@ export function compileExperiencePlanToScenario(
       label: act.commitLabel,
       percentage: pct,
       count: Math.round(totalDemoVotes * (pct / 100)),
+      source: 'seed_demo' as const,
     };
   });
 
@@ -203,20 +333,25 @@ export function compileExperiencePlanToScenario(
     {
       id: `ref_demo_${Date.now()}`,
       authorHandle: '@reader_sample',
-      authorName: 'Sample Reader',
+      authorName: 'Sample Reader (демо)',
       text: 'The hesitation before deciding is captured so well here.',
-      timestamp: 'Demo reflection',
+      timestamp: 'Пример отклика (демо)',
       upvotes: 4,
+      source: 'seed_demo' as const,
     },
   ];
 
   const authorHandle = author.startsWith('@') ? author : `@${author.toLowerCase().replace(/\s+/g, '_')}`;
+
+  const hasReality =
+    plan.authorTruth.status === 'author_supplied' || plan.authorTruth.status === 'fictional_demo';
 
   return {
     id: plan.id,
     title: plan.title,
     hook: plan.synopsis,
     setup: analysis.centralTension || plan.synopsis,
+    synopsis: plan.synopsis,
     author,
     authorHandle,
     duration: `${plan.durationMinutes || 3} min`,
@@ -238,13 +373,14 @@ export function compileExperiencePlanToScenario(
     beats: plan.beats,
     modifiers: plan.modifiers,
     endings,
-    reality: plan.authorTruth.status === 'verified' ? plan.authorTruth.text || '' : '',
+    reality: hasReality ? plan.authorTruth.text || '' : '',
     crowdQuestion: plan.crowdQuestion || 'What would you do?',
     seededStats,
     communityReflections: reflections,
     responsePrompt: plan.responsePrompt || 'Have you lived through a moment like this?',
     themeKey: analysis.themeKey,
     authorTruth: plan.authorTruth,
+    responseToPostId,
   };
 }
 
@@ -292,8 +428,8 @@ export function generateDeterministicExperiencePlan(
 
   const hasRealOutcome = !!whatReallyHappened && whatReallyHappened.trim().length > 5;
   const authorTruth: AuthorTruth = hasRealOutcome
-    ? { status: 'verified', text: whatReallyHappened.trim() }
-    : { status: 'missing' };
+    ? { status: 'author_supplied', text: whatReallyHappened.trim(), sourceLabel: 'со слов автора' }
+    : { status: 'withheld' };
 
   const analysis: StoryAnalysis = {
     setting: worldTemplate.replace('_', ' '),

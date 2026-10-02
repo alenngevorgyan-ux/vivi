@@ -3,8 +3,10 @@ import type { GameSpec } from '../../types/gameSpec';
 import { worldTemplates, type ViviWorldId } from '../../world/templates';
 import type { ExperienceModifier } from '../modifiers/types';
 import type { ViviCharacterId } from '../../assets/characters/characters';
-import { resolveSemanticSlot, type SemanticSlotResolution } from './semanticSlots';
-import { StoryBeat } from './StoryBeatRunner';
+import { resolveSemanticSlot, type SemanticSlotResolution } from './semanticSlots.ts';
+import { StoryBeat } from './StoryBeatRunner.ts';
+import type { AuthorTruth, AuthorTruthStatus } from './generationPipeline.ts';
+export type { AuthorTruth, AuthorTruthStatus };
 
 export interface RuntimeAction {
   id: string;
@@ -42,6 +44,7 @@ export interface CanonicalScenario {
   title: string;
   hook: string;
   setup: string;
+  synopsis?: string;
   author: string;
   authorHandle: string;
   duration: string;
@@ -61,13 +64,14 @@ export interface CanonicalScenario {
   modifiers: ExperienceModifier[];
   endings: Record<string, string>;
   reality: string;
-  authorTruth: { status: 'verified' | 'missing'; text?: string };
+  authorTruth: AuthorTruth;
   crowdQuestion: string;
   authorChoiceId?: string;
   seededStats: CrowdStat[];
   communityReflections: CommunityReflection[];
   responsePrompt: string;
   themeKey: string;
+  responseToPostId?: string;
 }
 
 // Maps authored hero stories or generated stories to canonical runtime format
@@ -200,11 +204,7 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     source: 'seed_demo' as const,
   }));
 
-  const authorHandle = story.author.toLowerCase().includes('alex')
-    ? '@alex_k'
-    : story.author.toLowerCase().includes('anonymous')
-    ? '@anonymous_contributor'
-    : `@${story.author.toLowerCase().replace(/\s+/g, '_')}`;
+  const authorHandle = `@demo_${story.id.replace(/-/g, '_')}`;
 
   return {
     id: story.id,
@@ -219,7 +219,11 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
     playerSpawn: [38, 77],
     playerCharacter: 'young_adult_masc_01',
     timerAnchor: story.timerAnchor,
-    authorTruth: { status: 'verified', text: story.reality },
+    authorTruth: {
+      status: 'fictional_demo',
+      text: story.reality,
+      sourceLabel: 'Заданная для демо развязка',
+    },
     npc: {
       id: 'partner_or_other',
       character: story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01',
@@ -355,9 +359,9 @@ export function compileGameSpecToRuntime(gameSpec: GameSpec): CanonicalScenario 
 
   const rawTruth = gameSpec.whatReallyHappened;
   const hasAuthorTruth = typeof rawTruth === 'string' && rawTruth.trim().length > 5;
-  const authorTruth = hasAuthorTruth
-    ? { status: 'verified' as const, text: rawTruth.trim() }
-    : { status: 'missing' as const };
+  const authorTruth: AuthorTruth = hasAuthorTruth
+    ? { status: 'author_supplied', text: rawTruth.trim(), sourceLabel: 'со слов автора' }
+    : { status: 'withheld' };
 
   const seededStats: CrowdStat[] = runtimeActions.map((act, i) => ({
     choiceId: act.id,

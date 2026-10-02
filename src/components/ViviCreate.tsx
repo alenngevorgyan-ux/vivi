@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowUpRight, Sparkles, Link as LinkIcon } from 'lucide-react';
 import type { GameSpec } from '../types/gameSpec';
+import { type StoredPlayablePost } from '../engine/runtime/generationPipeline';
 import { CreateView } from './CreateView';
 
 const prompts = [
@@ -11,31 +12,57 @@ const prompts = [
 
 interface ViviCreateProps {
   initialGameToEdit?: GameSpec | null;
+  initialPostToEdit?: StoredPlayablePost | null;
   initialPrompt?: string;
   responseToPostId?: string;
   themeKey?: string;
-  onSaveGame: (game: GameSpec) => void;
-  onPlayGame: (game: GameSpec) => void;
+  onSaveGame?: (game: GameSpec) => void;
+  onPlayGame?: (game: GameSpec) => void;
+  onSavePost?: (post: StoredPlayablePost) => void;
+  onPlayPost?: (post: StoredPlayablePost) => void;
   onCancelResponse?: () => void;
 }
 
 export function ViviCreate({
   initialGameToEdit,
+  initialPostToEdit,
   initialPrompt = '',
   responseToPostId,
   themeKey,
   onSaveGame,
   onPlayGame,
+  onSavePost,
+  onPlayPost,
   onCancelResponse,
 }: ViviCreateProps) {
   const [advanced, setAdvanced] = useState(false);
-  const [story, setStory] = useState(initialPrompt || initialGameToEdit?.description || '');
-  const [reality, setReality] = useState(initialGameToEdit?.whatReallyHappened || '');
-  const [author, setAuthor] = useState(initialGameToEdit?.author || 'Anonymous');
-  const [pillar, setPillar] = useState(themeKey || 'Relationships');
+  const [story, setStory] = useState(
+    initialPrompt ||
+    initialPostToEdit?.scenario?.setup ||
+    initialPostToEdit?.synopsis ||
+    initialGameToEdit?.description ||
+    ''
+  );
+  const [reality, setReality] = useState(
+    initialPostToEdit?.scenario?.reality ||
+    initialPostToEdit?.scenario?.authorTruth?.text ||
+    initialGameToEdit?.whatReallyHappened ||
+    ''
+  );
+  const [author, setAuthor] = useState(
+    initialPostToEdit?.scenario?.author ||
+    initialGameToEdit?.author ||
+    'Anonymous'
+  );
+  const [pillar, setPillar] = useState(
+    themeKey ||
+    initialPostToEdit?.pillar ||
+    'Relationships'
+  );
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [generated, setGenerated] = useState<GameSpec | null>(initialGameToEdit || null);
+  const [generatedPost, setGeneratedPost] = useState<StoredPlayablePost | null>(initialPostToEdit || null);
 
   useEffect(() => {
     if (initialPrompt && !story) {
@@ -62,12 +89,37 @@ export function ViviCreate({
       });
 
       const data = await response.json();
-      if (!response.ok || !data.gameSpec) {
+      if (!response.ok || (!data.gameSpec && !data.scenario)) {
         throw new Error(data.error || 'Vivi не удалось построить мир для этой ситуации.');
       }
 
-      setGenerated(data.gameSpec);
-      onSaveGame(data.gameSpec);
+      const post: StoredPlayablePost = data.playablePost || {
+        schemaVersion: 2,
+        id: data.scenario?.id || data.gameSpec?.id,
+        title: data.scenario?.title || data.gameSpec?.title,
+        synopsis: data.scenario?.synopsis || data.gameSpec?.synopsis,
+        pillar: data.scenario?.pillar || pillar,
+        world: data.scenario?.world || 'apartment_night',
+        authorHandle: data.scenario?.authorHandle || `@${(author || 'creator').toLowerCase().replace(/\s+/g, '_')}`,
+        createdAt: Date.now(),
+        scenario: data.scenario,
+        analysis: data.analysis,
+        experiencePlan: data.experiencePlan,
+        legacyGameSpec: data.gameSpec,
+        responseToPostId: data.responseToPostId || responseToPostId,
+        themeKey: data.themeKey || pillar,
+        inspirationPrompt: data.inspirationPrompt || story,
+      };
+
+      setGeneratedPost(post);
+      if (data.gameSpec) {
+        setGenerated(data.gameSpec);
+      }
+      if (onSavePost) {
+        onSavePost(post);
+      } else if (onSaveGame) {
+        onSaveGame(data.gameSpec || (post as any));
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Что-то пошло не так. Попробуйте еще раз.');
     } finally {
@@ -80,9 +132,13 @@ export function ViviCreate({
       <div className="vivi-create-advanced">
         <button onClick={() => setAdvanced(false)}>← Назад к создателю Vivi</button>
         <CreateView
-          initialGameToEdit={generated || initialGameToEdit}
-          onSaveGame={onSaveGame}
-          onPlayGame={onPlayGame}
+          initialGameToEdit={generatedPost?.legacyGameSpec || generated || initialGameToEdit}
+          onSaveGame={(game) => {
+            if (onSaveGame) onSaveGame(game);
+          }}
+          onPlayGame={(game) => {
+            if (onPlayGame) onPlayGame(game);
+          }}
         />
       </div>
     );
@@ -193,14 +249,22 @@ export function ViviCreate({
             <ArrowRight size={17} />
           </button>
 
-          {generated && (
+          {(generatedPost || generated) && (
             <div className="vivi-create-result">
               <span className="vivi-eyebrow">МИР ГОТОВ · ГОТОВ К ИССЛЕДОВАНИЮ</span>
-              <h3>{generated.title}</h3>
-              <p>{generated.synopsis}</p>
+              <h3>{generatedPost?.title || generated?.title}</h3>
+              <p>{generatedPost?.synopsis || generated?.synopsis}</p>
               <button
                 className="vivi-button mt-3 text-xs py-2 px-4"
-                onClick={() => onPlayGame(generated)}
+                onClick={() => {
+                  if (generatedPost && onPlayPost) {
+                    onPlayPost(generatedPost);
+                  } else if (generatedPost && onPlayGame) {
+                    onPlayGame(generatedPost.legacyGameSpec || (generatedPost as any));
+                  } else if (generated && onPlayGame) {
+                    onPlayGame(generated);
+                  }
+                }}
               >
                 Войти в созданный мир <ArrowUpRight size={16} />
               </button>

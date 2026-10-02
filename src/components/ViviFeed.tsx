@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { heroStories, type HeroStory } from '../data/heroStories';
 import type { GameSpec } from '../types/gameSpec';
+import { type StoredPlayablePost, isStoredPlayablePost } from '../engine/runtime/generationPipeline';
 import { SceneArt } from '../assets/worlds/SceneArt';
 import type { ViviWorldId } from '../world/templates';
 
@@ -29,9 +30,9 @@ const categories = [
 ];
 
 interface ViviFeedProps {
-  customGames?: GameSpec[];
+  customGames?: (StoredPlayablePost | GameSpec)[];
   onEnter: (story: HeroStory) => void;
-  onEnterGameSpec: (game: GameSpec) => void;
+  onEnterGameSpec: (game: StoredPlayablePost | GameSpec) => void;
   onCreate: () => void;
   onArchive: () => void;
 }
@@ -83,7 +84,11 @@ export function ViviFeed({
   // Filter community/custom stories
   const filteredCommunityStories = useMemo(() => {
     return customGames.filter(game => {
-      const matchQuery = `${game.title} ${game.synopsis || game.description}`.toLowerCase().includes(query.toLowerCase());
+      const isPost = isStoredPlayablePost(game);
+      const title = game.title || '';
+      const synopsis = isPost ? game.synopsis : (game.synopsis || game.description || '');
+      const author = isPost ? game.authorHandle : (game.author || '');
+      const matchQuery = `${title} ${synopsis} ${author}`.toLowerCase().includes(query.toLowerCase());
       if (feedTab === 'my_decisions') {
         return (myDecisions[game.id] || bookmarkedIds.has(game.id)) && matchQuery;
       }
@@ -263,8 +268,15 @@ export function ViviFeed({
         {/* Community / User-created stories */}
         {(feedTab === 'community' || feedTab === 'my_decisions') &&
           filteredCommunityStories.map((game, index) => {
+            const isPost = isStoredPlayablePost(game);
             const decision = myDecisions[game.id];
             const isSaved = bookmarkedIds.has(game.id);
+            const worldTemplate: ViviWorldId = isPost
+              ? ((game.world as ViviWorldId) || 'apartment_night')
+              : ((game.nodes[game.startNodeId]?.worldConfig?.template as ViviWorldId) || 'apartment_night');
+            const genre = isPost ? (game.pillar || game.themeKey || 'COMMUNITY') : (game.genre || 'COMMUNITY');
+            const author = isPost ? game.authorHandle : `@${game.author ? game.author.toLowerCase().replace(/\s+/g, '_') : 'creator'}`;
+            const synopsis = isPost ? game.synopsis : (game.synopsis || game.description);
 
             return (
               <div
@@ -275,10 +287,7 @@ export function ViviFeed({
               >
                 <div className="vivi-card-art relative">
                   <SceneArt
-                    world={
-                      (game.nodes[game.startNodeId]?.worldConfig?.template as ViviWorldId) ||
-                      'apartment_night'
-                    }
+                    world={worldTemplate}
                     active
                   />
                   <span className="vivi-card-number">C / {String(index + 1).padStart(2, '0')}</span>
@@ -300,7 +309,7 @@ export function ViviFeed({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="vivi-eyebrow">
-                        {(game.genre || 'COMMUNITY').toUpperCase()} · 3 MIN
+                        {genre.toUpperCase()} · 3 MIN
                       </span>
                       <span className="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-[9px] font-mono">
                         СООБЩЕСТВО
@@ -308,12 +317,12 @@ export function ViviFeed({
                     </div>
 
                     <h3 className="group-hover:text-amber-800 transition-colors">{game.title}</h3>
-                    <p className="line-clamp-2">{game.synopsis || game.description}</p>
+                    <p className="line-clamp-2">{synopsis}</p>
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-stone-200 mt-auto">
                     <span className="text-[11px] text-stone-500 font-mono">
-                      @{game.author ? game.author.toLowerCase().replace(/\s+/g, '_') : 'creator'}
+                      {author}
                     </span>
                     <span className="vivi-card-enter">
                       ВОЙТИ В ИСТОРИЮ <ArrowUpRight size={15} />

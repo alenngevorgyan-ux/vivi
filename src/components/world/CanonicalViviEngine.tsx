@@ -190,14 +190,15 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     return [76, 76];
   }, [physicalState.npcAction, scenario.world]);
 
-  const npcPose = physicalState.npcAction.pose || (elapsedMs >= 24000 ? 'turn' : 'wait');
+  const beatState = beatRunner.getState();
+  const npcPose = physicalState.npcAction.pose || (beatState.pressureTriggered ? 'turn' : 'wait');
   const selectedEnding = selectedAction ? scenario.endings[selectedAction.id] : '';
 
   return (
     <div className="vivi-stage-shell relative select-none">
       <div className="vivi-stage relative overflow-hidden" ref={stageRef}>
         {/* Background Vector Scene Art */}
-        <SceneArt world={scenario.world} active={elapsedMs >= 6000} />
+        <SceneArt world={scenario.world} active={beatState.cueTriggered} />
 
         {/* Ambient Vignette */}
         <div className="vivi-stage-vignette" />

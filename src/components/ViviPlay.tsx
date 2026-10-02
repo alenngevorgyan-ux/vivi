@@ -21,6 +21,7 @@ import {
   type CanonicalScenario,
   type RuntimeAction,
   type CommunityReflection,
+  type AuthorTruthStatus,
 } from '../engine/runtime/RuntimeCompiler';
 import { CanonicalViviEngine } from './world/CanonicalViviEngine';
 import { StoryBeatRunner, type BeatRunnerState } from '../engine/runtime/StoryBeatRunner';
@@ -53,6 +54,7 @@ export function ViviPlay({
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(Date.now());
   const hiddenAtRef = useRef<number | null>(null);
+  const [runId, setRunId] = useState(0);
 
   // Authoritative StoryBeatRunner instance
   const [beatState, setBeatState] = useState<BeatRunnerState>(() => {
@@ -61,10 +63,12 @@ export function ViviPlay({
   });
 
   const beatRunner = useMemo(() => {
-    return new StoryBeatRunner(canonicalScenario.beats, (newState) => {
+    const runner = new StoryBeatRunner(canonicalScenario.beats, (newState) => {
       setBeatState({ ...newState });
     });
-  }, [canonicalScenario]);
+    setBeatState(runner.getState());
+    return runner;
+  }, [canonicalScenario, runId]);
 
   // Gameplay state
   const [selectedAction, setSelectedAction] = useState<RuntimeAction | null>(null);
@@ -248,10 +252,23 @@ export function ViviPlay({
     setObservations([]);
     setIsReflectionSubmitted(false);
     setCommitAttemptWarning(null);
+    beatRunner.reset();
+    setBeatState(beatRunner.getState());
+    setRunId(prev => prev + 1);
   };
 
   const selectedEnding = selectedAction ? canonicalScenario.endings[selectedAction.id] : '';
-  const hasAuthorTruth = canonicalScenario.authorTruth?.status === 'verified' && !!canonicalScenario.reality;
+  const truthStatus: AuthorTruthStatus =
+    canonicalScenario.authorTruth?.status ||
+    (canonicalScenario.reality ? 'author_supplied' : 'withheld');
+  const truthText = canonicalScenario.authorTruth?.text || canonicalScenario.reality || '';
+  const truthSourceLabel =
+    canonicalScenario.authorTruth?.sourceLabel ||
+    (truthStatus === 'author_supplied'
+      ? 'со слов автора'
+      : truthStatus === 'fictional_demo'
+      ? 'Заданная для демо развязка'
+      : 'НЕ РАСКРЫТО');
 
   return (
     <main className="vivi-play min-h-screen">
@@ -320,6 +337,7 @@ export function ViviPlay({
         {/* Canonical Physical 2D World (Enforces physical proximity) */}
         <section className="vivi-stage-shell">
           <CanonicalViviEngine
+            key={`canonical-engine-${canonicalScenario.id}-${runId}`}
             scenario={canonicalScenario}
             elapsedMs={elapsed}
             beatRunner={beatRunner}
@@ -453,18 +471,31 @@ export function ViviPlay({
                   <div className="vivi-reality">
                     <div className="flex items-center justify-between mb-1">
                       <span className="vivi-eyebrow">
-                        {hasAuthorTruth ? 'ЧТО ПРОИЗОШЛО В РЕАЛЬНОСТИ' : 'ПРАВДА АВТОРА'}
+                        {truthStatus === 'author_supplied'
+                          ? 'ЧТО АВТОР РАССКАЗАЛ О РЕАЛЬНОМ ИСХОДЕ'
+                          : truthStatus === 'fictional_demo'
+                          ? 'ДЕМОНСТРАЦИОННЫЙ СЦЕНАРИЙ'
+                          : 'ПРАВДА АВТОРА'}
                       </span>
                       <span className="text-[10px] text-stone-500 font-mono">
-                        {hasAuthorTruth ? 'ПОДЛИННЫЙ СЛУЧАЙ' : 'НЕ РАСКРЫТО'}
+                        {truthSourceLabel}
                       </span>
                     </div>
 
-                    {hasAuthorTruth ? (
-                      <p>{canonicalScenario.reality}</p>
-                    ) : (
+                    {truthStatus === 'author_supplied' && (
+                      <p>{truthText}</p>
+                    )}
+
+                    {truthStatus === 'fictional_demo' && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-stone-500 font-medium">Ниже — заданная для демо развязка.</p>
+                        <p>{truthText}</p>
+                      </div>
+                    )}
+
+                    {truthStatus === 'withheld' && (
                       <p className="italic text-stone-500 text-sm">
-                        Автор пока не раскрыл, что произошло в реальности. История опубликована для проверки ваших инстинктов в моменте выбора.
+                        {canonicalScenario.authorTruth?.withheldReason || 'Автор пока не раскрыл, что произошло.'}
                       </p>
                     )}
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { GameSpec } from './types/gameSpec';
 import { SOCIAL_MEMORIES } from './data/socialMemories';
 import { Navbar } from './components/Navbar';
@@ -7,11 +7,16 @@ import { ViviFeed } from './components/ViviFeed';
 import { ViviPlay } from './components/ViviPlay';
 import { FeedView } from './components/FeedView';
 import type { HeroStory } from './data/heroStories';
+import {
+  type StoredPlayablePost,
+  isStoredPlayablePost,
+} from './engine/runtime/generationPipeline';
+import type { CanonicalScenario } from './engine/runtime/RuntimeCompiler';
 
 const STORAGE_KEY = 'vivi_community_stories_v1';
 
 export default function App() {
-  const [games, setGames] = useState<GameSpec[]>(() => {
+  const [games, setGames] = useState<(StoredPlayablePost | GameSpec)[]>(() => {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -31,7 +36,9 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'feed' | 'create' | 'play'>('feed');
   const [activeHero, setActiveHero] = useState<HeroStory | null>(null);
-  const [activeGame, setActiveGame] = useState<GameSpec | null>(null);
+  const [activeScenario, setActiveScenario] = useState<CanonicalScenario | null>(null);
+  const [activeLegacyGame, setActiveLegacyGame] = useState<GameSpec | null>(null);
+  const [postToEdit, setPostToEdit] = useState<StoredPlayablePost | null>(null);
   const [gameToEdit, setGameToEdit] = useState<GameSpec | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -53,20 +60,29 @@ export default function App() {
   }, [games]);
 
   const handleEnterHero = (story: HeroStory) => {
-    setActiveGame(null);
+    setActiveScenario(null);
+    setActiveLegacyGame(null);
     setActiveHero(story);
     setActiveTab('play');
   };
 
-  const handleEnterGameSpec = (game: GameSpec) => {
+  const handleEnterPost = (post: StoredPlayablePost | GameSpec) => {
     setActiveHero(null);
-    setActiveGame(game);
+    if (isStoredPlayablePost(post)) {
+      setActiveLegacyGame(null);
+      setActiveScenario(post.scenario);
+    } else {
+      setActiveScenario(null);
+      setActiveLegacyGame(post);
+    }
     setActiveTab('play');
   };
 
   const handleCreateNew = () => {
     setActiveHero(null);
-    setActiveGame(null);
+    setActiveScenario(null);
+    setActiveLegacyGame(null);
+    setPostToEdit(null);
     setGameToEdit(null);
     setResponseThread(null);
     setActiveTab('create');
@@ -78,24 +94,36 @@ export default function App() {
     inspirationPrompt: string
   ) => {
     setActiveHero(null);
-    setActiveGame(null);
+    setActiveScenario(null);
+    setActiveLegacyGame(null);
+    setPostToEdit(null);
     setGameToEdit(null);
     setResponseThread({ responseToPostId, themeKey, inspirationPrompt });
     setActiveTab('create');
   };
 
-  const handleSaveGame = (updatedGame: GameSpec) => {
+  const handleSavePost = (updatedItem: StoredPlayablePost | GameSpec) => {
     setGames((prev) => {
-      const existsIndex = prev.findIndex((g) => g.id === updatedGame.id);
+      const existsIndex = prev.findIndex((g) => g.id === updatedItem.id);
       if (existsIndex >= 0) {
         const copy = [...prev];
-        copy[existsIndex] = updatedGame;
+        copy[existsIndex] = updatedItem;
         return copy;
       }
-      return [updatedGame, ...prev];
+      return [updatedItem, ...prev];
     });
-    setActiveGame(updatedGame);
+    if (isStoredPlayablePost(updatedItem)) {
+      setActiveScenario(updatedItem.scenario);
+      setActiveLegacyGame(null);
+    } else {
+      setActiveLegacyGame(updatedItem);
+      setActiveScenario(null);
+    }
   };
+
+  const legacyGamesForStudio: GameSpec[] = useMemo(() => {
+    return games.map((g) => (isStoredPlayablePost(g) ? g.legacyGameSpec : g));
+  }, [games]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans vivi-app bg-[#f4efe7] text-[#202629]">
@@ -105,13 +133,14 @@ export default function App() {
         setActiveTab={(tab) => {
           if (tab !== 'play') {
             setActiveHero(null);
-            setActiveGame(null);
+            setActiveScenario(null);
+            setActiveLegacyGame(null);
           }
           if (tab === 'feed') setShowArchive(false);
           setActiveTab(tab);
         }}
-        hasActiveGame={!!activeGame || !!activeHero}
-        activeGameTitle={activeHero?.title || activeGame?.title}
+        hasActiveGame={!!activeHero || !!activeScenario || !!activeLegacyGame}
+        activeGameTitle={activeHero?.title || activeScenario?.title || activeLegacyGame?.title}
         isAudioMuted={isAudioMuted}
         setIsAudioMuted={setIsAudioMuted}
       />
@@ -123,7 +152,7 @@ export default function App() {
           <ViviFeed
             customGames={games}
             onEnter={handleEnterHero}
-            onEnterGameSpec={handleEnterGameSpec}
+            onEnterGameSpec={handleEnterPost}
             onCreate={handleCreateNew}
             onArchive={() => setShowArchive(true)}
           />
@@ -139,15 +168,25 @@ export default function App() {
               ← Назад в ленту Vivi
             </button>
             <FeedView
-              games={games}
-              onPlayGame={handleEnterGameSpec}
+              games={legacyGamesForStudio}
+              onPlayGame={(g) => {
+                const found = games.find((item) => item.id === g.id);
+                handleEnterPost(found || g);
+              }}
               onEditGame={(g) => {
-                setGameToEdit(g);
+                const found = games.find((item) => item.id === g.id);
+                if (found && isStoredPlayablePost(found)) {
+                  setPostToEdit(found);
+                  setGameToEdit(null);
+                } else {
+                  setGameToEdit(g);
+                  setPostToEdit(null);
+                }
                 setActiveTab('create');
               }}
               onImportGame={(g) => {
-                handleSaveGame(g);
-                handleEnterGameSpec(g);
+                handleSavePost(g);
+                handleEnterPost(g);
               }}
               onCreateNew={handleCreateNew}
             />
@@ -157,26 +196,29 @@ export default function App() {
         {/* Story Creator */}
         {activeTab === 'create' && (
           <ViviCreate
-            key={gameToEdit?.id || responseThread?.responseToPostId || 'new'}
+            key={postToEdit?.id || gameToEdit?.id || responseThread?.responseToPostId || 'new'}
             initialGameToEdit={gameToEdit}
+            initialPostToEdit={postToEdit}
             initialPrompt={responseThread?.inspirationPrompt}
             responseToPostId={responseThread?.responseToPostId}
             themeKey={responseThread?.themeKey}
-            onSaveGame={handleSaveGame}
-            onPlayGame={handleEnterGameSpec}
+            onSavePost={handleSavePost}
+            onPlayPost={handleEnterPost}
             onCancelResponse={() => setResponseThread(null)}
           />
         )}
 
         {/* Unified Canonical Playback Engine (Used for both Hero & User Stories!) */}
-        {activeTab === 'play' && (activeHero || activeGame) && (
+        {activeTab === 'play' && (activeHero || activeScenario || activeLegacyGame) && (
           <ViviPlay
-            key={activeHero?.id || activeGame?.id}
+            key={activeHero?.id || activeScenario?.id || activeLegacyGame?.id}
             story={activeHero}
-            gameSpec={activeGame}
+            scenario={activeScenario}
+            gameSpec={activeLegacyGame}
             onExit={() => {
               setActiveHero(null);
-              setActiveGame(null);
+              setActiveScenario(null);
+              setActiveLegacyGame(null);
               setShowArchive(false);
               setActiveTab('feed');
             }}

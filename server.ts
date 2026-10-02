@@ -36,6 +36,7 @@ import {
   compileExperiencePlanToScenario,
   type ExperiencePlan,
   type StoryAnalysis,
+  type StoredPlayablePost,
 } from './src/engine/runtime/generationPipeline.ts';
 
 // System instruction for Experience Plan Generator
@@ -106,7 +107,7 @@ Analyze the user's situation and generate a JSON response with two objects:
      { "id": "act_2", "targetSlot": string, "label": string, "outcome": string }
    ],
    "authorTruth": {
-     "status": "verified" | "missing",
+     "status": "author_supplied" | "withheld",
      "text": string // ONLY IF USER SUPPLIED WHAT ACTUALLY HAPPENED! Omit or leave empty if user did not provide reality.
    },
    "crowdQuestion": string,
@@ -115,7 +116,7 @@ Analyze the user's situation and generate a JSON response with two objects:
 
 CRITICAL RULES:
 - Raw x/y coordinates are STRICTLY FORBIDDEN. Only use semantic slots: 'phone_table', 'bathroom_door', 'sofa', 'presentation_screen', 'player_laptop', 'director', 'intercom', 'elevator', 'front_door', 'bench', 'bus_stop', 'station_board', 'platform_edge', 'dining_table', 'decision_center'.
-- ZERO AUTHOR TRUTH FABRICATION: If the user did not specify what really happened in real life, authorTruth.status MUST be "missing". DO NOT invent or make up what happened in reality.
+- ZERO AUTHOR TRUTH FABRICATION: If the user did not specify what really happened in real life, authorTruth.status MUST be "withheld". DO NOT invent or make up what happened in reality.
 - Respond ONLY with clean, valid JSON containing {"analysis": ..., "plan": ...}.
 `;
 
@@ -154,7 +155,7 @@ function experiencePlanToGameSpec(plan: ExperiencePlan, author: string, genre: s
     genre: genre || 'Human Situations',
     tags: [genre || 'Real', 'Interactive'],
     estimatedPlaytime: `${plan.durationMinutes || 3} min`,
-    whatReallyHappened: plan.authorTruth.status === 'verified' ? plan.authorTruth.text : '',
+    whatReallyHappened: plan.authorTruth.status === 'author_supplied' ? plan.authorTruth.text : '',
     startNodeId: 'node_start',
     nodes,
   };
@@ -168,6 +169,9 @@ app.post('/api/generate-story', async (req, res) => {
       whatReallyHappened = '',
       genre = 'Situations',
       author = 'Anonymous',
+      responseToPostId,
+      themeKey,
+      inspirationPrompt,
     } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
@@ -193,7 +197,7 @@ Author: ${author}
 
 Design 1 grounded playable scene within the supported Vivi world templates and semantic slots.
 Stage objects and people so the player can physically move, inspect, hesitate, and make a consequential choice.
-If what really happened was not provided, set authorTruth.status to "missing".
+If what really happened was not provided, set authorTruth.status to "withheld".
 `;
 
         const requestGemini = async (extraInstruction?: string) => {
@@ -235,9 +239,13 @@ If what really happened was not provided, set authorTruth.status to "missing".
           storyAnalysis = parsed.analysis || null;
           // Enforce zero truth fabrication
           if (!hasRealOutcome) {
-            generatedPlan.authorTruth = { status: 'missing' };
+            generatedPlan.authorTruth = { status: 'withheld' };
           } else {
-            generatedPlan.authorTruth = { status: 'verified', text: cleanRealOutcome };
+            generatedPlan.authorTruth = {
+              status: 'author_supplied',
+              text: cleanRealOutcome,
+              sourceLabel: 'со слов автора',
+            };
           }
         }
       } catch (geminiErr: any) {
@@ -265,14 +273,39 @@ If what really happened was not provided, set authorTruth.status to "missing".
         experienceGrammar: 'Move, inspect, commit',
         themeKey: genre,
       },
-      author
+      author,
+      responseToPostId
     );
+
+    const playablePost: StoredPlayablePost = {
+      schemaVersion: 2,
+      id: scenario.id,
+      title: scenario.title,
+      author: scenario.author,
+      authorHandle: scenario.authorHandle,
+      synopsis: scenario.synopsis || scenario.hook || generatedPlan.synopsis,
+      pillar: scenario.pillar,
+      world: scenario.world,
+      createdAt: Date.now(),
+      scenario,
+      analysis: storyAnalysis || undefined,
+      experiencePlan: generatedPlan,
+      legacyGameSpec: gameSpec,
+      responseToPostId,
+      themeKey: themeKey || genre,
+      inspirationPrompt: inspirationPrompt || prompt,
+    };
 
     res.json({
       success: true,
       gameSpec,
       experiencePlan: generatedPlan,
       scenario,
+      analysis: storyAnalysis,
+      playablePost,
+      responseToPostId,
+      themeKey: themeKey || genre,
+      inspirationPrompt: inspirationPrompt || prompt,
     });
   } catch (error: any) {
     console.error('Error generating story:', error);

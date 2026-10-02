@@ -12,20 +12,25 @@ import {
   validateExperiencePlan,
   generateDeterministicExperiencePlan,
   compileExperiencePlanToScenario,
+  isStoredPlayablePost,
+  type StoredPlayablePost,
+  WORLD_ALLOWED_SLOTS,
 } from '../src/engine/runtime/generationPipeline.ts';
 import { telemetry } from '../src/engine/runtime/telemetry.ts';
 
 console.log('Testing Canonical Runtime & Physical Engine Hardening...\n');
 
 // ============================================================================
-// 1. Verify all 12 hero stories compile to CanonicalScenario with semantic slots
+// 1. Verify all 12 hero stories compile to CanonicalScenario with semantic slots & fictional_demo
 // ============================================================================
 assert.equal(heroStories.length, 12, '12 hero stories exist');
 
 for (const story of heroStories) {
   const scenario = compileHeroStoryToRuntime(story);
   assert.ok(scenario.id, `${story.id} has ID`);
-  assert.ok(scenario.authorHandle.startsWith('@'), `${story.id} has author handle`);
+  assert.ok(scenario.authorHandle.startsWith('@demo_'), `${story.id} has @demo_ author handle`);
+  assert.equal(scenario.authorTruth?.status, 'fictional_demo', `${story.id} truth status is fictional_demo`);
+  assert.equal(scenario.authorTruth?.sourceLabel, 'Заданная для демо развязка', `${story.id} truth sourceLabel is demo`);
   assert.ok(scenario.actions.length >= 3, `${story.id} has at least 3 actions`);
   assert.ok(scenario.seededStats.length === scenario.actions.length, `${story.id} has crowd stats for all actions`);
   assert.ok(scenario.communityReflections.length > 0, `${story.id} has community reflections`);
@@ -43,7 +48,7 @@ for (const story of heroStories) {
     assert.ok(scenario.endings[act.id], `${story.id} action ${act.id} has ending text`);
   }
 }
-console.log('✓ 1. All 12 hero stories compile to canonical scenarios with semantic slots & demo labels');
+console.log('✓ 1. All 12 hero stories compile to canonical scenarios with semantic slots & fictional_demo provenance');
 
 // ============================================================================
 // 2. Acceptance Test: Physical Distance & Exploration Gating
@@ -194,7 +199,7 @@ assert.ok(nextY >= 76, 'movement stopped before entering coffee table collision 
 console.log('✓ 6. Physical collision and sliding resolution verified');
 
 // ============================================================================
-// 7. Acceptance Test: Zero Author Truth Fabrication
+// 7. Acceptance Test: Zero Author Truth Fabrication & Truth Provenance Model
 // ============================================================================
 // When user does NOT supply what happened in real life:
 const emptyOutcomeGen = generateDeterministicExperiencePlan(
@@ -204,11 +209,11 @@ const emptyOutcomeGen = generateDeterministicExperiencePlan(
   'Anonymous'
 );
 
-assert.equal(emptyOutcomeGen.plan.authorTruth.status, 'missing', 'authorTruth is strictly missing');
+assert.equal(emptyOutcomeGen.plan.authorTruth.status, 'withheld', 'authorTruth is strictly withheld');
 assert.equal(emptyOutcomeGen.plan.authorTruth.text, undefined, 'no invented text in authorTruth');
 
 const emptyScenario = compileExperiencePlanToScenario(emptyOutcomeGen.plan, emptyOutcomeGen.analysis);
-assert.equal(emptyScenario.authorTruth?.status, 'missing', 'scenario authorTruth status is missing');
+assert.equal(emptyScenario.authorTruth?.status, 'withheld', 'scenario authorTruth status is withheld');
 assert.equal(emptyScenario.reality, '', 'scenario reality is empty string');
 assert.ok(
   !emptyScenario.reality.includes('The author shared this moment'),
@@ -222,16 +227,21 @@ const realOutcomeGen = generateDeterministicExperiencePlan(
   'Work',
   'Alice'
 );
-assert.equal(realOutcomeGen.plan.authorTruth.status, 'verified', 'authorTruth is verified');
+assert.equal(realOutcomeGen.plan.authorTruth.status, 'author_supplied', 'authorTruth is author_supplied');
 assert.equal(
   realOutcomeGen.plan.authorTruth.text,
   'I sent the original Figma timestamped links directly to the VP after the call.',
   'authorTruth matches reality text'
 );
-console.log('✓ 7. Zero author truth fabrication verified (strictly missing when not provided)');
+assert.equal(
+  realOutcomeGen.plan.authorTruth.sourceLabel,
+  'со слов автора',
+  'authorTruth has correct source label'
+);
+console.log('✓ 7. Truth provenance model verified (author_supplied with sourceLabel vs withheld with zero fabrication)');
 
 // ============================================================================
-// 8. Acceptance Test: ExperiencePlan Schema Validation
+// 8. Acceptance Test: ExperiencePlan Schema Validation & World Semantic Slots
 // ============================================================================
 // Raw coordinates must be strictly rejected
 const invalidCoordPlan = {
@@ -252,10 +262,30 @@ const invalidCommitPlan = {
 const commitValidation = validateExperiencePlan(invalidCommitPlan);
 assert.equal(commitValidation.valid, false, 'rejects less than 2 commitments');
 
+// Invalid semantic slot for the chosen world template must be rejected
+const invalidSlotPlan = {
+  ...emptyOutcomeGen.plan,
+  worldTemplate: 'train_station' as const,
+  interactions: [
+    { id: 'act_1', targetSlot: 'bathroom_door', label: 'Door', observation: 'locked', commitLabel: 'Knock' },
+    { id: 'act_2', targetSlot: 'train', label: 'Train', observation: 'waiting', commitLabel: 'Board' },
+  ],
+  commitments: [
+    { id: 'c1', targetSlot: 'bathroom_door', label: 'Knock', outcome: 'Nothing' },
+    { id: 'c2', targetSlot: 'train', label: 'Board', outcome: 'Departed' },
+  ],
+};
+const slotValidation = validateExperiencePlan(invalidSlotPlan);
+assert.equal(slotValidation.valid, false, 'rejects invalid slot bathroom_door for train_station world');
+assert.ok(
+  slotValidation.errors.some(e => e.includes('bathroom_door') && e.includes('train_station')),
+  'validator error specifically mentions the invalid slot and world'
+);
+
 // Valid plan passes
 const validValidation = validateExperiencePlan(emptyOutcomeGen.plan);
 assert.equal(validValidation.valid, true, 'valid ExperiencePlan passes validation');
-console.log('✓ 8. ExperiencePlan schema validation verified (rejects raw x/y, enforces slots & commitments)');
+console.log('✓ 8. ExperiencePlan schema validation verified (rejects invalid semantic slots for world, raw x/y, enforces commitments)');
 
 // ============================================================================
 // 9. Acceptance Test: Gated Research Telemetry Export
@@ -278,6 +308,115 @@ assert.ok(exported, 'export succeeded with valid consent');
 assert.equal(exported.consentVersion, 'v1.0', 'consent version recorded');
 assert.equal(exported.eventLog.length, 2, 'exported anonymized events');
 console.log('✓ 9. Research telemetry export gating verified (requires explicit opt-in + consent version)');
+
+// ============================================================================
+// 10. Acceptance Test: StoryBeatRunner.reset() completely resets state
+// ============================================================================
+const runnerToReset = new StoryBeatRunner(testScenario.beats);
+runnerToReset.checkTick(10000);
+runnerToReset.onObjectInspected('phone_table', 'phone', 'A lit phone.');
+runnerToReset.commitDecision('phone');
+runnerToReset.triggerReveal();
+
+const dirtyState = runnerToReset.getState();
+assert.equal(dirtyState.cueTriggered, true, 'dirty cue is true');
+assert.equal(dirtyState.isRevealed, true, 'dirty reveal is true');
+assert.equal(dirtyState.committedChoiceId, 'phone', 'dirty commit choice exists');
+assert.ok(dirtyState.completedBeatIds.size > 0, 'dirty completed beat IDs exist');
+
+runnerToReset.reset();
+const freshState = runnerToReset.getState();
+assert.equal(freshState.cueTriggered, false, 'reset cueTriggered is false');
+assert.equal(freshState.pressureTriggered, false, 'reset pressureTriggered is false');
+assert.equal(freshState.canCommit, false, 'reset canCommit is false');
+assert.equal(freshState.committedChoiceId, null, 'reset committedChoiceId is null');
+assert.equal(freshState.isRevealed, false, 'reset isRevealed is false');
+assert.equal(freshState.unlockedActionIds.size, 0, 'reset unlockedActionIds is empty');
+assert.equal(freshState.completedBeatIds.size, 0, 'reset completedBeatIds is empty');
+console.log('✓ 10. StoryBeatRunner.reset() verified (all flags, sets, and committed choices cleanly reset)');
+
+// ============================================================================
+// 11. Acceptance Test: Generated Demo Data Provenance (source: seed_demo)
+// ============================================================================
+const demoPlanScenario = compileExperiencePlanToScenario(realOutcomeGen.plan, realOutcomeGen.analysis, 'Bob');
+for (const stat of demoPlanScenario.seededStats) {
+  assert.equal(stat.source, 'seed_demo', 'generated crowd stat explicitly tagged source: seed_demo');
+}
+for (const ref of demoPlanScenario.communityReflections) {
+  assert.equal(ref.source, 'seed_demo', 'generated community reflection explicitly tagged source: seed_demo');
+}
+console.log('✓ 11. Generated demo data provenance verified (seed_demo tags on stats and reflections)');
+
+// ============================================================================
+// 12. Acceptance Test: Response Chain Persistence & StoredPlayablePost Preservation
+// ============================================================================
+const responseScenario = compileExperiencePlanToScenario(
+  realOutcomeGen.plan,
+  realOutcomeGen.analysis,
+  'Charlie',
+  'parent_post_456'
+);
+assert.equal(responseScenario.responseToPostId, 'parent_post_456', 'responseToPostId persisted in scenario');
+
+const storedPost: StoredPlayablePost = {
+  id: responseScenario.id,
+  schemaVersion: 2,
+  title: responseScenario.title,
+  author: responseScenario.author,
+  authorHandle: responseScenario.authorHandle,
+  synopsis: responseScenario.synopsis || 'Test synopsis',
+  pillar: responseScenario.pillar,
+  world: responseScenario.world,
+  scenario: responseScenario,
+  analysis: realOutcomeGen.analysis,
+  experiencePlan: realOutcomeGen.plan,
+  legacyGameSpec: { id: responseScenario.id, title: responseScenario.title } as any,
+  responseToPostId: 'parent_post_456',
+  themeKey: 'Work',
+  inspirationPrompt: 'Prompt text',
+  createdAt: 1700000000,
+};
+
+// Survives JSON serialize / deserialize without loss
+const serialized = JSON.stringify(storedPost);
+const parsedPost = JSON.parse(serialized);
+
+assert.ok(isStoredPlayablePost(parsedPost), 'isStoredPlayablePost recognizes parsed JSON');
+assert.equal(parsedPost.schemaVersion, 2, 'schemaVersion 2 preserved');
+assert.equal(parsedPost.responseToPostId, 'parent_post_456', 'responseToPostId preserved in StoredPlayablePost');
+assert.equal(parsedPost.scenario.authorTruth?.status, 'author_supplied', 'scenario authorTruth status preserved');
+assert.equal(parsedPost.scenario.actions.length, responseScenario.actions.length, 'all runtime actions preserved');
+console.log('✓ 12. Response chain and StoredPlayablePost serialization verified end-to-end');
+
+// ============================================================================
+// 13. Acceptance Test: Legacy GameSpec Fallback Still Functional
+// ============================================================================
+const legacyGameSpec = {
+  id: 'legacy_1',
+  title: 'Old Story',
+  description: 'An old description before canonical engine',
+  author: 'OldAuthor',
+  startNodeId: 'node_1',
+  nodes: {
+    node_1: {
+      id: 'node_1',
+      title: 'Node 1',
+      narrative: 'Old narrative',
+      worldConfig: { template: 'apartment_night' },
+      choices: [
+        { id: 'c1', text: 'Choice 1', targetNodeId: 'node_1', reaction: 'React 1' },
+        { id: 'c2', text: 'Choice 2', targetNodeId: 'node_1', reaction: 'React 2' },
+      ],
+    },
+  },
+  whatReallyHappened: 'Old author reality happened here.',
+} as any;
+
+const compiledLegacy = compileGameSpecToRuntime(legacyGameSpec);
+assert.equal(compiledLegacy.id, 'legacy_1', 'compiled legacy has ID');
+assert.equal(compiledLegacy.authorTruth?.status, 'author_supplied', 'legacy reality mapped to author_supplied');
+assert.equal(compiledLegacy.actions.length, 2, 'legacy choices compiled to runtime actions');
+console.log('✓ 13. Legacy GameSpec fallback verified (backward compatibility preserved)');
 
 console.log('\n========================================================');
 console.log('ALL CANONICAL RUNTIME HARDENING ACCEPTANCE TESTS PASSED!');

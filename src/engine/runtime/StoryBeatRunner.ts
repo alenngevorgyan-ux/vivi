@@ -75,6 +75,24 @@ export class StoryBeatRunner {
     return this.state;
   }
 
+  public reset(): void {
+    this.state = {
+      currentBeatIndex: 0,
+      currentBeat: this.beats[0] || null,
+      completedBeatIds: new Set<string>(),
+      cueTriggered: false,
+      pressureTriggered: false,
+      unlockedActionIds: new Set<string>(),
+      canCommit: false,
+      committedChoiceId: null,
+      isRevealed: false,
+      activeObservations: [],
+    };
+    if (this.onStateChange) {
+      this.onStateChange(this.state);
+    }
+  }
+
   public checkTick(elapsedMs: number): void {
     if (!this.state.currentBeat) return;
 
