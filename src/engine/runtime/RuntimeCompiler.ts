@@ -78,6 +78,25 @@ export interface CanonicalScenario {
 }
 
 // Maps authored hero stories or generated stories to canonical runtime format
+/**
+ * Which flagship situations physically stage a second person.
+ *
+ * This is a casting decision, not engine logic: 03:17, The Photo and The Location
+ * are built on the player being alone, and putting a figure in frame destroys the
+ * premise the scene is holding. Everything else has someone really in the room.
+ */
+const STORIES_WITH_ON_STAGE_COMPANION = new Set([
+  'the-message',
+  'the-presentation',
+  'last-walk',
+  'the-secret',
+  'the-screenshot',
+  'the-envelope',
+  'the-wedding',
+  'the-family-document',
+  'the-last-train',
+]);
+
 export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
   // Infer semantic slots for hero actions if not already explicit
   const slotMap: Record<string, string> = {
@@ -228,7 +247,7 @@ export function compileHeroStoryToRuntime(story: HeroStory): CanonicalScenario {
       text: story.reality,
       sourceLabel: 'Заданная для демо развязка',
     },
-    npc: {
+    npc: !STORIES_WITH_ON_STAGE_COMPANION.has(story.id) ? undefined : {
       id: 'partner_or_other',
       character: story.world === 'neighborhood_sunset' ? 'young_adult_masc_02' : 'adult_fem_01',
       slot: story.world === 'office_night' ? 'director' : story.world === 'hallway_night' ? 'elevator' : 'bathroom_door',

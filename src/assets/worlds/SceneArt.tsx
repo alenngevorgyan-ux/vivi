@@ -20,8 +20,10 @@ export interface SceneState {
   active?: boolean;
   doorState?: 'closed' | 'ajar' | 'handle_moving' | 'opening' | 'open';
   phoneLit?: boolean;
-  /** Diegetic readout for an elevator or floor indicator. */
+  /** Diegetic readout on an elevator or floor indicator. */
   elevatorText?: string;
+  /** Diegetic clock or board readout. */
+  clockText?: string;
   /** Extra darkness for a held, quiet moment. */
   dim?: number;
 }
@@ -295,10 +297,10 @@ function HallwayForeground() {
   return (
     <g>
       {/* The near door frame: the player is always slightly inside a doorway. */}
-      <path d="M0 0 H70 V600 H0Z" fill="#0b1016" />
-      <path d="M70 0 H92 V600 H70Z" fill="#131b23" />
-      <path d="M1000 0 H938 V600 H1000Z" fill="#0b1016" />
-      <path d="M938 0 H920 V600 H938Z" fill="#131b23" />
+      <path d="M0 0 H44 V600 H0Z" fill="#070b10" />
+      <path d="M44 0 H58 V600 H44Z" fill="#101820" />
+      <path d="M1000 0 H960 V600 H1000Z" fill="#070b10" />
+      <path d="M960 0 H948 V600 H960Z" fill="#101820" />
     </g>
   );
 }
@@ -306,21 +308,26 @@ function HallwayForeground() {
 function HallwayLighting({ uid, state }: { uid: string; state: SceneState }) {
   return (
     <g>
+      {/* The corridor is black by default; the two practicals only dent it. */}
+      <rect width="1000" height="600" fill="#04070c" opacity={0.56 + (state.dim ?? 0) * 0.2} />
+
       <g style={{ mixBlendMode: 'screen' }}>
-        {/* Two tired ceiling practicals, and nothing between them. */}
-        <ellipse cx="300" cy="240" rx="210" ry="180" fill={`url(#${uid}-pool)`} opacity="0.4" />
-        <ellipse cx="790" cy="250" rx="190" ry="170" fill={`url(#${uid}-pool)`} opacity="0.3" />
+        <ellipse cx="300" cy="226" rx="150" ry="132" fill={`url(#${uid}-pool)`} opacity="0.42" />
+        <ellipse cx="300" cy="222" rx="46" ry="40" fill={`url(#${uid}-pool)`} opacity="0.5" />
+        <ellipse cx="800" cy="236" rx="130" ry="120" fill={`url(#${uid}-pool)`} opacity="0.26" />
+
+        {/* The elevator seam is the only cold light, and the only thing to watch. */}
         <ellipse
           cx="529"
-          cy="330"
-          rx="190"
-          ry="150"
+          cy="312"
+          rx={state.active ? 185 : 120}
+          ry={state.active ? 150 : 100}
           fill={`url(#${uid}-cold)`}
-          opacity={state.active ? 0.8 : 0.4}
+          opacity={state.active ? 0.85 : 0.4}
         />
       </g>
+
       <rect width="1000" height="600" fill={`url(#${uid}-corner)`} />
-      <rect width="1000" height="600" fill="#05080d" opacity={0.3 + (state.dim ?? 0) * 0.3} />
     </g>
   );
 }
@@ -375,16 +382,16 @@ function OfficeBackdrop({ p, uid, state }: { p: Palette; uid: string; state: Sce
       </g>
 
       {/* Meeting clock. Time is the pressure in this room. */}
-      <rect x="836" y="18" width="92" height="38" rx="3" fill="#0d1a22" />
+      <rect x="820" y="44" width="96" height="40" rx="3" fill="#0d1a22" />
       <text
-        x="882"
-        y="46"
+        x="868"
+        y="74"
         textAnchor="middle"
         fill={p.practical}
         fontFamily="IBM Plex Mono, monospace"
         fontSize="25"
       >
-        {state.elevatorText || '10:42'}
+        {state.clockText || '10:42'}
       </text>
 
       <rect x="40" y="110" width="150" height="174" fill="#223843" opacity="0.65" />
@@ -406,6 +413,14 @@ function OfficeMidground({ p, uid, state }: { p: Palette; uid: string; state: Sc
       <path d="M402 286 L686 286 L760 372 L330 372Z" fill="#9fc4cc" opacity={state.active ? 0.17 : 0.09} />
 
       {/* Colleagues already seated and already facing the director. */}
+      {/* The coworker is already presenting; the player arrives into an argument in progress. */}
+      <g transform="translate(372 196) scale(0.82)" opacity="0.95">
+        <path d="M-16 0 Q0 -8 16 0 L20 52 H-20Z" fill="#5a6a71" />
+        <path d="M-20 52 L-24 112 M20 52 L24 112" stroke="#2a3a43" strokeWidth="9" />
+        <path d="M16 6 Q34 16 44 2" fill="none" stroke="#5a6a71" strokeWidth="9" strokeLinecap="round" />
+        <ellipse cx="0" cy="-17" rx="10.5" ry="12" fill="#c08a66" />
+        <path d="M-10.5 -20 Q-10 -31 0 -31 Q10 -31 10.5 -20 Q6 -26 0 -26 Q-6 -26 -10.5 -20Z" fill="#332b26" />
+      </g>
       <SeatedExtra x={286} y={318} s={0.74} tone="#4a5d66" turn={12} />
       <SeatedExtra x={392} y={306} s={0.68} tone="#56666d" turn={16} />
       <SeatedExtra x={742} y={312} s={0.72} tone="#4f6068" turn={-14} />

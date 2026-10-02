@@ -223,6 +223,7 @@ export default function App() {
               setActiveTab('feed');
             }}
             onRespondWithStory={handleRespondWithStory}
+            isMuted={isAudioMuted}
           />
         )}
       </div>

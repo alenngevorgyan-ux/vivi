@@ -23,6 +23,7 @@ import {
   type ViviCameraShot,
 } from '../../engine/cinematic/cameraLanguage';
 import { prefersReducedMotion } from '../../assets/characters/animationClock';
+import { ambience } from '../../utils/viviAmbience';
 import { stagePair } from '../../engine/cinematic/staging';
 
 interface CanonicalViviEngineProps {
@@ -59,6 +60,7 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
   onActionInspected,
   committed,
   revealed,
+  isMuted = false,
   onCommit,
   latestObservation,
 }) => {
@@ -337,13 +339,58 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
     physicalState.npcAction.pose === 'leave' &&
     physicalState.door.state !== 'open';
 
+  /* ----------------------------------------------------------- sound --- */
+
+  // Every sound here has a source in the room, so each one follows the physical
+  // state rather than the narrative beat it happens to coincide with.
+  useEffect(() => {
+    ambience.setMuted(isMuted);
+  }, [isMuted]);
+
+  useEffect(() => {
+    ambience.setCue(physicalState.ambientAudioCue);
+  }, [physicalState.ambientAudioCue]);
+
+  useEffect(() => () => ambience.stop(), []);
+
+  const wasVibratingRef = useRef(false);
+  useEffect(() => {
+    if (physicalState.phone.isVibrating && !wasVibratingRef.current) ambience.vibrate();
+    wasVibratingRef.current = physicalState.phone.isVibrating;
+  }, [physicalState.phone.isVibrating]);
+
+  const lastDoorStateRef = useRef(physicalState.door.state);
+  useEffect(() => {
+    const prev = lastDoorStateRef.current;
+    const next = physicalState.door.state;
+    if (prev !== next && (next === 'open' || next === 'handle_moving')) {
+      ambience.doorThump(next === 'handle_moving' ? 0.5 : 1);
+    }
+    lastDoorStateRef.current = next;
+  }, [physicalState.door.state]);
+
+  const wasDingingRef = useRef(false);
+  useEffect(() => {
+    if (physicalState.elevator.isDingActive && !wasDingingRef.current) ambience.ding();
+    wasDingingRef.current = physicalState.elevator.isDingActive;
+  }, [physicalState.elevator.isDingActive]);
+
+  const lastIntercomRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (physicalState.ambientAudioCue === 'intercom_ring' && lastIntercomRef.current !== 'intercom_ring') {
+      ambience.intercom();
+    }
+    lastIntercomRef.current = physicalState.ambientAudioCue;
+  }, [physicalState.ambientAudioCue]);
+
   /* ----------------------------------------------------------- scene --- */
 
   const sceneState: SceneState = {
     active: beatState.cueTriggered,
     doorState: doorOpenForEntry ? 'open' : physicalState.door.state,
     phoneLit: physicalState.phone.isScreenLit,
-    elevatorText: physicalState.elevator.indicatorText || physicalState.timeDisplay.text,
+    elevatorText: physicalState.elevator.indicatorText,
+    clockText: physicalState.timeDisplay.text,
     dim: beatState.pressureTriggered ? 0.25 : 0,
   };
 
@@ -478,10 +525,8 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
         </div>
 
         {/* Interface lives outside the camera so it never scales with the lens. */}
-        {physicalState.timeDisplay.text && (
-          <div className={`vivi-hud-time ${physicalState.timeDisplay.isExpiring ? 'is-expiring' : ''}`}>
-            {physicalState.timeDisplay.text}
-          </div>
+        {physicalState.timeDisplay.text && physicalState.timeDisplay.isExpiring && (
+          <div className="vivi-hud-time is-expiring">{physicalState.timeDisplay.text}</div>
         )}
 
         {openingLine && !committed && <p className="vivi-subtitle">{openingLine}</p>}

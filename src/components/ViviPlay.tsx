@@ -33,6 +33,7 @@ interface ViviPlayProps {
   scenario?: CanonicalScenario | null;
   onExit: () => void;
   onRespondWithStory?: (responseToPostId: string, themeKey: string, inspirationPrompt: string) => void;
+  isMuted?: boolean;
 }
 
 export function ViviPlay({
@@ -41,6 +42,7 @@ export function ViviPlay({
   scenario: directScenario,
   onExit,
   onRespondWithStory,
+  isMuted = false,
 }: ViviPlayProps) {
   // Compile into canonical scenario format
   const canonicalScenario: CanonicalScenario = useMemo(() => {
@@ -356,6 +358,7 @@ export function ViviPlay({
             revealed={revealed}
             onCommit={handleCommit}
             latestObservation={activeObservation}
+            isMuted={isMuted}
           />
         </section>
 
