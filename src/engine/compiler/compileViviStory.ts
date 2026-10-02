@@ -60,6 +60,19 @@ export interface CompileStoryResult {
   report: CompileStoryReport;
 }
 
+/** Stored posts keep a short, non-sensitive reason, never a provider's full error payload. */
+function shortError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(message);
+    const e = parsed?.error ?? parsed;
+    if (e?.code || e?.status) return `${e.code ?? ''} ${e.status ?? ''}`.trim();
+  } catch {
+    // not JSON
+  }
+  return message.replace(/\s+/g, ' ').slice(0, 120);
+}
+
 function normalise(story: string): string {
   return story.replace(/\s+/g, ' ').trim().toLowerCase();
 }
@@ -137,7 +150,7 @@ export async function compileViviStory(
           fallbackReason = `model DSL invalid after ${repaired ? 'repair' : 'first attempt'}`;
         }
       } catch (err) {
-        fallbackReason = `provider error: ${err instanceof Error ? err.message : String(err)}`;
+        fallbackReason = `provider error: ${shortError(err)}`;
       }
     }
   } else {
