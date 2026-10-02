@@ -14,7 +14,16 @@ import { heroStories, type HeroStory } from '../data/heroStories';
 import type { GameSpec } from '../types/gameSpec';
 import { type StoredPlayablePost, isStoredPlayablePost } from '../engine/runtime/generationPipeline';
 import { SceneArt } from '../assets/worlds/SceneArt';
-import type { ViviWorldId } from '../world/templates';
+import { worldTemplates, type ViviWorldId } from '../world/templates';
+
+/**
+ * Seeded legacy stories still name pre-V2 environments. SceneArt only knows
+ * the current worlds, so map those to their closest current room instead of
+ * crashing the whole feed.
+ */
+const LEGACY_WORLDS: Record<string, ViviWorldId> = { village_sunset: 'neighborhood_sunset', city_evening: 'city_rain' };
+const cardWorld = (id: string | undefined): ViviWorldId =>
+  id && id in worldTemplates ? (id as ViviWorldId) : (id && LEGACY_WORLDS[id]) || 'apartment_night';
 
 const categories = [
   'All',
@@ -271,9 +280,7 @@ export function ViviFeed({
             const isPost = isStoredPlayablePost(game);
             const decision = myDecisions[game.id];
             const isSaved = bookmarkedIds.has(game.id);
-            const worldTemplate: ViviWorldId = isPost
-              ? ((game.world as ViviWorldId) || 'apartment_night')
-              : ((game.nodes[game.startNodeId]?.worldConfig?.template as ViviWorldId) || 'apartment_night');
+            const worldTemplate = cardWorld(isPost ? game.world : game.nodes[game.startNodeId]?.worldConfig?.template);
             const genre = isPost ? (game.pillar || game.themeKey || 'COMMUNITY') : (game.genre || 'COMMUNITY');
             const author = isPost ? game.authorHandle : `@${game.author ? game.author.toLowerCase().replace(/\s+/g, '_') : 'creator'}`;
             const synopsis = isPost ? game.synopsis : (game.synopsis || game.description);
