@@ -1,7 +1,7 @@
 import type { ViviExperienceDSL } from './dsl.ts';
 import type { StoryHints } from './preprocess.ts';
 import { LIMITS, type DslObject, type DslRole } from './vocabulary.ts';
-import { commitmentVariety, resolveCommitments } from './commitmentClasses.ts';
+import { commitmentVariety, resolveCommitment, resolveCommitments } from './commitmentClasses.ts';
 import { groundCast, referencedRoles } from './castGrounding.ts';
 
 /**
@@ -33,6 +33,29 @@ const CLASS_WORD: Record<string, string> = {
   COMMUNICATION: 'phone or intercom',
   OTHER: 'place',
 };
+
+/**
+ * What else this scene already offers, named concretely.
+ *
+ * A repair turn that is only told what is wrong tends to shuffle the same
+ * choices; one told what is available moves one of them. Everything listed is
+ * already in the program, so taking the advice invents nothing.
+ */
+function alternatives(dsl: ViviExperienceDSL): string {
+  const resolved = resolveCommitments(dsl);
+  const usedLoci = new Set(resolved.map(r => r.locus));
+  const options: string[] = [];
+  for (const [role, presence] of dsl.c) {
+    if (presence === 'on' && !resolved.some(r => r.actorRole === role && r.cls === 'ACTOR')) options.push(`the ${role} in the room`);
+  }
+  for (const obj of dsl.o) {
+    const target = resolveCommitment(dsl, ['look', obj, 'x']);
+    if (!usedLoci.has(target.locus)) options.push(`the ${obj}`);
+  }
+  if (!resolved.some(r => r.cls === 'EXIT')) options.push('leaving');
+  if (!resolved.some(r => r.cls === 'WAIT_STATE')) options.push('staying where you are');
+  return options.slice(0, 4).join(', ') || 'leaving, or staying where you are';
+}
 
 /** Objects an event or a commitment actually uses; the rest are scenery. */
 function referencedObjects(dsl: ViviExperienceDSL): Set<DslObject> {
@@ -88,15 +111,11 @@ export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints): SemanticRe
 
   // A cast change can move what a choice points at, so variety is judged last.
   const variety = commitmentVariety(current);
-  if (variety.oneKind) {
-    const word = CLASS_WORD[variety.classes[0]] ?? 'thing';
-    errors.push(
-      `All ${current.a.length} choices reach for the same kind of thing (${word}). Give at least two kinds — object / person in the room / place or way out / staying put — using only what the story already has.`
-    );
-  } else if (variety.oneSpot) {
-    errors.push(
-      `All ${current.a.length} choices happen in one spot. Point at least one of them at something else in the room.`
-    );
+  if (variety.oneKind || variety.oneSpot) {
+    const complaint = variety.oneKind
+      ? `All ${current.a.length} choices reach for the same kind of thing (${CLASS_WORD[variety.classes[0]] ?? 'thing'}).`
+      : `All ${current.a.length} choices happen in one spot.`;
+    errors.push(`${complaint} Point at least one somewhere else: ${alternatives(current)}. Invent nothing new.`);
   }
 
   return { dsl: current, errors, notes };

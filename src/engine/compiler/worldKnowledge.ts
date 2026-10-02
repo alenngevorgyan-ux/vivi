@@ -276,11 +276,49 @@ function slotExists(world: ViviWorldId, slot: string | undefined): slot is strin
   return !!slot && !!worldTemplates[world]?.slots.some(s => s.id === slot);
 }
 
-/** Resolve a place word against a world, or null if the world has no such place. */
-export function resolvePlace(world: ViviWorldId, place: DslPlace | string): string | null {
-  const known = WORLD_KNOWLEDGE[world];
-  const slot = known?.places[place as DslPlace];
+/**
+ * What kind of place each word names, and which other words would do instead.
+ *
+ * Not every world draws every place: a family home has no `bedroom` slot even
+ * though every family home has a bedroom. A model naming one is right about
+ * the story and should never be corrected for it, so each word falls back
+ * along its own kind — a room you cannot see is reached through a door, a
+ * place to sit becomes the room's own resting place, a way out becomes the
+ * way out.
+ */
+const PLACE_KINDS: Array<{ places: DslPlace[]; prefer: DslPlace[]; anchor: 'door' | 'rest' | 'exit' }> = [
+  { places: ['bathroom', 'bedroom', 'kitchen'], prefer: ['bathroom', 'bedroom', 'kitchen'], anchor: 'door' },
+  { places: ['sofa', 'bench', 'table', 'desk', 'bar'], prefer: ['sofa', 'bench', 'table', 'desk', 'bar'], anchor: 'rest' },
+  { places: ['stairs', 'elevator', 'front_door', 'exit'], prefer: ['front_door', 'exit', 'stairs', 'elevator'], anchor: 'exit' },
+  { places: ['street', 'car', 'balcony', 'platform'], prefer: ['street', 'platform', 'balcony', 'car'], anchor: 'exit' },
+  { places: ['window'], prefer: ['window', 'balcony'], anchor: 'rest' },
+  { places: ['screen'], prefer: ['screen', 'table'], anchor: 'rest' },
+  { places: ['corner', 'center'], prefer: ['corner', 'center'], anchor: 'rest' },
+];
+
+/** The slot a world draws for a place word, or null when it draws none. */
+export function placeSlotExact(world: ViviWorldId, place: DslPlace | string): string | null {
+  const slot = WORLD_KNOWLEDGE[world]?.places[place as DslPlace];
   return slotExists(world, slot) ? slot : null;
+}
+
+/**
+ * Resolve a place word against a world. Always lands somewhere a figure can be:
+ * the world's own slot for that word when it has one, otherwise the nearest
+ * place of the same kind, otherwise the room's door, resting place or way out.
+ */
+export function resolvePlace(world: ViviWorldId, place: DslPlace | string): string | null {
+  const exact = placeSlotExact(world, place);
+  if (exact) return exact;
+  const kind = PLACE_KINDS.find(k => (k.places as string[]).includes(place));
+  if (!kind) return null;
+  for (const alternative of kind.prefer) {
+    const slot = placeSlotExact(world, alternative);
+    if (slot) return slot;
+  }
+  const known = WORLD_KNOWLEDGE[world];
+  const anchor = known[kind.anchor];
+  return slotExists(world, anchor) ? anchor : null;
 }
 
 /** The slot hosting a key object. Every object resolves somewhere in every world. */

@@ -5,8 +5,8 @@
  *   npm run eval:openrouter                 the configured OPENROUTER_MODEL over corpus + blind set, quality summary
  *   npm run bench:openrouter                the configured OPENROUTER_MODEL over the corpus, tokens / cost / latency
  *
- * Flags: --models a,b  --configured  --with-reference  --set corpus|blind|all  --runs N
- *        --budget USD  --concurrency N  --limit N  --out file.json  --report file.md
+ * Flags: --models a,b  --configured  --with-reference  --set corpus|blind|holdout|all  --runs N
+ *        --budget USD  --concurrency N  --limit N  --ids a,b  --out file.json  --report file.md
  *
  * Every story goes through the real pipeline (compileViviStory → validator →
  * one repair at most → deterministic fallback → ExperienceCompiler) with the
@@ -19,6 +19,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { EVAL_CORPUS } from '../src/data/evalCorpus.ts';
 import { BLIND_CORPUS } from '../src/data/blindCorpus.ts';
+import { HOLDOUT_CORPUS } from '../src/data/holdoutCorpus.ts';
 import { compileViviStory } from '../src/engine/compiler/compileViviStory.ts';
 import { preprocessStory } from '../src/engine/compiler/preprocess.ts';
 import { serializeDSL } from '../src/engine/compiler/dsl.ts';
@@ -56,11 +57,13 @@ else if (flag('configured')) entries = [{ model: process.env.OPENROUTER_MODEL?.t
 else entries = [...matrix.candidates, ...(flag('with-reference') ? matrix.reference ?? [] : [])];
 const referenceModels = new Set((matrix.reference ?? []).map(r => r.model));
 
-const set = opt('set', 'all') as 'corpus' | 'blind' | 'all';
+const set = opt('set', 'all') as 'corpus' | 'blind' | 'holdout' | 'all';
 const runs = Number(opt('runs', '1'));
 const budget = Number(opt('budget', String(matrix.budgetUsd ?? 0.5)));
 const concurrency = Number(opt('concurrency', '6'));
 const limit = opt('limit') ? Number(opt('limit')) : Infinity;
+/** Re-measure named stories only — used to check a fix against the runs that failed. */
+const onlyIds = opt('ids') ? new Set(opt('ids')!.split(',').map(x => x.trim())) : null;
 const outPath = opt('out', 'reports/data/openrouter-bakeoff.json')!;
 const reportPath = opt('report');
 // Measurement timeout: long enough to see each model's real latency distribution.
@@ -71,12 +74,19 @@ const timeoutMs = Number(opt('timeout-ms', String(matrix.timeoutMs ?? 60000)));
 
 interface Item { id: string; set: 'corpus' | 'blind'; lang: Lang; category: string; story: string; outcome?: string; expect: FaithfulnessExpect }
 const asLang = (l: string): Lang => (l === 'ru' || l === 'hy' ? l : 'en');
-const items: Item[] = [
-  ...(set !== 'blind'
-    ? EVAL_CORPUS.map(e => ({ id: e.id, set: 'corpus' as const, lang: asLang(preprocessStory(e.story).lang), category: e.category, story: e.story, outcome: e.outcome, expect: e.expect ?? {} }))
-    : []),
-  ...(set !== 'corpus' ? BLIND_CORPUS.map(b => ({ id: b.id, set: 'blind' as const, lang: b.lang, category: b.category, story: b.story, outcome: b.outcome, expect: b.expect })) : []),
-].slice(0, limit);
+// The holdout is scored on its own, never mixed into a development run.
+const items: Item[] = (
+  set === 'holdout'
+    ? HOLDOUT_CORPUS.map(h => ({ id: h.id, set: 'blind' as const, lang: h.lang, category: h.category, story: h.story, outcome: h.outcome, expect: h.expect }))
+    : [
+        ...(set !== 'blind'
+          ? EVAL_CORPUS.map(e => ({ id: e.id, set: 'corpus' as const, lang: asLang(preprocessStory(e.story).lang), category: e.category, story: e.story, outcome: e.outcome, expect: e.expect ?? {} }))
+          : []),
+        ...(set !== 'corpus' ? BLIND_CORPUS.map(b => ({ id: b.id, set: 'blind' as const, lang: b.lang, category: b.category, story: b.story, outcome: b.outcome, expect: b.expect })) : []),
+      ]
+)
+  .filter(item => !onlyIds || onlyIds.has(item.id))
+  .slice(0, limit);
 
 /* ------------------------------------------------- truth-safety canary */
 

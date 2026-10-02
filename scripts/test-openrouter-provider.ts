@@ -164,12 +164,12 @@ ok('Unsupported parameters are omitted so require_parameters can still route');
 /* --------------------------------------------------------------- repair */
 
 {
-  const broken = { ...WIRE, e: [...WIRE.e, { k: 'exit', r: 'neighbor', p: 'platform' }] }; // a hallway has no platform
+  const broken = { ...WIRE, e: [...WIRE.e, { k: 'sound', s: 'thunder' }] }; // not a sound the vocabulary has
   const m = mockFetch((_b, call) => (call === 0 ? chat(broken) : chat(WIRE, { prompt_tokens: 300, completion_tokens: 180, cost: 0.0001 })));
   const result = await compileViviStory({ story: STORY }, { provider: provider(m.fn) });
   assert.equal(result.report.source, 'model');
   assert.equal(result.report.firstPassValid, false);
-  assert.ok(result.report.firstPassErrors!.some(e => e.includes('does not exist in world')));
+  assert.ok(result.report.firstPassErrors!.some(e => e.includes('is not one of')));
   assert.equal(result.report.repaired, true);
   assert.equal(m.sent.length, 2, 'exactly one repair request');
   const repair = m.sent[1].body;

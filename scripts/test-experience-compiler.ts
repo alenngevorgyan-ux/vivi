@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { heroStories } from '../src/data/heroStories/index.ts';
 import { HERO_DSL } from '../src/data/heroStories/dslFixtures.ts';
 import { EVAL_CORPUS } from '../src/data/evalCorpus.ts';
+import { HOLDOUT_CORPUS } from '../src/data/holdoutCorpus.ts';
 import { validateDSL, serializeDSL, stripModelOnlyFields, type ViviExperienceDSL } from '../src/engine/compiler/dsl.ts';
 import { compileExperience } from '../src/engine/compiler/ExperienceCompiler.ts';
 import { compileViviStory, type CachedSemantics } from '../src/engine/compiler/compileViviStory.ts';
@@ -18,6 +19,7 @@ import { computePhysicalModifiers } from '../src/engine/runtime/ModifierEngine.t
 import { StoryBeatRunner } from '../src/engine/runtime/StoryBeatRunner.ts';
 import { directShot, OPENING_LOCK_MS } from '../src/engine/cinematic/director.ts';
 import { DSL_VERSION, COMPILER_VERSION } from '../src/engine/compiler/vocabulary.ts';
+import { resolvePlace, placeSlotExact } from '../src/engine/compiler/worldKnowledge.ts';
 import { estimateTokens } from './lib/tokens.ts';
 
 console.log('Testing Experience DSL & Compiler...\n');
@@ -60,7 +62,16 @@ assert.equal(validateDSL({ ...base, c: [['butler', 'on']] }).ok, false, 'unknown
   const remote = validateDSL({ ...base, a: [['read', 'phone', 'Read it'], ['call', 'boss', 'Call them']] });
   assert.ok(remote.ok && remote.dsl.c.some(c => c[0] === 'boss' && c[1] === 'off'), 'a role only acted on is reachable, not present');
 }
-assert.equal(validateDSL({ ...base, e: [['exit', 'partner', 'platform']] }).ok, false, 'place must exist in the world');
+// Every world answers every place word: a family home has a bedroom even
+// though its template draws no bedroom slot, so a model is never wrong for
+// naming one. The word lands on the nearest place of the same kind.
+{
+  const elsewhere = validateDSL({ ...base, e: [['exit', 'partner', 'platform']] });
+  assert.ok(elsewhere.ok, 'a place the world does not draw still resolves');
+  assert.equal(resolvePlace('family_home', 'bedroom'), 'stair_door', 'an unseen room is reached through the door');
+  assert.equal(resolvePlace('apartment_night', 'bedroom'), 'bedroom', 'a world that draws the place still uses it');
+  assert.equal(placeSlotExact('family_home', 'bedroom'), null, 'and the exact question still has an honest answer');
+}
 assert.equal(validateDSL({ ...base, notes: 'hi' }).ok, false, 'unknown top-level field rejected');
 assert.equal(validateDSL({ ...base, a: [['read', 'phone', 'Read it']] }).ok, false, 'fewer than 2 commitments rejected');
 assert.equal(
@@ -495,9 +506,11 @@ const walk = (dir: string) => {
   }
 };
 coreDirs.forEach(walk);
+const holdoutIds = HOLDOUT_CORPUS.map(h => h.id);
 for (const file of files) {
   const src = readFileSync(file, 'utf8');
   assert.ok(!/['"](the-message|0317|the-presentation)['"]/.test(src), `${file} must not branch on a story id`);
+  for (const id of holdoutIds) assert.ok(!src.includes(id), `${file} must not know about holdout story ${id}`);
 }
 ok(`No story-id branches in ${files.length} core engine files`);
 
