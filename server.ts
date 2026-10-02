@@ -30,186 +30,287 @@ function getGeminiClient() {
   });
 }
 
-// System instruction for Story Generator
-const STORY_GENERATOR_SYSTEM_INSTRUCTION = `
-You are the Master Memory Architect for "Mythos", a platform where real human stories become tiny playable 2D worlds that users explore physically.
-Your task is to convert human stories into a complete, playable GameSpec JSON.
+import {
+  validateExperiencePlan,
+  generateDeterministicExperiencePlan,
+  compileExperiencePlanToScenario,
+  type ExperiencePlan,
+  type StoryAnalysis,
+  type StoredPlayablePost,
+} from './src/engine/runtime/generationPipeline.ts';
 
-A story represents an authentic human memory (friendship, love, startups, tough life choices, childhood, family).
-Every scene must include a 2D 'worldConfig' so the player can physically walk around, approach interactive memory objects (benches, bicycles, laptops, coffee cups, photos), meet an NPC (friend, co-founder, partner), converse, and then make a pivotal choice.
+// System instruction for Experience Plan Generator
+const EXPERIENCE_PLAN_SYSTEM_INSTRUCTION = `
+You are the scenario compiler for VIVI, a platform where real human situations become tiny playable 2D worlds that people enter and explore physically.
 
-World Templates available:
-- 'village_sunset': peaceful countryside, childhood neighborhood, suburban street at sunset.
-- 'office_night': quiet startup office, empty desks, glowing monitors, panoramic night city windows.
-- 'city_evening': rain-soaked streets, bus stops, canal bridges, streetlights at dusk.
-- 'bedroom_night': warm cozy room, wooden floor, soft lighting, quiet introspective memories.
-
-GameSpec Structure:
-{
-  "id": "...",
-  "title": "...",
-  "author": "...",
-  "synopsis": "...",
-  "description": "...",
-  "genre": "Воспоминания" | "Отношения" | "Что бы ты сделал?" | "Странные истории" | "Сны" | "Работа" | "Стартапы" | "Семья" | "Дружба" | "Исповеди",
-  "tags": ["..."],
-  "coverImage": "...",
-  "estimatedPlaytime": "3-5 мин",
-  "difficulty": "Casual",
-  "whatReallyHappened": "The author's authentic reflection on what actually happened in real life.",
-  "startNodeId": "node_start",
-  "nodes": {
-    "node_start": {
-      "id": "node_start",
-      "title": "...",
-      "chapter": "...",
-      "narrative": "...",
-      "worldConfig": {
-        "id": "world_1",
-        "template": "village_sunset" | "office_night" | "city_evening" | "bedroom_night",
-        "title": "...",
-        "timeOfDay": "sunset" | "night" | "dusk",
-        "width": 1000,
-        "height": 600,
-        "playerSpawn": { "x": 160, "y": 380 },
-        "playerAppearance": { "preset": "boy_01" | "girl_01" | "man_01" | "woman_01", "clothingColor": "#f59e0b" },
-        "npcs": [
-          {
-            "id": "npc_1",
-            "name": "...",
-            "appearance": { "preset": "boy_01" | "girl_01" | "man_01" | "woman_01", "clothingColor": "#2563eb" },
-            "x": 780,
-            "y": 360,
-            "interactionRadius": 85,
-            "dialogue": [
-              { "speaker": "...", "text": "..." },
-              { "speaker": "...", "text": "..." }
-            ],
-            "leadsToChoice": true
-          }
-        ],
-        "objects": [
-          {
-            "id": "obj_1",
-            "type": "bench" | "tree" | "streetlight" | "bicycle" | "desk" | "laptop" | "whiteboard" | "coffee_cup" | "bus_stop" | "cat",
-            "name": "...",
-            "x": 380,
-            "y": 360,
-            "interactive": true,
-            "interactionPrompt": "Вспомнить" | "Осмотреть",
-            "memoryText": "Sensory discovery memory revealed when inspected..."
-          },
-          {
-            "id": "obj_2",
-            "type": "bicycle" | "tree" | "coffee_cup" | "whiteboard",
-            "name": "...",
-            "x": 580,
-            "y": 380,
-            "interactive": true,
-            "interactionPrompt": "Вспомнить",
-            "memoryText": "..."
-          }
-        ]
-      },
-      "choices": [
-        { "id": "c1", "text": "...", "nextNodeId": "node_ending_1" },
-        { "id": "c2", "text": "...", "nextNodeId": "node_ending_2" },
-        { "id": "c3", "text": "...", "nextNodeId": "node_ending_3" }
-      ]
-    },
-    "node_ending_1": {
-      "id": "node_ending_1",
-      "title": "...",
-      "isEnding": true,
-      "endingType": "victory",
-      "endingTitle": "...",
-      "endingSummary": "..."
-    },
-    "node_ending_2": {
-      "id": "node_ending_2",
-      "title": "...",
-      "isEnding": true,
-      "endingType": "neutral",
-      "endingTitle": "...",
-      "endingSummary": "..."
-    }
-  }
+Analyze the user's situation and generate a JSON response with two objects:
+1. "analysis": StoryAnalysis {
+   "setting": string,
+   "people": string[],
+   "emotionalCore": string,
+   "centralTension": string,
+   "pivotalMoment": string,
+   "importantObjects": string[],
+   "actualOutcome": string | null, // ONLY if provided by user! Never invent!
+   "experienceGrammar": string,
+   "themeKey": string
 }
 
-Respond ONLY with clean valid JSON.
+2. "plan": ExperiencePlan {
+   "id": string, // "exp_..."
+   "title": string,
+   "synopsis": string,
+   "worldTemplate": "apartment_night" | "office_night" | "hallway_night" | "neighborhood_sunset" | "bar_or_party" | "train_station" | "city_rain" | "family_home" | "hotel_or_rental" | "bedroom_night",
+   "durationMinutes": 3,
+   "cast": [
+     {
+       "role": string,
+       "character": "young_adult_masc_01" | "adult_fem_01" | "young_adult_masc_02" | "elder_masc_01",
+       "slot": string, // semantic slot
+       "pose": "idle" | "wait" | "confront" | "read" | "leave"
+     }
+   ],
+   "beats": [
+     { "id": "beat_arrival", "type": "arrival", "trigger": "time_elapsed", "triggerPayload": 0, "title": "Arrival", "description": "..." },
+     { "id": "beat_cue", "type": "cue", "trigger": "time_elapsed", "triggerPayload": 6000, "title": "The Cue", "description": "...", "isCue": true },
+     { "id": "beat_pressure", "type": "pressure", "trigger": "time_elapsed", "triggerPayload": 22000, "title": "Pressure", "description": "...", "isPressure": true },
+     { "id": "beat_commit", "type": "commitment", "trigger": "player_committed", "title": "Decision", "description": "..." }
+   ],
+   "interactions": [
+     {
+       "id": "act_1",
+       "targetSlot": string, // MUST be semantic slot name (e.g. phone_table, bathroom_door, sofa, front_door, presentation_screen, etc.)
+       "label": string, // 1-45 chars max
+       "observation": string,
+       "commitLabel": string
+     },
+     {
+       "id": "act_2",
+       "targetSlot": string,
+       "label": string,
+       "observation": string,
+       "commitLabel": string
+     }
+   ],
+   "modifiers": [
+     {
+       "id": "mod_1",
+       "kind": "timer" | "message" | "sound" | "door" | "npcPressure" | "lighting" | "arrival",
+       "atMs": number,
+       "anchor": string,
+       "payload": string,
+       "visibleToPlayer": true
+     }
+   ],
+   "commitments": [
+     { "id": "act_1", "targetSlot": string, "label": string, "outcome": string },
+     { "id": "act_2", "targetSlot": string, "label": string, "outcome": string }
+   ],
+   "authorTruth": {
+     "status": "author_supplied" | "withheld",
+     "text": string // ONLY IF USER SUPPLIED WHAT ACTUALLY HAPPENED! Omit or leave empty if user did not provide reality.
+   },
+   "crowdQuestion": string,
+   "responsePrompt": string
+}
+
+CRITICAL RULES:
+- Raw x/y coordinates are STRICTLY FORBIDDEN. Only use semantic slots: 'phone_table', 'bathroom_door', 'sofa', 'presentation_screen', 'player_laptop', 'director', 'intercom', 'elevator', 'front_door', 'bench', 'bus_stop', 'station_board', 'platform_edge', 'dining_table', 'decision_center'.
+- ZERO AUTHOR TRUTH FABRICATION: If the user did not specify what really happened in real life, authorTruth.status MUST be "withheld". DO NOT invent or make up what happened in reality.
+- Respond ONLY with clean, valid JSON containing {"analysis": ..., "plan": ...}.
 `;
 
-// API: Generate GameSpec using Gemini
+function experiencePlanToGameSpec(plan: ExperiencePlan, author: string, genre: string): any {
+  const nodes: Record<string, any> = {
+    node_start: {
+      id: 'node_start',
+      title: plan.title,
+      narrative: plan.synopsis,
+      worldConfig: {
+        template: plan.worldTemplate,
+      },
+      choices: plan.commitments.map((c, i) => ({
+        id: c.id,
+        text: c.label,
+        nextNodeId: `node_end_${i + 1}`,
+      })),
+    },
+  };
+
+  plan.commitments.forEach((c, i) => {
+    nodes[`node_end_${i + 1}`] = {
+      id: `node_end_${i + 1}`,
+      title: c.label,
+      isEnding: true,
+      endingSummary: c.outcome,
+    };
+  });
+
+  return {
+    id: plan.id,
+    title: plan.title,
+    author: author || 'Community Contributor',
+    synopsis: plan.synopsis,
+    description: plan.synopsis,
+    genre: genre || 'Human Situations',
+    tags: [genre || 'Real', 'Interactive'],
+    estimatedPlaytime: `${plan.durationMinutes || 3} min`,
+    whatReallyHappened: plan.authorTruth.status === 'author_supplied' ? plan.authorTruth.text : '',
+    startNodeId: 'node_start',
+    nodes,
+  };
+}
+
+// API: Generate GameSpec & ExperiencePlan using Gemini (with retry & schema validation) or Deterministic Fallback
 app.post('/api/generate-story', async (req, res) => {
   try {
     const {
       prompt,
       whatReallyHappened = '',
-      genre = 'Воспоминания',
-      author = 'Анонимный автор',
+      genre = 'Situations',
+      author = 'Anonymous',
+      responseToPostId,
+      themeKey,
+      inspirationPrompt,
     } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'A story description is required.' });
     }
 
-    const ai = getGeminiClient();
+    const hasRealOutcome = typeof whatReallyHappened === 'string' && whatReallyHappened.trim().length > 5;
+    const cleanRealOutcome = hasRealOutcome ? whatReallyHappened.trim() : '';
 
-    const userPrompt = `
-Transform this real human story into a tiny playable 2D memory world in JSON:
+    let generatedPlan: ExperiencePlan | null = null;
+    let storyAnalysis: StoryAnalysis | null = null;
+
+    // Try Gemini if API key is present
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const ai = getGeminiClient();
+        const userPrompt = `
+Transform this human situation into an ExperiencePlan for a 2D Vivi world in JSON:
 User Story: "${prompt}"
-${whatReallyHappened ? `What Really Happened in Real Life: "${whatReallyHappened}"` : ''}
+${cleanRealOutcome ? `What Really Happened in Real Life: "${cleanRealOutcome}"` : 'What Really Happened in Real Life: [Not provided by author]'}
 Genre Category: ${genre}
 Author: ${author}
 
-Design 1-2 rich playable 2D scenes where the player physically walks between interactive memory objects (benches, bicycles, laptops, coffee cups, bus stops), approaches the central NPC character, has a meaningful dialogue, and reaches the crucial life choice.
+Design 1 grounded playable scene within the supported Vivi world templates and semantic slots.
+Stage objects and people so the player can physically move, inspect, hesitate, and make a consequential choice.
+If what really happened was not provided, set authorTruth.status to "withheld".
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: userPrompt,
-      config: {
-        systemInstruction: STORY_GENERATOR_SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        temperature: 0.85,
+        const requestGemini = async (extraInstruction?: string) => {
+          const contents = extraInstruction
+            ? `${userPrompt}\n\nATTENTION TO PREVIOUS VALIDATION ERRORS:\n${extraInstruction}`
+            : userPrompt;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents,
+            config: {
+              systemInstruction: EXPERIENCE_PLAN_SYSTEM_INSTRUCTION,
+              responseMimeType: 'application/json',
+              temperature: 0.8,
+            },
+          });
+
+          const responseText = response.text || '';
+          const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+          return JSON.parse(cleanJson);
+        };
+
+        // Attempt 1
+        let parsed = await requestGemini();
+        let planCandidate = parsed.plan || parsed;
+        let validation = validateExperiencePlan(planCandidate);
+
+        // Retry once if invalid
+        if (!validation.valid) {
+          console.warn('Initial ExperiencePlan failed validation:', validation.errors);
+          const errorMsg = validation.errors.join('; ');
+          parsed = await requestGemini(`Please fix the following schema errors: ${errorMsg}. Remember: NO raw coordinates (x/y), between 2-5 commitments, and valid semantic slots.`);
+          planCandidate = parsed.plan || parsed;
+          validation = validateExperiencePlan(planCandidate);
+        }
+
+        if (validation.valid) {
+          generatedPlan = validation.plan;
+          storyAnalysis = parsed.analysis || null;
+          // Enforce zero truth fabrication
+          if (!hasRealOutcome) {
+            generatedPlan.authorTruth = { status: 'withheld' };
+          } else {
+            generatedPlan.authorTruth = {
+              status: 'author_supplied',
+              text: cleanRealOutcome,
+              sourceLabel: 'со слов автора',
+            };
+          }
+        }
+      } catch (geminiErr: any) {
+        console.warn('Gemini generation failed or timed out, using deterministic pipeline fallback:', geminiErr?.message);
+      }
+    }
+
+    // Deterministic fallback if Gemini was skipped or failed validation
+    if (!generatedPlan) {
+      const fallbackResult = generateDeterministicExperiencePlan(prompt, cleanRealOutcome, genre, author);
+      generatedPlan = fallbackResult.plan;
+      storyAnalysis = fallbackResult.analysis;
+    }
+
+    const gameSpec = experiencePlanToGameSpec(generatedPlan, author, genre);
+    const scenario = compileExperiencePlanToScenario(
+      generatedPlan,
+      storyAnalysis || {
+        setting: generatedPlan.worldTemplate,
+        people: ['Player'],
+        emotionalCore: 'Hesitation',
+        centralTension: prompt,
+        pivotalMoment: 'Decision',
+        importantObjects: ['decision center'],
+        experienceGrammar: 'Move, inspect, commit',
+        themeKey: genre,
       },
+      author,
+      responseToPostId
+    );
+
+    const playablePost: StoredPlayablePost = {
+      schemaVersion: 2,
+      id: scenario.id,
+      title: scenario.title,
+      author: scenario.author,
+      authorHandle: scenario.authorHandle,
+      synopsis: scenario.synopsis || scenario.hook || generatedPlan.synopsis,
+      pillar: scenario.pillar,
+      world: scenario.world,
+      createdAt: Date.now(),
+      scenario,
+      analysis: storyAnalysis || undefined,
+      experiencePlan: generatedPlan,
+      legacyGameSpec: gameSpec,
+      responseToPostId,
+      themeKey: themeKey || genre,
+      inspirationPrompt: inspirationPrompt || prompt,
+    };
+
+    res.json({
+      success: true,
+      gameSpec,
+      experiencePlan: generatedPlan,
+      scenario,
+      analysis: storyAnalysis,
+      playablePost,
+      responseToPostId,
+      themeKey: themeKey || genre,
+      inspirationPrompt: inspirationPrompt || prompt,
     });
-
-    const responseText = response.text || '';
-    let parsedSpec;
-    try {
-      parsedSpec = JSON.parse(responseText.trim());
-    } catch (parseErr) {
-      // If wrapped in markdown blocks
-      const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      parsedSpec = JSON.parse(cleanJson);
-    }
-
-    // Assign standard fields if missing
-    if (!parsedSpec.id) {
-      parsedSpec.id = 'gen_' + Date.now();
-    }
-    if (!parsedSpec.author) {
-      parsedSpec.author = 'Mythos AI Engine';
-    }
-    if (!parsedSpec.createdAt) {
-      parsedSpec.createdAt = new Date().toISOString();
-    }
-    if (!parsedSpec.updatedAt) {
-      parsedSpec.updatedAt = new Date().toISOString();
-    }
-    if (!parsedSpec.metrics) {
-      parsedSpec.metrics = { plays: 1, likes: 0, rating: 5.0, completions: 0 };
-    }
-    if (!parsedSpec.coverImage) {
-      parsedSpec.coverImage = '';
-    }
-
-    res.json({ success: true, gameSpec: parsedSpec });
   } catch (error: any) {
     console.error('Error generating story:', error);
     res.status(500).json({
-      error: error.message || 'Failed to generate story with AI. Please check server logs or API key.',
+      error: error.message || 'Failed to generate story.',
     });
   }
 });
@@ -270,7 +371,7 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`Mythos Story Engine running on http://0.0.0.0:${PORT}`);
+    console.log(`Vivi Story Engine running on http://0.0.0.0:${PORT}`);
   });
 }
 
