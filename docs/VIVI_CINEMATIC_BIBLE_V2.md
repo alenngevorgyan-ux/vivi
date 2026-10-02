@@ -34,22 +34,32 @@ border.
 
 ## How a shot gets chosen
 
-The engine resolves one shot per frame, by precedence:
+[`director.ts`](../src/engine/cinematic/director.ts) resolves one shot per frame, by precedence:
 
 1. `revealed` → REALITY_HOLD
 2. `committed` → FINAL_COMMIT
-3. an inspection in the last 2.3 s → OBJECT_INSERT on that object's slot
-4. an authored `ShotCue` still on the timeline → that cue
-5. pressure beat reached → STATIC_TENSION
-6. otherwise → SOFT_FOLLOW
+3. an inspection in the last 2.3 s → OBJECT_INSERT on that object (or on the
+   player, for something in their hand)
+4. the opening — a compiled scene's camera-grammar opening, or an authored
+   scene's shot list
+5. the latest **camera event** still inside its window (compiled scenes)
+6. the first moment a commitment becomes possible (grammars that want it)
+7. pressure reached → the grammar's pressure shot
+8. otherwise → SOFT_FOLLOW
 
-Authored cues come from the stories themselves — `CanonicalScenario.shots`, fed
-by `compileHeroStoryToRuntime`. `ShotType` maps onto the language one to one, so
-`PHONE_INSERT` becomes an OBJECT_INSERT and `REALITY_REVEAL` a REALITY_HOLD.
+Compiled scenes carry no shot list. They carry a camera grammar (`intimate`,
+`suspense`, `scrutiny`, `departure`, `moral`, `discovery`) and a handful of
+semantic camera events produced by the compiler — `npc_exit`, `npc_enter`,
+`object_active`, `speech`, `silence`, `pressure`, `arrival`, `stare`,
+`approach`, `memory`. Each grammar maps those onto the presets above, so the
+same story event reads as a push-in in one grammar and a held wide in another.
+Attention framing never hard-cuts; only an inspection does.
 
-**Control is only taken for the first 4.2 seconds.** Authored cues may declare
-`locked`, but after the opening beat the engine ignores it and the player drives.
-A camera that keeps taking the room away is not restraint, it is a cutscene.
+Authored legacy cues still come from `CanonicalScenario.shots` and pass through
+the same function. The three golden stories now compile from DSL and use their
+grammar instead.
+
+**Control is only taken for the first 4.2 seconds.**
 
 ## Staging
 
@@ -68,20 +78,25 @@ and never crosses the hero object.
 
 ## Casting
 
-Three flagship situations are built on the player being alone — 03:17, The Photo,
-The Location — and the compiler stages no second figure in them. A figure in the
-corridor destroys the only image 03:17 has. The list lives in
-`STORIES_WITH_ON_STAGE_COMPANION` in [`RuntimeCompiler.ts`](../src/engine/runtime/RuntimeCompiler.ts).
+Casting is data, not engine logic. Compiled scenes cast from the DSL: no `on`
+cast means nobody is in the room, which is how 03:17 keeps its corridor empty.
+Older curated stories keep a `companion` flag in
+[`curation.ts`](../src/data/heroStories/curation.ts).
 
-The meeting room is the opposite case: a presenting coworker and three seated
-colleagues are drawn into the world art, so the room is full and oriented toward
-authority before anyone speaks. They are set dressing, not cast — the scenario
-still carries exactly one NPC.
+The meeting room is full because the scene casts it: the presenting coworker,
+the director and three seated colleagues are **actors**, not art. Seated
+figures turn to whoever speaks, to the player when the room stares, and glance
+up when the player passes close. Feed stills still draw the room populated.
+
+People walk routes planned around the furniture (see
+[the compiler doc](VIVI_EXPERIENCE_COMPILER_V1.md#navigation)) and are solid
+to the player.
 
 ## Beats must not depend on frame delivery
 
-The bathroom door opens for a fixed window measured from the moment the partner
-starts leaving, not from how far they have walked. Anything keyed to animation
+Actors are a pure function of scene time: where someone is at 0:27 does not
+depend on how many frames were delivered before it. Doors open from timed
+modifiers, not from walk progress. Anything keyed to animation
 progress hangs open when frames are throttled — a backgrounded tab, a slow
 device. Story state comes from the modifier timeline; only motion comes from rAF.
 
@@ -108,7 +123,17 @@ wood, a door meeting its frame, an intercom and an elevator. Levels sit around
 comes from what stops.
 
 Each cue follows physical modifier state, not the narrative beat it coincides
-with, and the navbar mute reaches the master gain.
+with, and the navbar mute reaches the master gain. Nothing is created before
+the first user gesture, a muted scene never starts sound, and the bed the scene
+wants is applied on unlock or unmute. Compiled scenes add world beds
+(ventilation, office hum, crowd, station air, evening air, train idle), knock
+and footsteps one-shots, and grammar-driven restraint.
+
+## MEMORY_ECHO
+
+`["echo", object]` makes an object glint; reaching it warms and drops the grade
+while the player and the remembered person replay three and a half seconds as
+translucent figures beside it, then dissolve. The model writes one word.
 
 ## Commitment is a place, not a menu
 

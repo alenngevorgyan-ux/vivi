@@ -104,3 +104,20 @@ portrait viewport crops the composition down to a strip of wall.
 Palette families, type (Newsreader / Inter / IBM Plex Mono), radii, the editorial
 feed treatment, and the rule that a world template supplies most of a scene's
 structure. The ten palettes in `tokens.ts` are unchanged.
+
+## Additions in the compiler pass
+
+- **Grade layer.** Compiled scenes add a lighting-profile grade *outside* the
+  camera: a soft-light tint, base darkness, a vignette, extra darkness under
+  pressure, flicker, and a warm drop during a memory echo. It never scales with
+  the lens.
+- **Props.** Loose story objects (phone, envelope, photo, document, letter,
+  ticket, keys, bag, laptop) are small runtime props that glow when active. A
+  phone in the player's hand shows its screen above them.
+- **People are not art.** On stage, the office's presenter and colleagues are
+  runtime actors; `SceneState.populated` draws them only in feed stills.
+  Seated figures get a plain chair.
+- **Collision traces the art.** Every world's boxes now follow the furniture it
+  draws; the hallway floor is the trapezoid you see.
+- **Small structural additions:** the empty elevator opens onto a lit car; the
+  station's last train slides in and its board shows the live countdown.
