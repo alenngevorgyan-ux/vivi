@@ -38,10 +38,12 @@ interface Props {
 }
 
 /** Design's anchor for an option: its act's first fixed attention target, else the hero. */
-function anchorOf(option: string, l: OverlayLayout, staging?: StagingV3) {
+function anchorOf(option: string, l: OverlayLayout, staging?: StagingV3): { x: number; y: number; above: boolean } | undefined {
   const t = staging?.enactments[option]?.attention.find(a => a.kind === 'point');
-  if (t && t.kind === 'point') return l.project(t.at[0], t.at[1], t.at[2]);
-  return l.hero;
+  const p = t && t.kind === 'point' ? l.project(t.at[0], t.at[1], t.at[2]) : undefined;
+  if (p) return { ...p, above: false };
+  // The hero's own preparation: the label sits above the head, never over the body or the summary.
+  return l.hero ? { ...l.hero, above: true } : undefined;
 }
 
 export function DecisionProjectionV3({ readable, reserved, copy, dispatch, activation, mode, overlay, staging, heading }: Props) {
@@ -68,9 +70,9 @@ export function DecisionProjectionV3({ readable, reserved, copy, dispatch, activ
     // neutral: manifest order), then kept inside the stage. Equal size, equal style.
     const placed: Array<{ id: string; left: number; top: number }> = [];
     for (const o of options) {
-      const a = anchorOf(o.id, overlay, staging) ?? { x: overlay.box.w / 2, y: overlay.box.h / 2 };
+      const a = anchorOf(o.id, overlay, staging) ?? { x: overlay.box.w / 2, y: overlay.box.h / 2, above: false };
       const left = Math.min(Math.max(8, a.x - W / 2), overlay.box.w - W - 8);
-      let top = Math.min(Math.max(8, a.y + 10), overlay.box.h - H - 8);
+      let top = Math.min(Math.max(8, a.above ? a.y - H - 12 : a.y + 10), overlay.box.h - H - 8);
       for (let guard = 0; guard < 6; guard++) {
         const hit = placed.find(q => Math.abs(q.left - left) < W && Math.abs(q.top - top) < H);
         if (!hit) break;

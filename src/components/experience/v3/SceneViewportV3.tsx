@@ -16,7 +16,7 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CompiledScene, EntityState, PlaybackManifestV3, SpatialMark } from '../../../engine/v3/contracts/manifest';
 import type { RuntimeSnapshot } from '../../../engine/v3/contracts/state';
-import type { FloorPoint, RuntimeGeometryV3 } from '../../../engine/v3/contracts/geometry';
+import { seatedStandable, type FloorPoint, type RuntimeGeometryV3 } from '../../../engine/v3/contracts/geometry';
 import { along, bodyBox, fitCamera, islandEllipse, legalFloor, nearDepth, occluderSilhouette, pathMetres, stageToFloor, surfaceRect, toStage, yawOf, type Fit } from './NormalizedProjection';
 import { SceneLayersV3, type BodyLayer, type CutoutLayer, type IslandPx, type LayerModel } from './SceneLayersV3';
 import { routeBetween, selectFraming, type ActPose, type Orientation, type StagingV3 } from './staging';
@@ -384,7 +384,10 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
             nearestRole = role;
           }
         }
-        return { kind: 'floor', point: p, legal: legalFloor(loc, p), ...(nearestRole ? { nearestRole } : {}) };
+        // Legal: open floor clear of the (already inflated) footprints, or — for a declared seated mark — its own seat.
+        const seat = nearestRole ? loc.seats?.find(q => q.role === nearestRole)?.obstacle : undefined;
+        const legal = legalFloor(loc, p) || (!!seat && seatedStandable(loc, p, seat));
+        return { kind: 'floor', point: p, legal, ...(nearestRole ? { nearestRole } : {}) };
       },
       markOnStage(role: string) {
         const mk = cs.marks?.[role];
@@ -400,7 +403,16 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
   const overlayLayout: OverlayLayout = { fit, box, hero: layout.heroTop, actors: layout.tops, project: (x, y, h = 0) => toStage(fit, x, y, h) };
 
   return (
-    <div ref={wrap} className="v3p-viewport" data-testid="scene-viewport" data-camera={cam.id} data-orientation={orientation} style={{ height: box.h }}>
+    <div
+      ref={wrap}
+      className="v3p-viewport"
+      data-testid="scene-viewport"
+      data-camera={cam.id}
+      data-orientation={orientation}
+      // QA aid: where this scene's compiled marks fall on the stage (public geometry only).
+      data-marks={JSON.stringify(Object.fromEntries(Object.entries(cs.marks ?? {}).flatMap(([r, mk]) => { const q = toStage(fit, mk.x, mk.y, 0); return q ? [[r, [Math.round(q.x), Math.round(q.y)]]] : []; })))}
+      style={{ height: box.h }}
+    >
       <div className="v3p-stage" style={{ width: box.w, height: box.h }} data-testid="stage">
         {plates && layout.model.plate.graphite ? <SceneLayersV3 model={layout.model} overlay={overlay?.(overlayLayout)} /> : <p className="v3p-stage-missing">The scene picture is not loaded.</p>}
       </div>

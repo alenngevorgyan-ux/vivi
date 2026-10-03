@@ -25,7 +25,7 @@ const DirectorLab = import.meta.env.DEV ? lazy(() => import('./components/dev/Di
 const V3Harness = import.meta.env.DEV ? lazy(() => import('./components/experience/v3/V3Harness')) : null;
 const v3HarnessRequested = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('v3') === 'foundation';
 /** Development-only visual V3 slice, The Correction (`?v3=correction`); compiled out of production builds. Not a product route. */
-const CorrectionDevEntry = import.meta.env.DEV ? lazy(() => import('./components/experience/v3/CorrectionDevEntry')) : null;
+const CorrectionDevEntry = import.meta.env.DEV ? lazy(() => import('./components/experience/v3-correction/CorrectionDevEntry')) : null;
 const v3CorrectionRequested = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('v3') === 'correction';
 
 export default function App() {

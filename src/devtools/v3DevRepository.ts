@@ -78,3 +78,22 @@ export const devSnapshots = {
     }
   },
 };
+
+/** Dev per-viewer display preferences (readable mode, reduced motion), in sessionStorage. */
+export const devPrefs = {
+  read(key: string): boolean | undefined {
+    try {
+      const v = sessionStorage.getItem(`v3p:${key}`);
+      return v === null ? undefined : v === '1';
+    } catch {
+      return undefined;
+    }
+  },
+  write(key: string, value: boolean) {
+    try {
+      sessionStorage.setItem(`v3p:${key}`, value ? '1' : '0');
+    } catch {
+      /* a convenience only */
+    }
+  },
+};

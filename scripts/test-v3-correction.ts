@@ -28,7 +28,7 @@ import {
 } from '../src/data/experienceV3Fixtures/runtime/theCorrection.ts';
 import { CORRECTION_REVEAL_CANARIES, CORRECTION_REVEAL_PRESENTATION, correctionReveal, correctionRevealBinding, resolveCorrectionReveal } from '../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
 import { CORRECTION_SOURCE_LEDGER, traceCorrectionFacts } from '../src/data/experienceV3Fixtures/runtime/theCorrection.provenance.ts';
-import { correctionActSlots, correctionAmbientCues, correctionSceneSlots, SCENE_HOOKS } from '../src/data/experienceV3Fixtures/runtime/theCorrection.presentation.ts';
+import { correctionActSlots, correctionAmbientCues, correctionPublicCopy, correctionSceneSlots, SCENE_HOOKS } from '../src/data/experienceV3Fixtures/runtime/theCorrection.presentation.ts';
 import { PLACEHOLDER_GEOMETRY_ID, placeholderGeometry } from '../src/data/experienceV3Fixtures/runtime/placeholderGeometry.ts';
 import { CORRECTION_GEOMETRY_PROVENANCE, CORRECTION_RUNTIME_GEOMETRY, CORRECTION_STAGING } from '../src/data/experienceV3Fixtures/runtime/theCorrection.geometry.ts';
 import { validateGeometryForManifest, validateRuntimeGeometry } from '../src/engine/v3/contracts/geometry.ts';
@@ -287,8 +287,37 @@ passed('Provenance: every runtime fact → gold fact → pre-boundary span (hash
     const src = readFileSync(f, 'utf8');
     const privateImport = /\.private\.json['"]/.test(src);
     if (privateImport) assert.ok(/theCorrection\.(reveal|provenance)\.ts$/.test(f), `${f} must not import a private gold file`);
-    if (!f.includes('experienceV3Fixtures/runtime')) assert.ok(!/experienceV3Fixtures\/runtime/.test(src), `${f}: production code does not import the dev runtime fixtures`);
+    // The visual slice's development entry (and the host pieces it alone uses) may read the fixtures: it is reached
+    // only through App.tsx's import.meta.env.DEV-gated lazy import, so production builds compile it out.
+    const devOnly = /components\/experience\/v3-correction\/(CorrectionDevEntry\.tsx|CorrectionRevealHost\.ts)$/.test(f);
+    if (!f.includes('experienceV3Fixtures/runtime') && !devOnly) assert.ok(!/experienceV3Fixtures\/runtime/.test(src), `${f}: production code does not import the dev runtime fixtures`);
   }
+  const app = readFileSync('src/App.tsx', 'utf8');
+  assert.match(app, /const CorrectionDevEntry = import\.meta\.env\.DEV \? lazy\(\(\) => import\('\.\/components\/experience\/v3-correction\/CorrectionDevEntry'\)\) : null;/, 'the dev entry is reached only through a DEV-gated lazy import');
+  for (const f of srcFiles) if (!/CorrectionDevEntry\.tsx$|App\.tsx$/.test(f)) assert.ok(!/['"][^'"]*CorrectionDevEntry['"]/.test(readFileSync(f, 'utf8')), `${f} does not import the dev entry`);
+  // The whole visual player, statically: no path from the dev entry, the shell or the viewport reaches a private file.
+  // The private record is reachable only through CorrectionRevealHost's dynamic import, after the reveal gate.
+  const resolveTs = (from: string, spec: string) => {
+    const base = resolve(dirname(from), spec);
+    for (const c of [base, `${base}.ts`, `${base}.tsx`]) if (statSync(c, { throwIfNoEntry: false })?.isFile()) return c;
+    return base;
+  };
+  const staticImports = (file: string): string[] =>
+    [...readFileSync(file, 'utf8').matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)].map(x => x[1]).filter(q => q.startsWith('.')).map(q => resolveTs(file, q));
+  const reachAll = (file: string, seen = new Set<string>()): Set<string> => {
+    if (seen.has(file)) return seen;
+    seen.add(file);
+    if (/\.tsx?$/.test(file)) for (const i of staticImports(file)) reachAll(i, seen);
+    return seen;
+  };
+  const player = [...reachAll(resolve('src/components/experience/v3-correction/CorrectionDevEntry.tsx'))];
+  assert.ok(player.some(f => f.endsWith('ExperiencePlayerV3.tsx')) && player.some(f => f.endsWith('SceneViewportV3.tsx')) && player.some(f => f.endsWith('theCorrection.geometry.ts')));
+  assert.deepEqual(player.filter(f => /\.private\.json$|theCorrection\.(reveal|provenance)\.ts$/.test(f)), [], 'the visual player never statically imports the private record or ledger');
+  assert.match(readFileSync('src/components/experience/v3-correction/CorrectionRevealHost.ts', 'utf8'), /await import\('\.\.\/\.\.\/\.\.\/data\/experienceV3Fixtures\/runtime\/theCorrection\.reveal\.ts'\)/, 'the record loads only by dynamic import');
+  // Gold §L bridge, bound once as public copy: it is the boundary line, identical to the reveal presentation.
+  assert.equal(correctionPublicCopy().boundaryLine, CORRECTION_REVEAL_PRESENTATION.bridge);
+  assert.deepEqual([correctionPublicCopy().displayTitle, correctionPublicCopy().directorQuestion], ['Mira’s forecast', 'Anything to add before we use this?'], 'the approved display title and the exact Gold question');
+  noLeaks(correctionPublicCopy(), 'public player copy');
 }
 passed('Private separation: no canary or reveal key in manifest/post/plan/slots; the reveal is one separate exact record; private files unreachable from public modules');
 

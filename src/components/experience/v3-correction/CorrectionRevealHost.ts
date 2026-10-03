@@ -14,7 +14,7 @@
 
 import { validateRevealRecord } from '../../../engine/v3/contracts/reveal.ts';
 import { CORRECTION_VERSIONS } from '../../../data/experienceV3Fixtures/runtime/theCorrection.ts';
-import type { RevealBinding, RevealLoader } from './hostContracts.ts';
+import type { RevealBinding, RevealLoader } from '../v3/hostContracts.ts';
 
 /** The public part of the trusted variant → record mapping. It names no option and carries no text. */
 export function correctionPublicRevealBinding(): RevealBinding {

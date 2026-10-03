@@ -450,7 +450,8 @@
 }
 
 .v3p-sr-only,
-.v3p-page .v3p-sr-only {
+.v3p-page .v3p-sr-only,
+.v3p-page .v3-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

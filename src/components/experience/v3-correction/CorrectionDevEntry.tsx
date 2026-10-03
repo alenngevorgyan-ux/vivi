@@ -19,11 +19,12 @@ import type { InputIntent } from '../../../engine/input/InputManager';
 import { correctionPost, type CorrectionVariant } from '../../../data/experienceV3Fixtures/runtime/theCorrection';
 import { CORRECTION_RUNTIME_GEOMETRY, CORRECTION_STAGING } from '../../../data/experienceV3Fixtures/runtime/theCorrection.geometry';
 import { correctionActSlots, correctionPublicCopy } from '../../../data/experienceV3Fixtures/runtime/theCorrection.presentation';
-import { devJournal, devRepository, devSnapshots, type JournalFault, type PersistFault } from '../../../devtools/v3DevRepository';
-import { AssetCache } from './AssetPreloader';
+import { devJournal, devPrefs, devRepository, devSnapshots, type JournalFault, type PersistFault } from '../../../devtools/v3DevRepository';
+import { devFetchAsset } from '../../../devtools/v3AssetFetch';
+import { AssetCache } from '../v3/AssetPreloader';
 import { correctionPublicRevealBinding, correctionRevealLoader, type RevealFault } from './CorrectionRevealHost';
-import { ExperiencePlayerV3, type PlayerApi, type PlayerCopy } from './ExperiencePlayerV3';
-import type { PreloadScene, VisualHostConfig } from './hostContracts';
+import { ExperiencePlayerV3, type PlayerApi, type PlayerCopy } from '../v3/ExperiencePlayerV3';
+import type { PreloadScene, VisualHostConfig } from '../v3/hostContracts';
 import { deskDescription, DeskTitleInsert } from './scenes/CorrectionDesk';
 import { meetingDescription } from './scenes/CorrectionMeeting';
 import { hallwayDescription, SummaryInsert } from './scenes/CorrectionHallway';
@@ -44,7 +45,7 @@ declare global {
       getState: () => RuntimeSnapshot | undefined;
       status: () => unknown;
       dispatch: (e: ExperienceEvent) => StepResult | undefined;
-      events: Array<{ type: string; rejected?: string }>;
+      events: Array<{ type: string; rejected?: string; screen?: { caption: boolean; pose?: string | null; boundaryLine: boolean; withdrawn: boolean } }>;
       intents: InputIntent[];
       decisions: Array<{ key: string; option: string }>;
       revealLoads: number;
@@ -66,11 +67,12 @@ export default function CorrectionDevEntry() {
   const loaded = useMemo(() => loadPlayable(correctionPost(variant)), [variant]);
   const staging = CORRECTION_STAGING[variant];
   const geometry = CORRECTION_RUNTIME_GEOMETRY[variant];
-  const assets = useMemo(() => new AssetCache(staging.assets), [staging]);
+  const assets = useMemo(() => new AssetCache(staging.assets, devFetchAsset), [staging]);
   const [assetMode, setAssetMode] = useState<'full' | 'readable'>(() => (param('pictures') === 'off' ? 'readable' : 'full'));
   const modeRef = useRef(assetMode);
   modeRef.current = assetMode;
   const [mounted, setMounted] = useState(true);
+  const [mountKey, setMountKey] = useState(0);
   const api = useRef<PlayerApi | null>(null);
   const faults = useRef<Faults>({
     preload: (param('preload') as Faults['preload']) ?? 'none',
@@ -79,7 +81,7 @@ export default function CorrectionDevEntry() {
     reveal: (param('reveal') as RevealFault) ?? 'none',
     holdPreloads: param('hold') === '1',
   });
-  const log = useRef({ events: [] as Array<{ type: string; rejected?: string }>, intents: [] as InputIntent[], decisions: [] as Array<{ key: string; option: string }>, revealLoads: 0, preloads: [] as Array<{ sceneId: string; txId: string; outcome?: string }>, held: [] as NonNullable<Window['__v3Correction']>['held'], disclosures: [] as string[] });
+  const log = useRef({ events: [] as NonNullable<Window['__v3Correction']>['events'], intents: [] as InputIntent[], decisions: [] as Array<{ key: string; option: string }>, revealLoads: 0, preloads: [] as Array<{ sceneId: string; txId: string; outcome?: string }>, held: [] as NonNullable<Window['__v3Correction']>['held'], disclosures: [] as string[] });
 
   const manifest = loaded.kind === 'v3' ? loaded.manifest : undefined;
 
@@ -162,7 +164,9 @@ export default function CorrectionDevEntry() {
     };
   }, [assets, staging]);
 
-  const restore = useMemo(() => (manifest && param('resume') !== '0' ? devSnapshots.read(manifest.experienceId, manifest.revision) : undefined), [manifest]);
+  // Read at every (re)mount: returning to the route resumes from the last completed save.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const restore = useMemo(() => (manifest && param('resume') !== '0' ? devSnapshots.read(manifest.experienceId, manifest.revision) : undefined), [manifest, mountKey]);
 
   useEffect(() => {
     window.__v3Correction = {
@@ -180,7 +184,7 @@ export default function CorrectionDevEntry() {
       revealRecordPresent: () => !!api.current?.host.revealRecord(),
       assetsReady: id => assets.has(id),
       unmount: () => setMounted(false),
-      remount: () => setMounted(true),
+      remount: () => (setMountKey(k => k + 1), setMounted(true)),
     } as Window['__v3Correction'];
     return () => {
       delete window.__v3Correction;
@@ -196,6 +200,7 @@ export default function CorrectionDevEntry() {
     <main className="v3p-page" data-testid="correction-dev-entry" data-variant={variant}>
       {mounted ? (
         <ExperiencePlayerV3
+          key={mountKey}
           manifest={manifest}
           host={hostConfig}
           staging={staging}
@@ -205,9 +210,19 @@ export default function CorrectionDevEntry() {
           assetMode={assetMode}
           onAssetMode={setAssetMode}
           restore={restore}
+          prefs={devPrefs}
           onReady={onReady}
           onIntent={i => log.current.intents.push(i)}
-          onEvent={(e, r) => log.current.events.push({ type: e.type, rejected: r.rejected?.code })}
+          onEvent={(e, r) => {
+            // For QA: what was on screen when a presentation receipt was accepted.
+            const receipt = e.type === 'ENACTED' || e.type === 'HOLD_DONE' || e.type === 'BOUNDARY_DONE' || e.type === 'SKIP';
+            const q = (sel: string) => document.querySelector(sel);
+            log.current.events.push({
+              type: e.type,
+              rejected: r.rejected?.code,
+              ...(receipt ? { screen: { caption: !!q('[data-testid="enactment-caption"],[data-testid="held-caption"]')?.textContent, pose: q('[data-testid="figure-a_me"]')?.getAttribute('data-pose') ?? null, boundaryLine: !!q('[data-testid="boundary-line"]'), withdrawn: !!q('.v3p-paint.is-withdrawn') } } : {}),
+            });
+          }}
           onDisclosure={d => log.current.disclosures.push(d)}
         />
       ) : (

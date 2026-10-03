@@ -74,6 +74,8 @@ export interface ExperiencePlayerV3Props {
   onEvent?: (e: ExperienceEvent, r: StepResult) => void;
   onReady?: (api: PlayerApi) => void;
   onDisclosure?: (e: 'why' | 'aftermath' | 'skipped') => void;
+  /** Where per-viewer display preferences live (optional; memory only when absent). */
+  prefs?: PreferenceStore;
 }
 
 export function ExperiencePlayerV3(props: ExperiencePlayerV3Props) {
@@ -92,21 +94,12 @@ export function ExperiencePlayerV3(props: ExperiencePlayerV3Props) {
 
 /* ---------------------------------------------------------- preferences --- */
 
-function readPref(key: string): boolean | undefined {
-  try {
-    const v = sessionStorage.getItem(`v3p:${key}`);
-    return v === null ? undefined : v === '1';
-  } catch {
-    return undefined;
-  }
+/** Per-viewer display preferences (readable mode, reduced motion). The host injects storage; the runtime keeps none. */
+export interface PreferenceStore {
+  read(key: string): boolean | undefined;
+  write(key: string, value: boolean): void;
 }
-function writePref(key: string, v: boolean) {
-  try {
-    sessionStorage.setItem(`v3p:${key}`, v ? '1' : '0');
-  } catch {
-    /* a per-viewer convenience only */
-  }
-}
+const MEMORY_PREFS: PreferenceStore = { read: () => undefined, write: () => undefined };
 
 function useOrientation(): Orientation {
   const get = (): Orientation => (typeof window === 'undefined' ? 'landscape' : window.innerWidth < 760 || window.innerWidth < window.innerHeight * 0.95 ? 'portrait' : 'landscape');
@@ -119,17 +112,17 @@ function useOrientation(): Orientation {
   return o;
 }
 
-function useReducedMotion(): [boolean, (v: boolean) => void] {
+function useReducedMotion(prefs: PreferenceStore): [boolean, (v: boolean) => void] {
   const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : undefined;
   const [system, setSystem] = useState(!!mq?.matches);
-  const [user, setUser] = useState<boolean | undefined>(() => readPref('reducedMotion'));
+  const [user, setUser] = useState<boolean | undefined>(() => prefs.read('reducedMotion'));
   useEffect(() => {
     if (!mq) return;
     const on = () => setSystem(mq.matches);
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, [mq]);
-  return [user ?? system, v => (setUser(v), writePref('reducedMotion', v))];
+  return [user ?? system, v => (setUser(v), prefs.write('reducedMotion', v))];
 }
 
 /* -------------------------------------------------------------- helpers --- */
@@ -162,8 +155,9 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   const { host, state: s, status, dispatch, readable, getState } = useExperience(m, { manager, host: props.host, restore: props.restore, attemptId: props.attemptId, onEvent: props.onEvent });
   const activation = useCallback((e: React.SyntheticEvent) => manager.activationIdFor(e.nativeEvent), [manager]);
   const orientation = useOrientation();
-  const [reducedMotion, setReducedMotion] = useReducedMotion();
-  const [readableMode, setReadableMode] = useState(() => readPref('readable') ?? false);
+  const prefs = props.prefs ?? MEMORY_PREFS;
+  const [reducedMotion, setReducedMotion] = useReducedMotion(prefs);
+  const [readableMode, setReadableMode] = useState(() => prefs.read('readable') ?? false);
   const [contextOpen, setContextOpen] = useState(false);
   const [stoppedFor, setStoppedFor] = useState('');
   const [withdrawnFor, setWithdrawnFor] = useState('');
@@ -241,7 +235,7 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
           if (!sendTarget({ kind: hit.kind, id: hit.id }, i.activationId)) focus.announce('Nothing to do there right now.');
         } else if (hit.kind === 'floor') {
           const prep = prepFor(hit.nearestRole);
-          if (prep && hit.legal !== false) dispatch(readableEvents.prepare(prep.id, i.activationId));
+          if (prep && hit.legal) dispatch(readableEvents.prepare(prep.id, i.activationId));
           else if (!hit.legal && !hit.nearestRole) focus.announce('You cannot stand there.');
           else focus.announce('Nowhere to move to there right now.');
         }
@@ -320,7 +314,7 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
         </p>
         <h1 className="v3p-title">{copy.title}</h1>
         <div className="v3p-settings" role="group" aria-label="Display settings">
-          <button type="button" aria-pressed={readableMode} data-testid="toggle-readable" onClick={() => (setReadableMode(!readableMode), writePref('readable', !readableMode))}>
+          <button type="button" aria-pressed={readableMode} data-testid="toggle-readable" onClick={() => (setReadableMode(!readableMode), prefs.write('readable', !readableMode))}>
             Readable mode
           </button>
           <button type="button" aria-pressed={reducedMotion} data-testid="toggle-reduced-motion" onClick={() => setReducedMotion(!reducedMotion)}>

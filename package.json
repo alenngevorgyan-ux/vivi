@@ -23,6 +23,8 @@
     "test:v3-browser": "node --import tsx scripts/test-v3-browser.ts",
     "test:v3-foundation": "npm run test:v3-unit && npm run test:v3-browser",
     "test:v3-correction": "node --import tsx scripts/test-v3-correction.ts",
+    "test:v3-correction-browser": "node --import tsx scripts/test-v3-correction-browser.ts",
+    "build:v3-correction-geometry": "node --import tsx scripts/build-v3-correction-geometry.ts",
     "trace:v3-correction": "node --import tsx scripts/trace-v3-correction.ts"
   },
   "dependencies": {

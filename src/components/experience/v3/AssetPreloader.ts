@@ -4,8 +4,12 @@
  * An asset counts as prepared only when its bytes were fetched, hash-matched against the pinned SHA-256 of the
  * Design inventory, and decoded. The renderer then draws from an object URL of exactly those verified bytes, so a
  * swapped, truncated or stale file can never be shown under an approved id. Failure rejects; nothing is retried
- * silently. Generic: it knows asset ids, URLs and hashes, never a story.
+ * silently. Generic: it knows asset ids, URLs and hashes, never a story. The network is not touched here: the host
+ * injects the byte fetcher, like every other side effect of the V3 runtime.
  */
+
+/** Host-supplied byte loader (the dev entry injects a plain HTTP GET; a production host its own CDN client). */
+export type AssetFetcher = (url: string) => Promise<ArrayBuffer>;
 
 import type { StagingAsset } from './staging.ts';
 
@@ -64,7 +68,7 @@ export class AssetCache {
   private inflight = new Map<string, Promise<string>>();
   private disposed = false;
 
-  constructor(private readonly assets: Readonly<Record<string, StagingAsset>>, private readonly fetcher: typeof fetch = (...a) => fetch(...a)) {}
+  constructor(private readonly assets: Readonly<Record<string, StagingAsset>>, private readonly fetcher: AssetFetcher) {}
 
   /** The verified object URL of a prepared asset; undefined until prepared. */
   url(id: string): string | undefined {
@@ -101,9 +105,7 @@ export class AssetCache {
     if (!a) throw new AssetError(id, 'unknown_asset');
     let bytes: ArrayBuffer;
     try {
-      const res = await this.fetcher(a.url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(String(res.status));
-      bytes = await res.arrayBuffer();
+      bytes = await this.fetcher(a.url);
     } catch {
       throw new AssetError(id, 'fetch_failed');
     }
