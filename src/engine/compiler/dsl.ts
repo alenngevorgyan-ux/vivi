@@ -48,6 +48,8 @@ import { resolvePlace } from './worldKnowledge.ts';
  *   a   commitments      [verb, target|null, label, observation?, outcome?]
  *   cg  camera grammar   st  staging          lp  lighting profile
  *   x   text             { ti title, op opening line, cu cue line, pr pressure line, q crowd question }
+ *   m   moment (optional) { d decision moment, h why it is hard, k known facts[], f play|memory }
+ *   ob  observations (optional) [target, what is seen] — looking without consequence
  *
  * `tr` (truth status) and `lang` are stamped by the pipeline from the author's
  * own input, never taken from a model.
@@ -65,6 +67,16 @@ export interface DslText {
   q?: string;
 }
 
+/** The situation layer: what is being decided. Absent in scenes written before it existed. */
+export interface DslMoment {
+  d?: string;
+  h?: string;
+  k?: string[];
+  f?: 'play' | 'memory';
+}
+/** [target, what is seen, short label?] */
+export type DslObservation = [string, string] | [string, string, string];
+
 export interface ViviExperienceDSL {
   v: typeof DSL_VERSION;
   w: DslWorld;
@@ -78,11 +90,14 @@ export interface ViviExperienceDSL {
   st?: DslStaging;
   lp?: DslLighting;
   x?: DslText;
+  m?: DslMoment;
+  ob?: DslObservation[];
   tr?: DslTruth;
   lang?: string;
 }
 
-const TOP_LEVEL_KEYS = new Set(['v', 'w', 'g', 't', 'c', 'o', 'e', 'a', 'cg', 'st', 'lp', 'x', 'tr', 'lang']);
+const TOP_LEVEL_KEYS = new Set(['v', 'w', 'g', 't', 'c', 'o', 'e', 'a', 'cg', 'st', 'lp', 'x', 'm', 'ob', 'tr', 'lang']);
+const MOMENT_KEYS = new Set(['d', 'h', 'k', 'f']);
 const TEXT_KEYS = new Set(['ti', 'op', 'cu', 'pr', 'q']);
 /** Keys that only ever appear when something is trying to place things by hand. */
 const COORDINATE_KEYS = /^(x|y|z|pos|position|coords?|coordinates|left|top|zoom|scale|offset|width|height|ms|atMs|duration)$/i;
@@ -406,6 +421,66 @@ export function validateDSL(input: unknown, options: ValidateOptions = {}): DslV
     }
   }
 
+  /* moment */
+  let moment: DslMoment | undefined;
+  if (raw.m !== undefined && raw.m !== null) {
+    if (typeof raw.m !== 'object' || Array.isArray(raw.m)) {
+      errors.push('"m" must be an object {d, h, k, f}.');
+    } else {
+      const m = raw.m as Record<string, unknown>;
+      moment = {};
+      for (const key of Object.keys(m)) if (!MOMENT_KEYS.has(key)) errors.push(`Unknown moment field "m.${key}".`);
+      const d = cleanText(m.d, LIMITS.text.line);
+      const h = cleanText(m.h, LIMITS.text.note);
+      if (d) moment.d = d;
+      if (h) moment.h = h;
+      if (m.k !== undefined && m.k !== null) {
+        if (!Array.isArray(m.k)) errors.push('"m.k" must be an array of short facts.');
+        else {
+          const facts = m.k.map(f => cleanText(f, LIMITS.text.line)).filter((f): f is string => !!f);
+          if (facts.length > LIMITS.facts) warnings.push(`Only the first ${LIMITS.facts} facts are kept.`);
+          if (facts.length) moment.k = facts.slice(0, LIMITS.facts);
+        }
+      }
+      if (m.f !== undefined && m.f !== null && m.f !== '') {
+        if (m.f !== 'play' && m.f !== 'memory') errors.push('"m.f" must be play|memory.');
+        else moment.f = m.f;
+      }
+    }
+  }
+
+  /* observations */
+  const observations: DslObservation[] = [];
+  if (raw.ob !== undefined && raw.ob !== null) {
+    if (!Array.isArray(raw.ob)) errors.push('"ob" must be an array of [target, what is seen].');
+    else {
+      raw.ob.forEach((entry, i) => {
+        const where = `ob[${i}]`;
+        if (!Array.isArray(entry) || entry.length < 2 || entry.length > 3) {
+          errors.push(`${where} must be [target, what is seen, label?].`);
+          return;
+        }
+        const [target, seen, label] = entry;
+        const isObject = has(OBJECTS, target);
+        const isRole = has(ROLES, target) && roles.has(target);
+        const isPlace = has(PLACES, target) && (!worldKnown || !!resolvePlace(WORLDS[world], target));
+        if (!isObject && !isRole && !isPlace) {
+          // A look at something the room does not have is dropped, not fatal: it is optional context.
+          warnings.push(`${where} target "${String(target)}" is not in this scene; dropped.`);
+          return;
+        }
+        const t = cleanText(seen, LIMITS.text.note);
+        if (!t) {
+          warnings.push(`${where} has no text; dropped.`);
+          return;
+        }
+        if (isObject) objects.add(target as DslObject);
+        const l = cleanText(label, LIMITS.text.label);
+        if (observations.length < LIMITS.observations) observations.push(l ? [target as string, t, l] : [target as string, t]);
+      });
+    }
+  }
+
   if (objects.size > LIMITS.objects + 2) warnings.push(`Many key objects (${objects.size}); scenes read best with one or two.`);
 
   if (errors.length) return { ok: false, errors };
@@ -423,6 +498,8 @@ export function validateDSL(input: unknown, options: ValidateOptions = {}): DslV
     ...(raw.st ? { st: raw.st as DslStaging } : {}),
     ...(raw.lp ? { lp: raw.lp as DslLighting } : {}),
     ...(text && Object.keys(text).length ? { x: text } : {}),
+    ...(moment && Object.keys(moment).length ? { m: moment } : {}),
+    ...(observations.length ? { ob: observations } : {}),
     ...(raw.tr ? { tr: raw.tr as DslTruth } : {}),
     ...(raw.lang ? { lang: raw.lang as string } : {}),
   };

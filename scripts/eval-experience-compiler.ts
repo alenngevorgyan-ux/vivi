@@ -36,6 +36,7 @@ for (const item of EVAL_CORPUS) {
   const result = await compileViviStory({ story: item.story, actualOutcome: item.outcome });
   const failures = checkScenario(item.id, result.compiled.dsl, result.post.scenario, {
     outcome: item.outcome ?? '',
+    story: item.story,
     expectWorlds: item.expect?.worlds,
     expectObjects: item.expect?.objects,
   });
@@ -44,7 +45,7 @@ for (const item of EVAL_CORPUS) {
   const flipped = item.outcome ? undefined : 'I waited, and in the end I told the truth.';
   const second = await compileViviStory({ story: item.story, actualOutcome: flipped });
   failures.push(
-    ...checkScenario(item.id, second.compiled.dsl, second.post.scenario, { outcome: flipped ?? '' }).filter(
+    ...checkScenario(item.id, second.compiled.dsl, second.post.scenario, { outcome: flipped ?? '', story: item.story }).filter(
       f => f.includes('truth') || f.includes('outcome')
     )
   );

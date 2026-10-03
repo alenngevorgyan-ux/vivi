@@ -101,8 +101,10 @@ export function buildDslJsonSchema(): JsonSchema {
     e: { type: 'array', items: { anyOf: (Object.keys(EVENT_SIGNATURES) as DslEventKind[]).map(eventSchema) } },
     a: {
       type: 'array',
-      items: obj({ v: str(VERBS), t: nullable(str(TARGETS)), l: { type: 'string' }, ob: { type: 'string' }, out: { type: 'string' } }),
+      items: obj({ v: str(VERBS), t: nullable(str(TARGETS)), l: { type: 'string' } }),
     },
+    ob: { type: 'array', items: obj({ t: str(TARGETS), s: { type: 'string' }, l: { type: 'string' } }) },
+    m: obj({ d: { type: 'string' }, h: { type: 'string' }, k: { type: 'array', items: { type: 'string' } }, f: str(['play', 'memory']) }),
     cg: str(CAMERA_GRAMMARS),
     st: str(STAGINGS),
     x: obj({ ti: { type: 'string' }, op: { type: 'string' }, q: { type: 'string' } }),
@@ -140,7 +142,9 @@ export const STRUCTURED_SYSTEM_PROMPT = [
   `o key objects: ${OBJECTS.join('|')}`,
   `e events in story order {k kind, ...args}; optional args (?) may be null: ${eventLine}`,
   `  places: ${PLACES.join('|')}; sounds: ${SOUNDS.join('|')}; vehicles: ${VEHICLES.join('|')}; light m: ${LIGHT_MODES.join('|')}; elevator m: ${ELEVATOR_MODES.join('|')}`,
-  `a commitments {v verb, t target, l label, ob observation, out outcome}: verbs ${VERBS.join('|')}; t is a key object, a cast role or a place, or null`,
+  `a deeds that end the scene {v verb, t target, l label}: verbs ${VERBS.join('|')}; t is a key object, a cast role or a place, or null`,
+  'ob 0-3 things to look at without consequence {t target, s what is seen — only what the story says, l label ≤5 words}',
+  'm {d the moment the narrator must decide, h why it is hard, k up to 4 facts they know then, f play | memory if nothing had to be decided}',
   `cg camera: ${CAMERA_GRAMMARS.join('|')}`,
   `st staging: ${STAGINGS.join('|')}`,
   'x {ti title, op opening line, q question to the reader}',
@@ -149,9 +153,10 @@ export const STRUCTURED_SYSTEM_PROMPT = [
   '- Only people the story gives. Every role used in e or a must be in c. Crowds (bg) are fine in public places.',
   '- HINTS are read from the author\'s own words: take world~ and people= unless the story plainly says otherwise.',
   '- Events: what is set up, the moment something changes, then what closes the window. 3-9 events.',
-  '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
-  "- Write l, ob, out, x and spoken lines in the story's language. l ≤6 words; ob and out a phrase of 3-20 words, never a fragment.",
-  '- out is only the next moment after the player acts. Never say what really happened afterwards.',
+  '- 2-4 deeds that differ in what they mean and cost, never paraphrases of one act — e.g. look in private, ask, leave, wait. At least two reach for different things.',
+  "- Opening someone's private messages is a deed (a), not a look (ob).",
+  "- Only what the story says. Never invent a reply, a second message, a sound, a person arriving or anyone's reaction.",
+  "- Write l, ob, m, x and spoken lines in the story's language. l ≤6 words.",
 ].join('\n');
 
 export function structuredUserPrompt(story: string, hints: StoryHints): string {
@@ -217,6 +222,16 @@ export function wireToDsl(value: unknown): unknown {
       if (c.out !== undefined) entry.push(c.out);
       return entry;
     });
+  }
+
+  if (Array.isArray(wire.ob)) {
+    out.ob = wire.ob.map(o => (isRecord(o) ? (o.l ? [o.t, o.s, o.l] : [o.t, o.s]) : o));
+  }
+
+  if (isRecord(wire.m)) {
+    const m: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(wire.m)) if (v !== null && v !== '' && !(Array.isArray(v) && !v.length)) m[k] = v;
+    out.m = m;
   }
 
   if (isRecord(wire.x)) {

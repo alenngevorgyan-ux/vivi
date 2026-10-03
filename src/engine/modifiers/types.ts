@@ -18,6 +18,8 @@ export interface ModifierData {
   door?: 'handle_moving' | 'open' | 'closed';
   /** Elevator floor count, e.g. [6, 9], one floor every two seconds. */
   floors?: [number, number];
+  /** Shown instead of a floor number when the story never said which floor (Experience V2). */
+  indicator?: string;
   /** The elevator doors open with nobody inside. */
   emptyCar?: boolean;
   /** Diegetic clock or board readout. */

@@ -12,7 +12,7 @@ export const DSL_VERSION = 1 as const;
 export type ViviExperienceDSLVersion = typeof DSL_VERSION;
 
 /** Bumped whenever the same DSL would compile to a materially different scene. */
-export const COMPILER_VERSION = '1.0.0';
+export const COMPILER_VERSION = '1.1.0';
 
 /* ---------------------------------------------------------------- worlds --- */
 
@@ -182,5 +182,8 @@ export const LIMITS = {
   objects: 4,
   events: 9,
   commitments: { min: 2, max: 4 },
+  /** Situation layer (optional): things to look at, and facts the hero knows. */
+  observations: 3,
+  facts: 4,
   text: { label: 48, line: 120, title: 48, note: 160 },
 } as const;

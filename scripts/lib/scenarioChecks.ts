@@ -15,6 +15,8 @@ import { viviCameraLanguage } from '../../src/engine/cinematic/cameraLanguage.ts
 
 export interface ScenarioCheckOptions {
   outcome?: string;
+  /** The author's full text, so an ending they wrote into the story can be recognised as theirs. */
+  story?: string;
   expectWorlds?: string[];
   expectObjects?: string[];
   truthMustBe?: string;
@@ -61,7 +63,12 @@ export function checkScenario(
   if (opts.outcome !== undefined) {
     if (opts.outcome.trim().length > 5) {
       if (truth.status !== 'author_supplied' || truth.text !== opts.outcome.trim()) fail.push('author outcome not preserved exactly');
-    } else if (truth.status !== 'withheld' || truth.text || scenario.reality) fail.push('truth fabricated where none was supplied');
+    } else if (truth.status !== 'withheld' || truth.text || scenario.reality) {
+      // V2: a story that tells its own ending has that ending held back as the
+      // author's account. It must be the author's words, verbatim — never ours.
+      const verbatim = truth.status === 'author_supplied' && !!truth.text && !!opts.story && opts.story.replace(/\s+/g, ' ').includes(truth.text.replace(/\s+/g, ' '));
+      if (!verbatim) fail.push('truth fabricated where none was supplied');
+    }
   }
 
   // actions: slots, actors, standing spots

@@ -8,6 +8,8 @@ import { reviewDsl } from './semanticReview.ts';
 import { addUsage, type ExperienceSemanticProvider, type ModelUsage } from './provider.ts';
 import { COMPILER_VERSION, DSL_VERSION } from './vocabulary.ts';
 import type { StoredPlayablePost } from '../runtime/generationPipeline.ts';
+import { proposeBoundary } from '../experience/boundary.ts';
+import type { ExperienceV2 } from '../experience/types.ts';
 
 /**
  * compileViviStory — the single generation pipeline.
@@ -23,7 +25,15 @@ import type { StoredPlayablePost } from '../runtime/generationPipeline.ts';
  */
 export interface CompileStoryInput {
   story: string;
+  /**
+   * The part of the story before the decision, as the author confirmed it.
+   * When absent, the same boundary heuristic the author sees is applied here,
+   * so a story that also tells its ending never sends that ending to a model.
+   */
+  storyBeforeDecision?: string;
   actualOutcome?: string;
+  authorWhy?: string;
+  authorAfter?: string;
   category?: string;
   responseToPostId?: string;
   author?: string;
@@ -104,11 +114,31 @@ export function semanticCacheKey(input: CompileStoryInput, providerId: string): 
 }
 
 export async function compileViviStory(
-  input: CompileStoryInput,
+  originalInput: CompileStoryInput,
   options: CompileStoryOptions = {}
 ): Promise<CompileStoryResult> {
-  const story = input.story?.trim();
-  if (!story) throw new Error('A story is required.');
+  let input = originalInput;
+  const fullStory = input.story?.trim();
+  if (!fullStory) throw new Error('A story is required.');
+
+  // Only the text before the decision may reach a model or the pre-reveal scene.
+  let story: string;
+  let boundary: ExperienceV2['boundary'];
+  let heldBack = '';
+  const confirmed = input.storyBeforeDecision?.trim();
+  if (confirmed) {
+    story = confirmed;
+    boundary = { mode: 'author_confirmed', removedChars: Math.max(0, fullStory.length - confirmed.length) };
+  } else {
+    const proposal = proposeBoundary(fullStory);
+    story = proposal.before || fullStory;
+    heldBack = proposal.after;
+    boundary = { mode: heldBack ? 'auto_split' : 'none', removedChars: heldBack.length };
+  }
+  // What the author wrote after the decision is their own account of it; it is
+  // never sent anywhere, and is shown back to them in preview as the reveal.
+  const actualOutcome = input.actualOutcome?.trim() || heldBack || undefined;
+  input = { ...input, story, actualOutcome };
 
   const hints = preprocessStory(story, { category: input.category, actualOutcome: input.actualOutcome });
   const provider = options.provider ?? null;
@@ -228,6 +258,9 @@ export async function compileViviStory(
     story,
     author: input.author,
     actualOutcome: input.actualOutcome,
+    authorWhy: input.authorWhy,
+    authorAfter: input.authorAfter,
+    situation: { sourceBefore: story, boundary },
     category: input.category,
     responseToPostId: input.responseToPostId,
     source,

@@ -15,7 +15,12 @@ export type AuthorTruthStatus =
 
 export interface AuthorTruth {
   status: AuthorTruthStatus;
+  /** What the author did. Preserved exactly as written. */
   text?: string;
+  /** Optional: why they did it, in their words. Never filled by a model. */
+  why?: string;
+  /** Optional: what happened afterwards, in their words. */
+  after?: string;
   sourceLabel?: string;
   withheldReason?: string;
   /** Required for `documented_source`; never produced by a model. */
@@ -90,6 +95,8 @@ export interface CompilerStamp {
 export interface StoredPlayablePost {
   id: string;
   schemaVersion: 2;
+  /** Experience V2: how this story is presented. Absent on posts saved before V2 (they play as before). */
+  format?: 'playable' | 'illustrated_memory' | 'text_story';
   title: string;
   author: string;
   authorHandle?: string;

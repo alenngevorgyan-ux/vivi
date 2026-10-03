@@ -37,8 +37,10 @@ import {
   type DslSound,
 } from './vocabulary.ts';
 import { EXPERIENCE_GRAMMARS, LIGHTING_PROFILE_DEFS, toneAdjustedLighting } from './grammars.ts';
-import { CARRIED, WORLD_KNOWLEDGE, defaultSlotForVerb, hostSlot, resolvePlace, type AmbientBedId } from './worldKnowledge.ts';
+import { CARRIED, WORLD_KNOWLEDGE, defaultSlotForVerb, hostSlot, resolvePlace, sceneHostSlot, type AmbientBedId } from './worldKnowledge.ts';
 import { resolveCommitment } from './commitmentClasses.ts';
+import { buildSituation } from '../experience/situation.ts';
+import type { ExperienceV2 } from '../experience/types.ts';
 import { approachLabel, carriedLabel, detectLanguage, objectObservation, roleName, text, type Lang } from './i18n.ts';
 
 /**
@@ -63,6 +65,14 @@ export interface CompileOptions {
   authorHandle?: string;
   /** What the author says really happened. The only source of author truth. */
   actualOutcome?: string;
+  /** Optional author's reason and aftermath, kept separate from the act. */
+  authorWhy?: string;
+  authorAfter?: string;
+  /**
+   * Experience V2: build the situation layer against this text (the author's
+   * words before the decision). Omitted for curated fixtures written before V2.
+   */
+  situation?: { sourceBefore: string; boundary?: ExperienceV2['boundary'] };
   /** Curated demo truth (hero fixtures) or documented sources (reserved). */
   truth?:
     | { status: 'fictional_demo'; text: string; sourceLabel?: string }
@@ -197,6 +207,8 @@ function clampText(s: string, max: number): string {
 /* ------------------------------------------------------------ compiler --- */
 
 export function compileExperience(input: ViviExperienceDSL, options: CompileOptions): CompiledExperience {
+  /** Experience V2: the scene is built around a decision and may only stage what the story gives. */
+  const situated = !!(options.situation || input.m || input.ob);
   const notes: string[] = [];
   const world: ViviWorldId = WORLDS[input.w];
   const template = worldTemplates[world];
@@ -243,7 +255,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   const staticObstacles: CollisionBox[] = [];
   // Nobody is staged standing on the story's object: keep a little floor clear around each one.
   const keepOut: CollisionBox[] = input.o
-    .map(obj => hostSlot(world, obj))
+    .map(obj => sceneHostSlot(input, obj))
     .filter(slot => slot !== CARRIED)
     .map(slot => {
       const [x, y] = slotAnchor(slot);
@@ -553,12 +565,13 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'msg': {
         const obj = a1 as DslObject;
-        const slot = hostSlot(world, obj);
+        const slot = sceneHostSlot(input, obj);
         const line = String(a2);
         mod('message', at, slot, line, {
           screenText: line,
           vibrate: obj === 'phone',
-          ...(obj === 'phone' && grammar.phoneLockSec ? { lockSec: grammar.phoneLockSec } : {}),
+          // A lock countdown is a pressure device the story did not supply; situated (V2) scenes never add one.
+          ...(obj === 'phone' && grammar.phoneLockSec && !situated ? { lockSec: grammar.phoneLockSec } : {}),
         }, 4000);
         markObject(obj, at);
         camera('object_active', at, { slot });
@@ -567,7 +580,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'call': {
         const obj = a1 as DslObject;
-        const slot = hostSlot(world, obj);
+        const slot = sceneHostSlot(input, obj);
         if (obj === 'intercom') {
           mod('call', at, slot, 'INTERCOM', { intercom: true }, 2000);
         } else {
@@ -581,7 +594,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'typing': {
         const obj = a1 as DslObject;
-        mod('typing', at, hostSlot(world, obj), 'Typing…', { typing: true }, 6000);
+        mod('typing', at, sceneHostSlot(input, obj), 'Typing…', { typing: true }, 6000);
         markObject(obj, at);
         break;
       }
@@ -630,7 +643,9 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'elevator': {
         const slot = hostSlot(world, 'elevator');
-        mod('elevator', at, slot, '6 · 7 · 8 · 9', { floors: [6, 9], emptyCar: a1 === 'empty' });
+        // Situated scenes do not invent which floors the car passed: it simply arrives.
+        if (situated) mod('elevator', at, slot, '●', { floors: [1, 1], indicator: '●', emptyCar: a1 === 'empty' });
+        else mod('elevator', at, slot, '6 · 7 · 8 · 9', { floors: [6, 9], emptyCar: a1 === 'empty' });
         markObject('elevator', at);
         camera('object_active', at, { slot });
         camera('silence', at + 7400);
@@ -645,7 +660,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'countdown': {
         const obj = a1 as DslObject;
-        const slot = hostSlot(world, obj);
+        const slot = sceneHostSlot(input, obj);
         // Unspecified countdowns run out shortly after pressure peaks, never minutes later.
         const secs = typeof a2 === 'number' ? a2 : Math.max(8, Math.min(grammar.countdownSec, Math.round((pressureAtMs + 14000 - at) / 1000)));
         mod('timer', at, slot, `${secs}s`, { countdownSec: secs });
@@ -675,7 +690,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       }
       case 'notice': {
         const obj = a1 as DslObject;
-        const slot = hostSlot(world, obj);
+        const slot = sceneHostSlot(input, obj);
         mod('lighting', at, slot, 'catches the light', { glint: slot }, 6000);
         markObject(obj, at);
         camera('object_active', at, { slot });
@@ -689,7 +704,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       case 'echo': {
         // The object glints on the timeline; the memory itself plays when the player reaches it.
         const obj = a1 as DslObject;
-        const slot = hostSlot(world, obj);
+        const slot = sceneHostSlot(input, obj);
         mod('lighting', at, slot, 'memory', { glint: slot }, 6000);
         markObject(obj, at);
         echoObjects.add(obj);
@@ -721,7 +736,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   ];
 
   const keyObjects: RuntimeKeyObject[] = input.o.map(obj => {
-    const slot = hostSlot(world, obj);
+    const slot = sceneHostSlot(input, obj);
     return {
       id: obj,
       kind: obj,
@@ -814,7 +829,8 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
     }
 
     // Two choices on one spot would hide one of them; move the later one and relabel it for where it went.
-    if (!actorId && usedSlots.has(slot)) {
+    // Situated (V2) scenes group the intents on one thing, so two deeds about the same object stay at it.
+    if (!actorId && usedSlots.has(slot) && !(situated && objectId)) {
       const alternative = fallbackSlots.find(s => !usedSlots.has(s) && s !== CARRIED);
       if (alternative) {
         notes.push(`commitment ${verb}: ${slot} already used, moved to ${alternative}`);
@@ -894,7 +910,13 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
     authorTruth = { status: 'documented_source', text: options.truth.text.trim(), sourceRefs: options.truth.sourceRefs, sourceLabel: options.truth.sourceLabel ?? 'по документальным источникам' };
   } else if (outcome && outcome.length > 5) {
     // Preserved exactly: the author's words are never paraphrased.
-    authorTruth = { status: 'author_supplied', text: options.actualOutcome!.trim(), sourceLabel: 'со слов автора' };
+    authorTruth = {
+      status: 'author_supplied',
+      text: options.actualOutcome!.trim(),
+      ...(options.authorWhy?.trim() ? { why: options.authorWhy.trim() } : {}),
+      ...(options.authorAfter?.trim() ? { after: options.authorAfter.trim() } : {}),
+      sourceLabel: 'со слов автора',
+    };
   } else if (options.truth?.status === 'fictional_demo' && options.truth.text.trim()) {
     authorTruth = { status: 'fictional_demo', text: options.truth.text, sourceLabel: options.truth.sourceLabel ?? 'Заданная для демо развязка' };
   } else {
@@ -964,6 +986,23 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   }
   const theme = options.category ?? GRAMMAR_THEME[input.g] ?? 'Human Moment';
 
+  const experience: ExperienceV2 | undefined =
+    options.situation || input.m || input.ob
+      ? buildSituation({
+          dsl: input,
+          actions,
+          actors,
+          keyObjects,
+          sourceBefore: options.situation?.sourceBefore ?? story ?? '',
+          lang,
+          hasAuthorAct: authorTruth.status !== 'withheld',
+          cueAtMs,
+          boundary: options.situation?.boundary,
+          publicScene: input.c.some(c => c[1] === 'bg'),
+        })
+      : undefined;
+  if (experience) notes.push(`experience v2: ${experience.format}${experience.missing.length ? ` (missing ${experience.missing.join(', ')})` : ''}`);
+
   const scenario: CanonicalScenario = {
     id,
     title,
@@ -1014,6 +1053,8 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       source: options.source,
       ...(options.model ? { model: options.model } : {}),
     },
+    ...(experience ? { experience } : {}),
+    lang,
   };
 
   const plan: ExperiencePlan = {
@@ -1056,6 +1097,7 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
   const post: StoredPlayablePost = {
     id,
     schemaVersion: 2,
+    ...(experience ? { format: experience.format } : {}),
     title,
     author,
     authorHandle,

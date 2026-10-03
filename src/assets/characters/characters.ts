@@ -1,5 +1,5 @@
 export type ViviCharacterId = 'young_adult_masc_01' | 'young_adult_masc_02' | 'young_adult_fem_01' | 'young_adult_fem_02' | 'adult_masc_01' | 'adult_fem_01' | 'older_adult_01' | 'anonymous_01' | 'memory_child_01' | 'memory_child_02';
-export type CharacterPose = 'idle' | 'walk' | 'sit' | 'look_at_phone' | 'talk' | 'wait' | 'turn' | 'leave' | 'hesitate';
+export type CharacterPose = 'idle' | 'walk' | 'sit' | 'look_at_phone' | 'talk' | 'wait' | 'turn' | 'leave' | 'hesitate' | 'reach' | 'raise_hand';
 export type CharacterFacing = 'front' | 'back' | 'left' | 'right';
 export const characters: Record<ViviCharacterId, { skin: string; hair: string; clothing: string; trouser: string; build: 'small' | 'standard' | 'tall'; hairShape: 'short' | 'long' | 'cropped' | 'wavy' }> = {
   young_adult_masc_01: { skin: '#b5795b', hair: '#28292b', clothing: '#a96b55', trouser: '#394a55', build: 'standard', hairShape: 'short' },

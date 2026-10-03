@@ -26,7 +26,7 @@ export const MODEL_SYSTEM_PROMPT = [
   'Reply with ONE JSON object only.',
   '',
   'Shape (arrays are positional):',
-  '{"v":1,"w":W,"g":G,"t":T,"c":[[ROLE,P,count?]],"o":[OBJ],"e":[[EVENT,...args]],"a":[[VERB,TARGET,"label","observation","outcome"]],"cg":CG,"st":ST,"x":{"ti":"title","op":"opening line","q":"question to the reader"}}',
+  '{"v":1,"w":W,"g":G,"t":T,"c":[[ROLE,P,count?]],"o":[OBJ],"e":[[EVENT,...args]],"a":[[VERB,TARGET,"label"]],"ob":[[TARGET,"what is seen","label"]],"m":{"d":"decision moment","h":"why it is hard","k":["fact"],"f":"play"},"cg":CG,"st":ST,"x":{"ti":"title","op":"opening line","q":"question to the reader"}}',
   `W ${Object.keys(WORLDS).join('|')}`,
   `G ${GRAMMARS.join('|')}`,
   `T ${TONES.join('|')}`,
@@ -45,9 +45,11 @@ export const MODEL_SYSTEM_PROMPT = [
   'Rules:',
   '- Events in story order: what is set up, the moment something changes, then what closes the window. At most 9.',
   '- HINTS are read from the author\'s own words: take world~ and people= unless the story plainly says otherwise.',
-  '- 2-4 commitments, never paraphrases of one act: at least two must reach for different things — an object, a person in the room, a way out, or staying put.',
-  '- Write label, observation, outcome, title and lines in the story\'s language. Label ≤6 words; observation and outcome a phrase of 3-20 words, never a fragment.',
-  '- The outcome is only the next moment after the player acts. Never say what really happened afterwards.',
+  '- 2-4 deeds that differ in what they mean and cost, never paraphrases of one act — e.g. look in private, ask, leave, wait. At least two reach for different things.',
+  '- a are deeds that end the scene; ob (0-3) is looking without consequence. Opening someone\'s private messages is a deed, not a look.',
+  '- m.d the moment the narrator must decide; m.h why it is hard; m.k up to 4 facts they know then. All from the story. m.f memory if nothing had to be decided.',
+  '- Only what the story says. Never invent a reply, a second message, a sound, a person arriving or anyone\'s reaction.',
+  '- Write labels, ob, m, title and lines in the story\'s language. Label ≤6 words.',
   '- No coordinates, sizes, timings, colours or camera directions. Omit anything you are unsure of.',
 ].join('\n');
 

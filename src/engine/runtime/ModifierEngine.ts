@@ -145,7 +145,7 @@ export function computePhysicalModifiers(
         const [from, to] = d.floors;
         const floor = Math.min(to, from + Math.floor(elapsedSinceMod / 2000));
         currentFloor = floor;
-        elevatorText = `FL ${floor}`;
+        elevatorText = d.indicator ?? `FL ${floor}`;
         isDingActive = floor === to && elapsedSinceMod < (to - from) * 2000 + 1500;
         if (elapsedSinceMod >= (to - from) * 2000 + 1800) doorsOpen = true;
       }

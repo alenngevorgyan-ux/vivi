@@ -11,7 +11,7 @@ import {
   type DslRole,
   type DslVerb,
 } from './vocabulary.ts';
-import { CARRIED, WORLD_KNOWLEDGE, defaultSlotForVerb, hostSlot, resolvePlace } from './worldKnowledge.ts';
+import { CARRIED, WORLD_KNOWLEDGE, defaultSlotForVerb, hostSlot, resolvePlace, sceneHostSlot } from './worldKnowledge.ts';
 
 /**
  * What kind of thing a commitment physically acts on.
@@ -106,7 +106,7 @@ export function resolveCommitment(dsl: ViviExperienceDSL, commitment: DslCommitm
   }
 
   if (isObject(target)) {
-    return { cls: objectClass(target), locus: hostSlot(world, target), objectId: target };
+    return { cls: objectClass(target), locus: sceneHostSlot(dsl, target), objectId: target };
   }
 
   if (isPlace(target)) {

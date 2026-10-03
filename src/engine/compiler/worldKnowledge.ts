@@ -1,6 +1,6 @@
 import { worldTemplates, type ViviWorldId } from '../../world/templates/index.ts';
 import type { CharacterFacing, CharacterPose } from '../../assets/characters/characters.ts';
-import type { DslObject, DslPlace, DslRole, DslLighting, DslVerb } from './vocabulary.ts';
+import { WORLDS, type DslObject, type DslPlace, type DslRole, type DslLighting, type DslVerb } from './vocabulary.ts';
 
 /**
  * What the compiler knows about each world that a model never needs to.
@@ -333,6 +333,24 @@ export function hostSlot(world: ViviWorldId, object: DslObject): string {
   // closest analogue is the room's own threshold.
   if (object === 'intercom' || object === 'elevator' || object === 'door' || object === 'train') return known.door;
   return slotExists(world, 'decision_center') ? 'decision_center' : worldTemplates[world].slots[0].id;
+}
+
+const LOOSE_THINGS = new Set<DslObject>(['bag', 'keys', 'envelope', 'letter', 'document', 'photo', 'ticket']);
+
+/**
+ * Where an object sits *in this scene*. Same as `hostSlot`, with one rule for
+ * situated (Experience V2) scenes: in a scene built around an elevator
+ * arriving, a loose thing found there is in the car, not by the stairs.
+ * Scenes compiled before V2 keep the world default so they stage as they did.
+ */
+export function sceneHostSlot(dsl: { w: string; e: ReadonlyArray<ReadonlyArray<unknown>>; m?: unknown; ob?: unknown }, object: DslObject): string {
+  const world = (WORLDS as Record<string, ViviWorldId>)[dsl.w];
+  const situated = !!(dsl.m || dsl.ob);
+  if (situated && LOOSE_THINGS.has(object) && dsl.e.some(ev => ev[0] === 'elevator')) {
+    const car = hostSlot(world, 'elevator');
+    if (slotExists(world, car)) return car;
+  }
+  return hostSlot(world, object);
 }
 
 /**

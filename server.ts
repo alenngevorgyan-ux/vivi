@@ -7,6 +7,8 @@ import { compileViviStory, type CachedSemantics } from './src/engine/compiler/co
 import { selectSemanticProvider } from './src/server/semanticProvider.ts';
 import { createGenerationGuard, LIMITS } from './src/server/generationGuard.ts';
 import { redactSecrets } from './src/server/redact.ts';
+import { proposeBoundary, boundaryAt, hasFirstPerson } from './src/engine/experience/boundary.ts';
+import { detectLanguage } from './src/engine/compiler/i18n.ts';
 
 dotenv.config({ quiet: true });
 
@@ -87,9 +89,18 @@ function experiencePlanToGameSpec(plan: ExperiencePlan, author: string, genre: s
 const clip = (value: unknown, max: number, fallback = ''): string =>
   typeof value === 'string' ? value.trim().slice(0, max) : fallback;
 
+// API: where does the decision fall? Deterministic, no model, nothing stored.
+app.post('/api/analyze-story', (req, res) => {
+  const { prompt, cutAt } = req.body ?? {};
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) return res.status(400).json({ error: 'A story description is required.' });
+  if (prompt.length > LIMITS.storyChars) return res.status(413).json({ error: `Please keep the story under ${LIMITS.storyChars} characters.` });
+  const proposal = typeof cutAt === 'number' ? boundaryAt(prompt, cutAt) : proposeBoundary(prompt);
+  res.json({ ...proposal, lang: detectLanguage(prompt), perspective: hasFirstPerson(prompt) });
+});
+
 // API: story → compact DSL (model or deterministic) → Experience Compiler → playable post
 app.post('/api/generate-story', async (req, res) => {
-  const { prompt, whatReallyHappened, genre, author, responseToPostId, themeKey, inspirationPrompt } = req.body ?? {};
+  const { prompt, storyBeforeDecision, whatReallyHappened, authorWhy, authorAfter, genre, author, responseToPostId, themeKey } = req.body ?? {};
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'A story description is required.' });
@@ -97,8 +108,13 @@ app.post('/api/generate-story', async (req, res) => {
   if (prompt.length > LIMITS.storyChars) {
     return res.status(413).json({ error: `Please keep the story under ${LIMITS.storyChars} characters.` });
   }
-  if (typeof whatReallyHappened === 'string' && whatReallyHappened.length > LIMITS.outcomeChars) {
-    return res.status(413).json({ error: `Please keep “what really happened” under ${LIMITS.outcomeChars} characters.` });
+  for (const field of [whatReallyHappened, authorWhy, authorAfter]) {
+    if (typeof field === 'string' && field.length > LIMITS.outcomeChars) {
+      return res.status(413).json({ error: `Please keep each answer about what happened under ${LIMITS.outcomeChars} characters.` });
+    }
+  }
+  if (typeof storyBeforeDecision === 'string' && storyBeforeDecision.length > LIMITS.storyChars) {
+    return res.status(413).json({ error: `Please keep the story under ${LIMITS.storyChars} characters.` });
   }
 
   const slot = guard.acquire(req.ip ?? 'unknown');
@@ -113,8 +129,13 @@ app.post('/api/generate-story', async (req, res) => {
     const result = await compileViviStory(
       {
         story: prompt,
+        // Only the part before the decision reaches a model. When the client did
+        // not send a confirmed split, the compiler applies the same heuristic.
+        storyBeforeDecision: clip(storyBeforeDecision, LIMITS.storyChars) || undefined,
         // The real outcome is stamped onto the post by the compiler; it is never sent to a model.
         actualOutcome: clip(whatReallyHappened, LIMITS.outcomeChars),
+        authorWhy: clip(authorWhy, LIMITS.outcomeChars) || undefined,
+        authorAfter: clip(authorAfter, LIMITS.outcomeChars) || undefined,
         category: safeGenre,
         responseToPostId: typeof responseToPostId === 'string' ? responseToPostId.slice(0, 120) : undefined,
         author: safeAuthor,
@@ -134,7 +155,8 @@ app.post('/api/generate-story', async (req, res) => {
       ...post,
       legacyGameSpec: gameSpec,
       themeKey: clip(themeKey, 60) || post.themeKey,
-      inspirationPrompt: clip(inspirationPrompt, LIMITS.storyChars) || prompt,
+      // Only the text before the decision is kept as the post's prompt; the rest is the reveal.
+      inspirationPrompt: post.inspirationPrompt,
     };
 
     res.json({
@@ -150,6 +172,7 @@ app.post('/api/generate-story', async (req, res) => {
       responseToPostId,
       themeKey: playablePost.themeKey,
       inspirationPrompt: playablePost.inspirationPrompt,
+      format: post.format,
     });
   } catch (error) {
     logError('[vivi] generate failed:', error);

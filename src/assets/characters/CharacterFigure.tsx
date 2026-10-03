@@ -210,6 +210,45 @@ function buildRig(pose: CharacterPose, tMs: number, explicitPhase?: number): Rig
     };
   }
 
+  if (pose === 'reach') {
+    // Weight forward over the front foot, one arm extended toward the thing.
+    return {
+      bob: 0,
+      sway: weight * 0.3,
+      hipY: HIP_Y,
+      torsoLean: 9,
+      shoulderTilt: -1.8,
+      headTilt: 7,
+      headNudge: 0.6,
+      breath: breath * 0.25,
+      legA: { root: 12, bend: 8 },
+      legB: { root: -8, bend: 14 },
+      armA: { root: 64, bend: 14 },
+      armB: { root: -6, bend: 18 },
+      seated: false,
+      holdsPhone: false,
+    };
+  }
+
+  if (pose === 'raise_hand') {
+    return {
+      bob: 0,
+      sway: weight * 0.3,
+      hipY: HIP_Y,
+      torsoLean: -1,
+      shoulderTilt: 2.4,
+      headTilt: -3,
+      headNudge: 0,
+      breath: breath * 0.35,
+      legA: { root: 4, bend: 3 },
+      legB: { root: -4, bend: 8 },
+      armA: { root: 162, bend: -10 },
+      armB: { root: -4, bend: 14 },
+      seated: false,
+      holdsPhone: false,
+    };
+  }
+
   if (pose === 'turn') {
     return {
       bob: 0,

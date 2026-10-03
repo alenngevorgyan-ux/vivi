@@ -68,7 +68,7 @@ const GRAMMAR_WORDS: Table<DslGrammar> = [
 ];
 
 const ROLE_WORDS: Table<DslRole> = [
-  ['partner', /\b(partner|boyfriend|girlfriend|husband|wife|fianc[eé]e?|spouse)\b|партн[её]р|парн|девушк|муж(?![а-яё])|мужа|жена|жены|жених|невест|զուգընկեր|ամուսին|կին|ընկերուհ/i],
+  ['partner', /\b(partner|boyfriend|girlfriend|husband|wife|fianc[eé]e?|spouse|live together|lived together|living together|moved in together)\b|жив[её]м вместе|жили вместе|съехались|партн[её]р|парн|девушк|муж(?![а-яё])|мужа|жена|жены|жених|невест|զուգընկեր|ամուսին|կին|ընկերուհ/i],
   ['ex', /\b(ex|ex-?(boyfriend|girlfriend|husband|wife))\b|бывш|նախկին/i],
   ['friend', /\b(friend|best friend|buddy|bff)\b|друг(?!ой|ая|ое|ие|им|их|ом|ую)|подруг|приятел|(?<!գործ)ընկեր(?!ուհ)/i],
   ['sibling', /\b(sister|brother|sibling)\b|сестр|брат|քույր|եղբայր/i],

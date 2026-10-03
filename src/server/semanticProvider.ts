@@ -1,6 +1,7 @@
 import type { ExperienceSemanticProvider } from '../engine/compiler/provider.ts';
 import { createGeminiProvider } from './geminiProvider.ts';
 import { DEFAULT_OPENROUTER_MODEL, createOpenRouterProvider, type ReasoningMode } from './openRouterProvider.ts';
+import { createReplayProvider } from '../data/experienceFixtures/replay.ts';
 
 /**
  * Which semantic provider the server uses. One env change switches it; the
@@ -10,8 +11,10 @@ import { DEFAULT_OPENROUTER_MODEL, createOpenRouterProvider, type ReasoningMode 
  *                                     else Gemini key → Gemini
  *                                     else deterministic
  *   SEMANTIC_PROVIDER=openrouter | gemini | deterministic   force one
+ *   SEMANTIC_PROVIDER=replay   QA only: stored editorial programs, no model, no spend;
+ *                              any other story takes the ordinary deterministic fallback
  */
-export type SemanticProviderKind = 'openrouter' | 'gemini' | 'deterministic';
+export type SemanticProviderKind = 'openrouter' | 'gemini' | 'deterministic' | 'replay';
 
 export interface SemanticProviderSelection {
   kind: SemanticProviderKind;
@@ -43,14 +46,15 @@ export function selectSemanticProvider(env: Env = process.env): SemanticProvider
     }
   }
 
-  if (!['auto', 'openrouter', 'gemini', 'deterministic'].includes(requested)) {
+  if (!['auto', 'openrouter', 'gemini', 'deterministic', 'replay'].includes(requested)) {
     warnings.push(`SEMANTIC_PROVIDER="${requested}" is not recognised; using auto.`);
   }
 
-  const wantOpenRouter = requested === 'openrouter' || (!['gemini', 'deterministic'].includes(requested) && !!openRouterKey);
+  const wantOpenRouter = requested === 'openrouter' || (!['gemini', 'deterministic', 'replay'].includes(requested) && !!openRouterKey);
   const wantGemini = requested === 'gemini' || (requested !== 'deterministic' && !wantOpenRouter && !!geminiKey);
 
   if (requested === 'deterministic') return { kind: 'deterministic', provider: null, warnings };
+  if (requested === 'replay') return { kind: 'replay', provider: createReplayProvider(), model: 'replay:editorial-fixtures', warnings };
 
   if (wantOpenRouter) {
     if (!openRouterKey) {

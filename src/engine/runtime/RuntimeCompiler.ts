@@ -14,6 +14,7 @@ import type { RuntimeActor, ActorCue } from './actors.ts';
 import type { CameraEvent, CameraGrammarId } from '../cinematic/director.ts';
 import type { StagingPreset } from '../cinematic/staging.ts';
 import type { LightingProfileDef } from '../compiler/grammars.ts';
+import type { ExperienceV2 } from '../experience/types.ts';
 export type { AuthorTruth, AuthorTruthStatus };
 
 export interface RuntimeAction {
@@ -138,6 +139,10 @@ export interface CanonicalScenario {
   keyObjects?: RuntimeKeyObject[];
   cinematic?: ScenarioCinematics;
   provenance?: ScenarioProvenance;
+  /** Experience V2 situation layer. Absent on scenes compiled before it; those go through the legacy adapter. */
+  experience?: ExperienceV2;
+  /** Language of the story (compiled scenes). */
+  lang?: string;
 }
 
 /** Believable demo comparison numbers for curated stories, explicitly tagged as seed data. */
