@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts && node --import tsx scripts/test-experience-compiler.ts && node --import tsx scripts/test-openrouter-provider.ts && node --import tsx scripts/test-experience-v2.ts && node --import tsx scripts/test-v3-foundation.ts && node --import tsx scripts/eval-experience-compiler.ts",
+    "test": "node --import tsx scripts/validate-vivi.ts && node --import tsx scripts/test-canonical-runtime.ts && node --import tsx scripts/test-experience-compiler.ts && node --import tsx scripts/test-openrouter-provider.ts && node --import tsx scripts/test-experience-v2.ts && node --import tsx scripts/test-v3-foundation.ts && node --import tsx scripts/test-v3-correction.ts && node --import tsx scripts/eval-experience-compiler.ts",
     "eval": "node --import tsx scripts/eval-experience-compiler.ts",
     "bench": "node --import tsx scripts/benchmark-experience-compiler.ts",
     "bench:openrouter": "node --import tsx scripts/openrouter-bakeoff.ts --configured --set corpus --runs 1 --out reports/data/bench-openrouter.json",
@@ -20,7 +20,9 @@
     "test:v2": "node --import tsx scripts/test-experience-v2.ts",
     "test:v3-unit": "node --import tsx scripts/test-v3-foundation.ts",
     "test:v3-browser": "node --import tsx scripts/test-v3-browser.ts",
-    "test:v3-foundation": "npm run test:v3-unit && npm run test:v3-browser"
+    "test:v3-foundation": "npm run test:v3-unit && npm run test:v3-browser",
+    "test:v3-correction": "node --import tsx scripts/test-v3-correction.ts",
+    "trace:v3-correction": "node --import tsx scripts/trace-v3-correction.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
