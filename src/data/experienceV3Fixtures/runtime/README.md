@@ -1,0 +1,9 @@
+# V3 runtime fixtures (development)
+
+Executable adaptations of the gold specs in `../spec/` through the real V3 Foundation contracts. Full handoff: [`docs/v3/THE_CORRECTION_RUNTIME_HANDOFF.md`](../../../../docs/v3/THE_CORRECTION_RUNTIME_HANDOFF.md).
+
+- `../spec/` is the gold planning source. It is read here, never modified (the test pins its bytes).
+- `adaptGoldSpec.ts` and `compileFixturePlan.ts` are generic: no story ids, no branches. Story interpretation is data in the per-story module.
+- **Private files:** only `*.reveal.ts` (the author record) and `*.provenance.ts` (the pre-boundary ledger) may import a `*.private.json`. The public module (`theCorrection.ts`), the design slots and `src/components/experience/v3/visualHooks.ts` must not, directly or transitively. The test walks the import graph.
+- Geometry here is `dev-placeholder-1`, not Design's. Replace it in `theCorrection.ts` (`GEOMETRY`) with a versioned `GeometryExport`.
+- Nothing in the production app imports this directory.
