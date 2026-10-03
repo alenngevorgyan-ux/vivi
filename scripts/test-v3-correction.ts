@@ -29,7 +29,12 @@ import {
 import { CORRECTION_REVEAL_CANARIES, CORRECTION_REVEAL_PRESENTATION, correctionReveal, correctionRevealBinding, resolveCorrectionReveal } from '../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
 import { CORRECTION_SOURCE_LEDGER, traceCorrectionFacts } from '../src/data/experienceV3Fixtures/runtime/theCorrection.provenance.ts';
 import { correctionActSlots, correctionAmbientCues, correctionSceneSlots, SCENE_HOOKS } from '../src/data/experienceV3Fixtures/runtime/theCorrection.presentation.ts';
-import { PLACEHOLDER_GEOMETRY_ID } from '../src/data/experienceV3Fixtures/runtime/placeholderGeometry.ts';
+import { PLACEHOLDER_GEOMETRY_ID, placeholderGeometry } from '../src/data/experienceV3Fixtures/runtime/placeholderGeometry.ts';
+import { CORRECTION_GEOMETRY_PROVENANCE, CORRECTION_RUNTIME_GEOMETRY, CORRECTION_STAGING } from '../src/data/experienceV3Fixtures/runtime/theCorrection.geometry.ts';
+import { validateGeometryForManifest, validateRuntimeGeometry } from '../src/engine/v3/contracts/geometry.ts';
+import { buildCorrectionGeometry, NOT_COMPILED } from './lib/correctionGeometryBuild.ts';
+import { emit, GENERATED, readInputs } from './build-v3-correction-geometry.ts';
+import { validateCorrectionGeometry } from './lib/correctionGeometryValidate.ts';
 import { HeadlessHost } from './lib/v3HeadlessHost.ts';
 import { CORRECTION_OPTIONS, advance, canonicalRun, commit, correctionHost, expectOk, expectRejected, finish, observe, ok, travel, walkToDecision } from './lib/correctionWalk.ts';
 import { correctionTrace } from './trace-v3-correction.ts';
@@ -40,7 +45,7 @@ import { correctionTrace } from './trace-v3-correction.ts';
  * Proves that the gold-1 story runs through the real V3 Foundation contracts and
  * controller: adaptation, provenance, public/private separation, a full walk,
  * A→B→A persistence, rich/compressed and readable parity, story-level input
- * rules, placeholder geometry, the visual handshake, the dev trace and a red
+ * rules, the compiled Design r4 geometry, the visual handshake, the dev trace and a red
  * team. It proves technical invariants only — never atmosphere, engagement,
  * hallway value, visual quality, reveal impact or understanding.
  */
@@ -87,7 +92,7 @@ for (const v of CORRECTION_VARIANTS) {
   assert.equal(loaded.kind, 'v3', `${v} loads through the ordinary V3 loader`);
   if (loaded.kind === 'v3') {
     assert.equal(loaded.versions.compiler, CORRECTION_VERSIONS.compilerVersion);
-    assert.deepEqual(loaded.versions.assetRevisions, { dev_placeholder_office_kit: PLACEHOLDER_GEOMETRY_ID });
+    assert.deepEqual(loaded.versions.assetRevisions, { correction_geometry: 'correction-geo-r4', correction_assets: 'correction-assets-r4' });
   }
   assert.equal(m.experienceId, 'the-correction');
   assert.equal(m.revision, CORRECTION_VERSIONS.manifest[v].revision);
@@ -608,35 +613,72 @@ passed('Readable parity: with no movement, target or observation, both variants 
 }
 passed('Story input: Enter opens, never commits; one activation cannot open and confirm; cancel returns to play; stale confirmation refused; the accepted act cannot be undone; the world is locked after it');
 
-/* ======================================== 10. placeholder geometry ====== */
+/* =================================== 10. compiled Design r4 geometry ====== */
 
+{
+  // The committed module is exactly a fresh deterministic build of the pinned Design bytes.
+  const built = buildCorrectionGeometry(readInputs());
+  assert.equal(readFileSync(GENERATED, 'utf8'), emit(built), 'theCorrection.geometry.ts is a fresh build (run scripts/build-v3-correction-geometry.ts)');
+  assert.equal(JSON.stringify(buildCorrectionGeometry(readInputs())), JSON.stringify(built), 'the build is deterministic');
+  assert.deepEqual([CORRECTION_GEOMETRY_PROVENANCE.sourceRevision, CORRECTION_GEOMETRY_PROVENANCE.sourceSha256], ['correction-geo-r4', 'a541aac8af489bdea7ca6fed2711d89032ff90e2975706cf74926ca8a39a0c81']);
+  assert.equal(CORRECTION_GEOMETRY_PROVENANCE.designCommit, '21403724418f36b8675ae03060dd7d9aadb7b724');
+  // Changed bytes are refused, not adapted.
+  const inputs = readInputs();
+  const tampered = Buffer.from(inputs.source.toString('utf8').replace('"correction-geo-r4"', '"correction-geo-r5"'));
+  assert.throws(() => buildCorrectionGeometry({ ...inputs, source: tampered }), /not the pinned/);
+  // Design's collision audit is reproduced check by check on the bare footprints.
+  assert.equal(built.audit.length, 16);
+  assert.ok(built.audit.every(r => r.ok));
+  assert.ok(Object.keys(NOT_COMPILED).length >= 5, 'everything published but not compiled is named with its reason');
+}
 {
   for (const v of CORRECTION_VARIANTS) {
     const m = correctionManifest(v);
+    const geo = CORRECTION_RUNTIME_GEOMETRY[v];
+    assert.ok(validateRuntimeGeometry(geo).ok, `${v} resource validates`);
+    const r = validateGeometryForManifest(geo, m);
+    assert.ok(r.ok, `${v}: ${r.issues.map(i => `${i.path}: ${i.message}`).join('; ')}`);
     for (const c of m.compiledScenes) {
-      assert.equal(c.kitRevision, PLACEHOLDER_GEOMETRY_ID);
-      assert.ok([c.cameraRecipe, c.lightRecipe, c.audioRecipe].every(x => x.startsWith('dev_placeholder_')), 'placeholders are obviously named');
+      assert.equal(c.kitRevision, 'correction-geo-r4');
+      assert.equal(c.compositionRevision, 'correction-assets-r4');
+      assert.ok(geo.cameras.some(k => k.id === c.cameraRecipe && k.location === c.location), `${c.id} selects a compiled ${c.location} recipe`);
       assert.ok(c.entryMark && c.marks, `${c.id} loads with an entry mark`);
     }
     // Every reposition target exists in the decision scene; every door resolves to a compiled scene.
     const decisionMarks = m.compiledScenes.find(c => c.id === m.primaryDecision!.scene)!.marks!;
     for (const p of m.preparations) if (p.action.kind === 'reposition') assert.ok(p.action.markRole in decisionMarks, `${p.id} → ${p.action.markRole}`);
     for (const p of m.portals) assert.ok(m.compiledScenes.some(c => c.id === p.toScene));
-    // Design's slots ask only for marks the geometry provides.
-    const geo = correctionGeometry(v);
-    for (const slot of correctionSceneSlots(v)) for (const mk of slot.requiredMarks) assert.ok(mk in (geo.scenes[slot.scene].marks ?? {}), `${slot.scene} needs ${mk}`);
+    // Design's slots ask only for marks the geometry provides, and anchors the resource has.
+    const g = correctionGeometry(v);
+    for (const slot of correctionSceneSlots(v)) {
+      for (const mk of slot.requiredMarks) assert.ok(mk in (g.scenes[slot.scene].marks ?? {}), `${slot.scene} needs ${mk}`);
+      const loc = m.compiledScenes.find(c => c.id === slot.scene)!.location;
+      const lg = geo.locations.find(l => l.location === loc)!;
+      for (const a of slot.requiredAnchors) assert.ok(lg.anchors.some(x => x.entity === a) || lg.portals.some(d => d.portal === a), `${slot.scene} anchor ${a}`);
+    }
+    // ONE coordinate authority: the staging carries no hero or actor position, and actor marks equal the resource anchors.
+    const st = JSON.stringify(CORRECTION_STAGING[v]);
+    for (const c of m.compiledScenes) for (const mk of Object.values(c.marks!)) assert.ok(!st.includes(`"x":${mk.x},"y":${mk.y}`), 'no mark is repeated in staging');
+    for (const e of m.initialEntities.filter(e => e.kind === 'actor' && e.mark)) {
+      const a = geo.locations.find(l => l.location === e.owner.id)!.anchors.find(x => x.entity === e.id)!;
+      assert.deepEqual([e.mark!.x, e.mark!.y, e.mark!.facing], [a.root[0], a.root[1], a.facing], `${e.id} staged where the resource anchors it`);
+    }
   }
-  // Replacing the geometry with a Design export changes no story state and no identity.
-  const design: GeometryExport = {
-    ...correctionGeometry('rich'),
-    id: 'design-office-r1',
-    assetRevisions: { office_kit: 'design-office-r1' },
-    assetHashes: { office_kit: 'abcdef0123456789abcdef0123456789' },
-  };
-  for (const s of Object.values(design.scenes)) Object.assign(s, { kitRevision: 'design-office-r1', compositionRevision: 'design-office-r1', cameraRecipe: 'cam_office', lightRecipe: 'light_office', audioRecipe: 'bed_office' });
-  const swapped = correctionManifest('rich', design);
+  // Gold prep_near "Stand nearer the director" is Design's standing preparation anchor; Design's near_director is the private approach.
+  const names = CORRECTION_STAGING.rich.designNames;
+  assert.deepEqual([names['marks.meeting'].near_director, names['marks.meeting'].ask_director, names['marks.meeting'].own_seat], ['stand_near_entry', 'near_director', 'own_seat']);
+  assert.deepEqual(CORRECTION_RUNTIME_GEOMETRY.rich.locations.find(l => l.location === 'meeting')!.seats, [{ role: 'own_seat', obstacle: 'chair_own_seat' }]);
+  // The control has one location and no doors.
+  assert.deepEqual(CORRECTION_RUNTIME_GEOMETRY.compressed.locations.map(l => [l.location, l.portals.length]), [['meeting', 0]]);
+}
+{
+  // Every viewport framing (desktop, portrait, Design's per-beat and per-act portraits) passes the real validators.
+  assert.deepEqual(await validateCorrectionGeometry(), []);
+  // A geometry swap (here: back to the dev placeholder) still changes no semantic field, revision or decision version.
+  const swapped = correctionManifest('rich', placeholderGeometry({ c_desk: 'desk', c_meeting_before: 'meeting', c_hallway: 'hallway', c_meeting_question: 'meeting' }));
   assert.ok(validateManifest(swapped, { profile: 'launch' }).ok);
-  const semantic = (m: PlaybackManifestV3) => ({ ...m, compiledScenes: m.compiledScenes.map(c => c.accessibleText), assetRevisions: null, assetHashes: null });
+  assert.equal(swapped.compiledScenes[0].kitRevision, PLACEHOLDER_GEOMETRY_ID);
+  const semantic = (m: PlaybackManifestV3) => ({ ...m, compiledScenes: m.compiledScenes.map(c => c.accessibleText), assetRevisions: null, assetHashes: null, initialEntities: m.initialEntities.map(e => ({ ...e, mark: undefined })) });
   assert.deepEqual(semantic(swapped), semantic(correctionManifest('rich')), 'geometry swap leaves every semantic field, revision and decision version unchanged');
   // No controller or projection code knows the placeholder.
   for (const d of ['src/engine/v3', 'src/engine/input', 'src/components/experience/v3']) {
@@ -646,7 +688,7 @@ passed('Story input: Enter opens, never commits; one activation cannot open and 
     for (const f of files) assert.ok(!/dev_placeholder|dev-placeholder/.test(readFileSync(f, 'utf8')), `${f} hardcodes no placeholder art`);
   }
 }
-passed('Placeholder geometry: dev-named, every scene/door/mark resolves; a Design geometry export swaps in with no semantic, revision or decision change');
+passed('Design r4 geometry: the committed module is a fresh pinned build, the audit reproduces, both variants and every framing validate, one coordinate authority, geometry swaps change no semantics');
 
 /* ========================================== 11. visual handshake ======= */
 
@@ -711,8 +753,9 @@ passed('Placeholder geometry: dev-named, every scene/door/mark resolves; a Desig
   for (const hk of SCENE_HOOKS) assert.ok(hk.split('.')[0] in sample || hk === 'commitment', `hook ${hk}`);
   const acts = correctionActSlots();
   assert.deepEqual(acts.map(a => a.option), ['correct_public', 'request_private', 'pass_question']);
-  assert.deepEqual(acts.map(a => a.caption.status), ['pending_editorial', 'pending_editorial', 'gold']);
-  assert.deepEqual(acts[2].caption, { status: 'gold', text: 'You let this question pass without speaking.' });
+  assert.deepEqual(acts.map(a => a.caption.status), ['approved', 'approved', 'approved']);
+  // B08: the exact approved intention labels, bound once.
+  assert.deepEqual(acts.map(a => a.caption.text), ['Say I built the forecast', 'Ask the director to clarify my credit privately afterward', 'Let this question pass without speaking']);
   assert.deepEqual(correctionAmbientCues(), ['ev_office_bed']);
 }
 passed('Visual handshake: phase/scene/transition/actors/objects/doors/attention/selection/commitment/boundary/reveal hooks project correctly, leak nothing, and settings never change state');

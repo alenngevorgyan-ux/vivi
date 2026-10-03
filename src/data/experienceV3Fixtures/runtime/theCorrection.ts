@@ -17,7 +17,7 @@ import spec from '../spec/the-correction.semantic.json' with { type: 'json' };
 import type { PlaybackManifestV3, StoredPostV3 } from '../../../engine/v3/contracts/manifest.ts';
 import { adaptGoldSpec, type AdaptationTrace, type GoldAdaptation, type GoldEnvelope } from './adaptGoldSpec.ts';
 import { compileFixturePlan, type GeometryExport } from './compileFixturePlan.ts';
-import { placeholderGeometry } from './placeholderGeometry.ts';
+import { CORRECTION_GEOMETRY_EXPORTS } from './theCorrection.geometry.ts';
 import type { SemanticPlanV3 } from '../../../engine/v3/contracts/semantic.ts';
 
 export const CORRECTION_ENVELOPE = spec as unknown as GoldEnvelope;
@@ -108,10 +108,11 @@ const ADAPTATIONS: Record<CorrectionVariant, GoldAdaptation> = {
   },
 };
 
-const GEOMETRY: Record<CorrectionVariant, GeometryExport> = {
-  rich: placeholderGeometry({ c_desk: 'desk', c_meeting_before: 'meeting', c_hallway: 'hallway', c_meeting_question: 'meeting' }),
-  compressed: placeholderGeometry({ c_compressed_before: 'meeting', c_compressed_meeting: 'meeting' }),
-};
+/**
+ * Design r4 geometry, compiled deterministically by scripts/build-v3-correction-geometry.ts from the pinned
+ * docs/visual-v3/correction-slice package. Replacing geometry changes no semantic field, revision or decision version.
+ */
+const GEOMETRY: Record<CorrectionVariant, GeometryExport> = CORRECTION_GEOMETRY_EXPORTS;
 
 /* --------------------------------------------------------------- build --- */
 
