@@ -44,5 +44,7 @@ export async function compileFixture(fixture: ExperienceFixture): Promise<Compil
   if (scenario.authorTruth.status === 'author_supplied') scenario.authorTruth = { ...scenario.authorTruth, status: 'fictional_demo', sourceLabel: 'вымышленная редакционная история' };
   result.post.id = fixture.id;
   scenario.id = fixture.id;
+  scenario.authorHandle = '@vivi_editorial';
+  result.post.authorHandle = '@vivi_editorial';
   return result;
 }

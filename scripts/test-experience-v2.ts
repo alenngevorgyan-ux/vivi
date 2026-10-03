@@ -322,6 +322,9 @@ ok('Pre-reveal bundle: the playable scene carries no outcome; the reveal is seal
   assert.equal(hy.length, 2, 'Armenian full stop splits sentences');
   // The first sentence always stays, even if it reads like an ending.
   assert.equal(proposeBoundary('В итоге всё началось с сообщения. Я посмотрел на экран.').cutAt, 2);
+  // Sequence inside the moment is not an ending; a future fact known at the time is not either.
+  const office = proposeBoundary('Коллега показал мою работу. Потом она спросила: «Вопросы есть?» Через месяц именно он пишет на меня отзыв. В итоге я промолчал.');
+  assert.equal(office.after, 'В итоге я промолчал.');
   // Nothing to cut.
   assert.equal(proposeBoundary('I found a wallet on the bench. There was cash inside.').after, '');
   assert.equal(boundaryAt('One. Two. Three.', 1).before, 'One.');

@@ -741,7 +741,8 @@ export function compileExperience(input: ViviExperienceDSL, options: CompileOpti
       id: obj,
       kind: obj,
       slot,
-      pos: slot === CARRIED ? playerSpawn : slotAnchor(slot),
+      // A thing found in an elevator lies on the car floor, not halfway up its doors.
+      pos: slot === CARRIED ? playerSpawn : situated && obj !== 'elevator' && slot === sceneHostSlot(input, 'elevator') ? [slotAnchor(slot)[0], slotAnchor(slot)[1] + 12] : slotAnchor(slot),
       ...(objectActiveAt.has(obj) ? { activeAtMs: objectActiveAt.get(obj) } : {}),
       prop: slot !== CARRIED && PROP_OBJECTS.has(obj) && !(ARCHITECTURE_PROPS[world] ?? []).includes(obj),
       actionIds: [],

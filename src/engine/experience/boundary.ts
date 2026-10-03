@@ -18,12 +18,17 @@ import type { FactRef } from './types.ts';
 
 /** Sentence-level markers that something after the decision is being reported. */
 const AFTER_MARKERS: RegExp[] = [
-  // English
-  /\b(in the end|eventually|i ended up|i decided to|i chose to|i went with|so i (did|said|told|asked|opened|left|stayed|waited|called)|the next (day|morning|week)|later (that|on)|a (day|week|month|year) later|it turned out|afterwards|after that|what i did was|i never (did|told|asked|opened|said))\b/i,
-  // Russian
-  /(^|[^а-яё])(в итоге|в конце концов|в результате|я решил|я решила|я выбрал|я выбрала|на следующий день|на другой день|через (день|неделю|месяц|год|пару)|позже|потом я|после этого|оказалось|так и не|в тот вечер я|в итоге я)([^а-яё]|$)/i,
+  // Time jumps only count at the start of a sentence: "через месяц он пишет отзыв" is a fact
+  // about the future known before the decision, "Через месяц мы помирились" is what came after.
+  /^(in the end|eventually|the next (day|morning|week)|a (day|week|month|year) later|afterwards|so i (did|said|told|asked|opened|left|stayed|waited|called))\b/i,
+  /\b(i ended up|i decided to|i chose to|i went with|it turned out|what i did was|i never (did|told|asked|opened|said))\b/i,
+  /^(в итоге|в конце концов|в результате|на следующий день|на другой день|оказалось)([^а-яё]|$)/i,
+  // "Через месяц" opens what came after only when the sentence reports it in the past tense.
+  /^через (день|неделю|месяц|год|пару)[^.!?]*[а-яё](л|ла|ло|ли|лся|лась|лись|лось)([^а-яё]|$)/i,
+  /(^|[^а-яё])(я решил|я решила|я выбрал|я выбрала|так и не|в итоге я|я в итоге)([^а-яё]|$)/i,
   // Armenian
-  /(վերջում|հետո ես|հաջորդ օրը|որոշեցի|պարզվեց|արդյունքում|ի վերջո)/,
+  /^(վերջում|հետո|հաջորդ օրը|ի վերջո|արդյունքում)/,
+  /(որոշեցի|պարզվեց)/,
 ];
 
 export interface SentenceSpan {

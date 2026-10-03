@@ -24,18 +24,19 @@ export interface EnactmentRecipe {
   /** The hero walks out of frame. */
   exits?: boolean;
   /** Camera intent while the gesture is held; the director turns it into a shot. */
-  camera: 'insert' | 'two_shot' | 'wide';
+  camera: 'insert' | 'two_shot' | 'wide' | 'hero';
   /** Interface note shown under the deed, from `copy.ts`. Never a reaction. */
   note?: UiKey;
 }
 
 const RECIPES: Record<EnactmentKind, EnactmentRecipe> = {
-  inspect_object: { kind: 'inspect_object', approach: true, lead: 'reach', gesture: 'look_at_phone', holdMs: 2600, camera: 'insert', note: 'unknownContent' },
+  // Leaning over the thing where it lies: the hero does not pick up someone else's phone into their own hand.
+  inspect_object: { kind: 'inspect_object', approach: true, lead: 'hesitate', gesture: 'reach', holdMs: 2600, camera: 'insert', note: 'unknownContent' },
   address_person: { kind: 'address_person', approach: true, lead: 'hesitate', gesture: 'talk', holdMs: 2400, camera: 'two_shot', note: 'noReply' },
-  speak_up: { kind: 'speak_up', approach: false, lead: 'raise_hand', gesture: 'talk', holdMs: 2400, camera: 'wide', note: 'noReply' },
-  use_device: { kind: 'use_device', approach: false, gesture: 'look_at_phone', holdMs: 2400, camera: 'insert', note: 'noReply' },
+  speak_up: { kind: 'speak_up', approach: false, lead: 'raise_hand', gesture: 'talk', holdMs: 2600, camera: 'hero', note: 'noReply' },
+  use_device: { kind: 'use_device', approach: false, gesture: 'look_at_phone', holdMs: 2400, camera: 'hero', note: 'noReply' },
   leave: { kind: 'leave', approach: true, lead: 'turn', gesture: 'leave', holdMs: 900, exits: true, camera: 'wide', note: 'sceneEnd' },
-  hold: { kind: 'hold', approach: false, gesture: 'wait', holdMs: 3200, camera: 'wide', note: 'sceneEnd' },
+  hold: { kind: 'hold', approach: false, lead: 'hesitate', gesture: 'wait', holdMs: 3000, camera: 'wide', note: 'sceneEnd' },
   secure: { kind: 'secure', approach: true, lead: 'reach', gesture: 'turn', holdMs: 1800, camera: 'insert', note: 'sceneEnd' },
   handle_object: { kind: 'handle_object', approach: true, lead: 'reach', gesture: 'turn', holdMs: 2000, camera: 'insert', note: 'sceneEnd' },
   move_to: { kind: 'move_to', approach: true, gesture: 'wait', holdMs: 1600, camera: 'wide', note: 'sceneEnd' },
@@ -43,8 +44,9 @@ const RECIPES: Record<EnactmentKind, EnactmentRecipe> = {
 
 export function recipeFor(commitment: Pick<CommitmentSpec, 'enactment' | 'carried'>): EnactmentRecipe {
   const recipe = RECIPES[commitment.enactment] ?? RECIPES.hold;
-  // A device already in the hero's hand is used where they stand.
-  return commitment.carried ? { ...recipe, approach: false } : recipe;
+  // A device already in the hero's hand is used where they stand, and looked at in the hand.
+  if (commitment.carried) return { ...recipe, approach: false, ...(recipe.kind === 'inspect_object' ? { lead: undefined, gesture: 'look_at_phone' as const } : {}) };
+  return recipe;
 }
 
 /** Total time a performance takes once the hero is in place, ms. */
