@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Attention map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=IBM+Plex+Sans:wght@400;500&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap">
+<style>
+body{margin:0;background:#E4DAC6}
+a{color:#B5523A}a:hover{color:#8E3B28}
+.eb{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#A5442E}
+.tt{font-family:Newsreader,Georgia,serif;font-weight:400;color:#211F1D;letter-spacing:-.01em}
+.sb{font-family:'IBM Plex Sans',system-ui,sans-serif;color:#5A554E}
+.cap{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.45;color:#5A554E}
+.cap b{font-weight:500;color:#211F1D}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:#A5442E}
+.it{font-family:Newsreader,Georgia,serif;font-style:italic;color:#3a3633}
+</style>
+</helmet>
+<div style="position:relative;width:2400px;height:1880px;box-sizing:border-box;padding:72px 80px;overflow:hidden;background:#E4DAC6"><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<filter id="paint" x="-15%" y="-10%" width="130%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="4" result="n1"/>
+ <feDisplacementMap in="SourceGraphic" in2="n1" scale="4.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="9" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0 0.04  0 0 0 -1.3 0.78" result="g"/>
+ <feComposite in="g" in2="d" operator="in" result="gd"/>
+ <feMerge><feMergeNode in="d"/><feMergeNode in="gd"/></feMerge>
+</filter>
+<filter id="paintL" x="-15%" y="-10%" width="130%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" seed="7" result="n1"/>
+ <feDisplacementMap in="SourceGraphic" in2="n1" scale="8" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="2" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0 0.04  0 0 0 -1.3 0.8" result="g"/>
+ <feComposite in="g" in2="d" operator="in" result="gd"/>
+ <feMerge><feMergeNode in="d"/><feMergeNode in="gd"/></feMerge>
+</filter>
+<filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+<filter id="pencil" x="-5%" y="-5%" width="110%" height="110%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="1" seed="11" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="1" seed="5" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.5" result="a"/>
+ <feComposite in="d" in2="a" operator="in"/>
+</filter>
+<radialGradient id="contactG"><stop offset="0" stop-color="#120e0b" stop-opacity="0.55"/><stop offset="0.6" stop-color="#120e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#120e0b" stop-opacity="0"/></radialGradient>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="4"/></filter>
+<filter id="soft12" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+<filter id="soft30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+<filter id="island" x="-20%" y="-20%" width="140%" height="140%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="21" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="80" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feGaussianBlur in="d" stdDeviation="2.5"/>
+</filter>
+<filter id="grain" x="0" y="0" width="100%" height="100%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="1" stitchTiles="stitch"/>
+ <feColorMatrix type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0.10 0"/>
+</filter>
+<filter id="mottle" x="0" y="0" width="100%" height="100%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="8" stitchTiles="stitch"/>
+ <feColorMatrix type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.28  0 0 0 0.16 -0.02"/>
+</filter>
+
+<filter id="tintCold" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#D2DAE1" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintWarm" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#F7E9D2" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintSodium" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#E0A56A" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintNight" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#7E8AA6" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="blur3" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="blur6" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
+</defs></svg><svg width="2400" height="1880" style="position:absolute;left:0;top:0;pointer-events:none" aria-hidden="true"><rect width="2400" height="1880" filter="url(#mottle)"/><rect width="2400" height="1880" filter="url(#grain)"/></svg><div style="position:relative;display:flex;flex-direction:column;gap:14px;max-width:1500px"><div class="eb">The Correction · V3 vertical slice · board C15</div><h1 class="tt" style="margin:0;font-size:68px;line-height:1.02">Attention and interaction, without hotspots</h1><p class="sb" style="margin:0;font-size:19px;line-height:1.5">What the player can attend to in each frame, in what order, and what visibly changes when they do. Overlays are for this handoff only.</p></div><div style="position:relative;margin-top:48px"><div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:40px"><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:1080px;height:607.5px;outline:1px solid #c4b9a6"><img src="/_blob/d5ffac7aa36fa8ee0fe9d34e53dada9b" alt="F01_desk" style="display:block;width:1080px;height:auto;"><svg viewBox="0 0 1920 1080" width="1080" height="607.5" style="position:absolute;left:0;top:0" aria-hidden="true"><ellipse cx="1106.462" cy="653.385" rx="213.056" ry="390.603" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="1284.008" y="387.064" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">1  body + pages</text><ellipse cx="776.232" cy="571.507" rx="220" ry="160" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="546.232" y="391.507" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">2  the slide</text><ellipse cx="906.232" cy="674" rx="330" ry="70" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9" stroke-dasharray="10 8" filter="url(#pencil)"/><text x="706.232" y="784" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">3  the match (joins 1 + 2)</text></svg></div><div style="display:flex;gap:10px;max-width:1060px;"><span class="num" style="padding-top:2px"></span><div class="cap"><b>Desk</b><br>Three targets, read in order. When 1 and 2 have both been attended, target 3 appears: the island joins them and the graphite loops are drawn.</div></div></div><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:1080px;height:607.5px;outline:1px solid #c4b9a6"><img src="/_blob/51c0daffe594f7de219bfb47d8166561" alt="F02_meeting" style="display:block;width:1080px;height:auto;"><svg viewBox="0 0 1920 1080" width="1080" height="607.5" style="position:absolute;left:0;top:0" aria-hidden="true"><ellipse cx="266.977" cy="640.691" rx="156.851" ry="293.243" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="206.977" y="326.989" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">1  me</text><ellipse cx="1060" cy="421.956" rx="241.648" ry="146.158" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="900" y="256.31" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">2  my line on her slide</text><ellipse cx="1344.969" cy="511.056" rx="70" ry="190" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9" stroke-dasharray="10 8" filter="url(#pencil)"/><text x="1404.969" y="391.056" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">3  Mira</text></svg></div><div style="display:flex;gap:10px;max-width:1060px;"><span class="num" style="padding-top:2px"></span><div class="cap"><b>Meeting</b><br>The self, the slide, then Mira. Attending the slide redraws the loop on the kink; attending Mira does not paint her face, only her body.</div></div></div><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:1080px;height:607.5px;outline:1px solid #c4b9a6"><img src="/_blob/2d377b6642e0048189637c4761b30da7" alt="F03_hallway" style="display:block;width:1080px;height:auto;"><svg viewBox="0 0 1920 1080" width="1080" height="607.5" style="position:absolute;left:0;top:0" aria-hidden="true"><ellipse cx="612.021" cy="612.519" rx="150.446" ry="254.6" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="750.894" y="438.928" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">1  the pages</text><ellipse cx="1109.63" cy="523.704" rx="120" ry="240" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9" stroke-dasharray="10 8" filter="url(#pencil)"/><text x="1049.63" y="263.704" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">2  the door back</text><ellipse cx="470" cy="420" rx="140" ry="240" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9" stroke-dasharray="4 8" filter="url(#pencil)"/><text x="330" y="160" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">3  daylight</text></svg></div><div style="display:flex;gap:10px;max-width:1060px;"><span class="num" style="padding-top:2px"></span><div class="cap"><b>Hallway</b><br>Pages first. The door is always a target: the way back is never hidden. Daylight is optional and only widens the island.</div></div></div><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:1080px;height:607.5px;outline:1px solid #c4b9a6"><img src="/_blob/65a2c90e6688818c610f6e3c23cc0d79" alt="F05_decision" style="display:block;width:1080px;height:auto;"><svg viewBox="0 0 1920 1080" width="1080" height="607.5" style="position:absolute;left:0;top:0" aria-hidden="true"><ellipse cx="576.707" cy="528.932" rx="150" ry="200" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="456.707" y="298.932" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">hand + pages</text><ellipse cx="1344.969" cy="484.596" rx="110" ry="230" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="1384.969" y="244.596" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">Mira</text><ellipse cx="266.977" cy="768.372" rx="140" ry="140" fill="none" stroke="#4E4A45" stroke-width="2" opacity="0.9"  filter="url(#pencil)"/><text x="206.977" y="958.372" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="30" fill="#4E4A45" paint-order="stroke" stroke="#ECE4D2" stroke-width="6">empty chair</text></svg></div><div style="display:flex;gap:10px;max-width:1060px;"><span class="num" style="padding-top:2px"></span><div class="cap"><b>Decision</b><br>Exactly three anchors, one per intention. No other target is active; the room is attended as a whole.</div></div></div></div><div style="margin-top:40px"><div style="display:flex;gap:50px;flex-wrap:wrap"><div style="display:flex;gap:10px;max-width:640px;"><span class="num" style="padding-top:2px">A</span><div class="cap"><b>No dots, no glows</b><br>Targets are never marked in-game. The player finds them by looking; the only feedback is paint arriving and memory drawing a graphite loop.</div></div><div style="display:flex;gap:10px;max-width:640px;"><span class="num" style="padding-top:2px">B</span><div class="cap"><b>Contours here are documentation</b><br>Pencil ellipses on this board are for the engineer: target, order and joins. They must not ship.</div></div><div style="display:flex;gap:10px;max-width:640px;"><span class="num" style="padding-top:2px">C</span><div class="cap"><b>Hover = paint, select = line</b><br>Pointer near a target: the island leans toward it. Selecting: a graphite loop or underline. Committing: rust, once.</div></div></div></div><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="1" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/></filter><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="10" stroke="#6E8B5E" stroke-width="1.4" opacity="0.6"/></pattern><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#B5523A"/></marker></defs></svg></div><div class="num" style="position:absolute;left:80px;bottom:36px;color:#8a8279;letter-spacing:.14em">VIVI V3 · THE CORRECTION · VERTICAL SLICE · PRODUCTION-TARGET FRAMES</div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1880}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

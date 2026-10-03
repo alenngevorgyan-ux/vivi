@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Truth boundary</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=IBM+Plex+Sans:wght@400;500&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap">
+<style>
+body{margin:0;background:#E4DAC6}
+a{color:#B5523A}a:hover{color:#8E3B28}
+.eb{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#A5442E}
+.tt{font-family:Newsreader,Georgia,serif;font-weight:400;color:#211F1D;letter-spacing:-.01em}
+.sb{font-family:'IBM Plex Sans',system-ui,sans-serif;color:#5A554E}
+.cap{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.45;color:#5A554E}
+.cap b{font-weight:500;color:#211F1D}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:#A5442E}
+.it{font-family:Newsreader,Georgia,serif;font-style:italic;color:#3a3633}
+</style>
+</helmet>
+<div style="position:relative;width:2400px;height:2420px;box-sizing:border-box;padding:72px 80px;overflow:hidden;background:#E4DAC6"><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<filter id="paint" x="-15%" y="-10%" width="130%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="4" result="n1"/>
+ <feDisplacementMap in="SourceGraphic" in2="n1" scale="4.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="9" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0 0.04  0 0 0 -1.3 0.78" result="g"/>
+ <feComposite in="g" in2="d" operator="in" result="gd"/>
+ <feMerge><feMergeNode in="d"/><feMergeNode in="gd"/></feMerge>
+</filter>
+<filter id="paintL" x="-15%" y="-10%" width="130%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" seed="7" result="n1"/>
+ <feDisplacementMap in="SourceGraphic" in2="n1" scale="8" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="2" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0 0.04  0 0 0 -1.3 0.8" result="g"/>
+ <feComposite in="g" in2="d" operator="in" result="gd"/>
+ <feMerge><feMergeNode in="d"/><feMergeNode in="gd"/></feMerge>
+</filter>
+<filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+<filter id="pencil" x="-5%" y="-5%" width="110%" height="110%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="1" seed="11" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="1" seed="5" result="n2"/>
+ <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.5" result="a"/>
+ <feComposite in="d" in2="a" operator="in"/>
+</filter>
+<radialGradient id="contactG"><stop offset="0" stop-color="#120e0b" stop-opacity="0.55"/><stop offset="0.6" stop-color="#120e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#120e0b" stop-opacity="0"/></radialGradient>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="4"/></filter>
+<filter id="soft12" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+<filter id="soft30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+<filter id="island" x="-20%" y="-20%" width="140%" height="140%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="21" result="n"/>
+ <feDisplacementMap in="SourceGraphic" in2="n" scale="80" xChannelSelector="R" yChannelSelector="G" result="d"/>
+ <feGaussianBlur in="d" stdDeviation="2.5"/>
+</filter>
+<filter id="grain" x="0" y="0" width="100%" height="100%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="1" stitchTiles="stitch"/>
+ <feColorMatrix type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0.10 0"/>
+</filter>
+<filter id="mottle" x="0" y="0" width="100%" height="100%">
+ <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="8" stitchTiles="stitch"/>
+ <feColorMatrix type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.28  0 0 0 0.16 -0.02"/>
+</filter>
+
+<filter id="tintCold" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#D2DAE1" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintWarm" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#F7E9D2" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintSodium" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#E0A56A" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="tintNight" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feFlood flood-color="#7E8AA6" result="f"/><feBlend in="SourceGraphic" in2="f" mode="multiply" result="m"/><feComposite in="m" in2="SourceAlpha" operator="in"/></filter>
+<filter id="blur3" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="blur6" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
+</defs></svg><svg width="2400" height="2420" style="position:absolute;left:0;top:0;pointer-events:none" aria-hidden="true"><rect width="2400" height="2420" filter="url(#mottle)"/><rect width="2400" height="2420" filter="url(#grain)"/></svg><div style="position:relative;display:flex;flex-direction:column;gap:14px;max-width:1500px"><div class="eb">The Correction · V3 vertical slice · board C08</div><h1 class="tt" style="margin:0;font-size:68px;line-height:1.02">The truth boundary: your version stops here</h1><p class="sb" style="margin:0;font-size:19px;line-height:1.5">Four seconds, three states, one transformation of the Remembered Room paint treatment. This is the line between the player’s counterfactual and the author’s account.</p></div><div style="position:relative;margin-top:48px"><div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:30px"><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:700px;height:393.75px;outline:1px solid #c4b9a6"><img src="/_blob/a340adbff350450986e30e2eb4aabb31" alt="F06a_speak" style="display:block;width:700px;height:auto;"><div class="num" style="position:absolute;left:10px;top:8px;background:#E4DAC6;padding:2px 6px">T+0 · ACT</div></div><div class="cap">The committed act reaches its last authored frame.</div></div><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:700px;height:393.75px;outline:1px solid #c4b9a6"><img src="/_blob/222c2661ebdb9055496a02fbbf68e9e4" alt="F07a_held" style="display:block;width:700px;height:auto;"><div class="num" style="position:absolute;left:10px;top:8px;background:#E4DAC6;padding:2px 6px">T+0.9 s · HELD</div></div><div class="cap">Grain locks, ambient loops thin out. Others’ paint drops a step; nobody moves.</div></div><div style="display:flex;flex-direction:column;gap:10px"><div style="position:relative;width:700px;height:393.75px;outline:1px solid #c4b9a6"><img src="/_blob/378b624e3e9517823fe762b650791a1a" alt="F07b_withdraw" style="display:block;width:700px;height:auto;"><div class="num" style="position:absolute;left:10px;top:8px;background:#E4DAC6;padding:2px 6px">T+2.5 s · WITHDRAW</div></div><div class="cap">Paint withdraws edges-first over 1.6 s: walls, then people, then floor. The island shrinks to the body.</div></div></div><div style="display:flex;flex-direction:column;gap:14px;margin-top:20px"><div class="eb">T+4 s · Boundary</div><div style="position:relative;width:2240px;height:1260px;outline:1px solid #c4b9a6"><img src="/_blob/7dfe59022a7fe13d5c53c7eee32870e6" alt="F07_boundary" style="display:block;width:2240px;height:auto;"></div></div><div style="display:flex;gap:50px;flex-wrap:wrap"><div style="display:flex;gap:10px;max-width:500px;"><span class="num" style="padding-top:2px">01</span><div class="cap"><b>What changes</b><br>Paint becomes paper. The hero’s body becomes flat ink (the halo goes, the silhouette stays). The slide dims to 35%.</div></div><div style="display:flex;gap:10px;max-width:500px;"><span class="num" style="padding-top:2px">02</span><div class="cap"><b>What does not</b><br>Nobody’s pose changes. No camera move. No sound sting. The world is not destroyed; it stops being remembered.</div></div><div style="display:flex;gap:10px;max-width:500px;"><span class="num" style="padding-top:2px">03</span><div class="cap"><b>The only text</b><br>“That is where your version stops.” Serif italic, top left, same position as every beat line before it.</div></div><div style="display:flex;gap:10px;max-width:500px;"><span class="num" style="padding-top:2px">04</span><div class="cap"><b>No modal</b><br>No result card, no score, no outcome. The next thing that happens is the reveal, on the same page.</div></div></div><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="1" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/></filter><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="10" stroke="#6E8B5E" stroke-width="1.4" opacity="0.6"/></pattern><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#B5523A"/></marker></defs></svg></div><div class="num" style="position:absolute;left:80px;bottom:36px;color:#8a8279;letter-spacing:.14em">VIVI V3 · THE CORRECTION · VERTICAL SLICE · PRODUCTION-TARGET FRAMES</div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":2420}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
