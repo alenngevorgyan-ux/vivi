@@ -1,5 +1,8 @@
 # Vivi Experience Compiler — v1
 
+> Experience V2 (decision moment, observations vs deeds, format gate, intent-first
+> player, author reveal) builds on this compiler: see [VIVI_EXPERIENCE_V2.md](VIVI_EXPERIENCE_V2.md).
+
 A model writes a few hundred tokens of [DSL](VIVI_EXPERIENCE_DSL_V1.md). The
 compiler turns that into a staged, lit, scored, playable scene, deterministically.
 
