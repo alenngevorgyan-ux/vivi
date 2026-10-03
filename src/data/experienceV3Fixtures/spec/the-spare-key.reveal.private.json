@@ -1,0 +1,34 @@
+{
+  "experienceId": "the-spare-key",
+  "revision": "gold-1",
+  "status": "fictional_editorial",
+  "authorHandle": "Fictional apartment narrator",
+  "act": "I told my sister I would let her stay, but that I would tell my partner before bringing her back in. I then told my partner before inviting her inside.",
+  "why": "I couldn’t promise my partner a private evening and secretly give it away. I also couldn’t ask my sister to leave without knowing where she would go.",
+  "aftermath": "Later that night, my sister told me she had missed the last bus. The argument with Mum was still not explained. I had let her stay that night; we did not settle a new rule about the key.",
+  "deliberatelyWithheld": "The medical reason, partner’s response, mother’s behavior, exact argument and long-term key arrangement are withheld. Missing the last bus is later testimony, not evidence known at the threshold.",
+  "choreography": {
+    "finalPlayerPoseByOption": {
+      "invite_now": "Hero facing sister at inside threshold, phone held, doorway unchanged.",
+      "ask_first": "Hero speaking toward sister, no beckoning or doorway closing.",
+      "decline_help": "Hero facing sister, phone retained; sister stays at original mark."
+    },
+    "heldVisualTrace": "Hold the door jamb with the sister still outside and my phone in hand; the chair can remain a small secondary trace. The jamb becomes the margin of the first-person author text. No invitation crossing is animated.",
+    "holdSeconds": [
+      0.6,
+      1.2
+    ],
+    "holdSkippable": true,
+    "camera": "Stop following; keep selected final relation/prop frame. Cut to paper if reduced motion; no orbit or NPC reaction insert.",
+    "sound": "Neutral bed fades under editorial transition, not as a factual silence. No applause, gasp, music sting, synthetic author voice or replayed quote.",
+    "transition": "Carry motif into warm paper margin. Persistent fictional label; bridge: “That is where your version stops. Here is what I did.”",
+    "firstAuthorLine": "I told my sister I would let her stay, but that I would tell my partner before bringing her back in",
+    "actEntry": "Automatic after enactment receipt or visual skip, then hold/bridge; never require another choice.",
+    "whyEntry": "Reader Continue / scroll; no timed disclosure.",
+    "aftermathEntry": "Reader Continue / scroll after why. Missing fields would be absent, never synthesized.",
+    "socialAvailable": "Only after aftermath is presented, or reader explicitly chooses Skip the rest of the account. Skipping is logged as skipped, not read.",
+    "continuation": "Primary: Open another fictional story. Secondary: I have a related story (private unsent draft only). No public counts or fake replies.",
+    "failure": "Keep accepted act; Retry author account / exit. No re-commit, substitute outcome or wrong-option inference."
+  },
+  "mappingNote": "No forced authorOption: the author made a conditional agreement plus partner disclosure, not the offered immediate invitation. Present account without declaring match or mismatch."
+}

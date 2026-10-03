@@ -1,0 +1,33 @@
+{
+  "experienceId": "the-introduction",
+  "revision": "gold-1",
+  "status": "fictional_editorial",
+  "authorHandle": "Fictional dinner narrator",
+  "act": "I said, “I’m his partner.”",
+  "why": "I wanted him to hear me say it. I didn’t want another evening spent pretending.",
+  "aftermath": "His mother changed the subject. On the way home he told me he had been afraid of losing her help.",
+  "deliberatelyWithheld": "No later rent outcome or reconciliation is disclosed. The mother’s reason for “friend,” the neighbor’s interpretation and the partner’s private thoughts at the table remain unknown.",
+  "choreography": {
+    "finalPlayerPoseByOption": {
+      "name_partner": "Hero facing neighbor, hand relaxed near body; partner still setting table in the held reconstruction.",
+      "let_pass": "Hero at original mark, unspeaking; neighbor retains existing smile."
+    },
+    "heldVisualTrace": "Hold the table edge between me and my partner. Carry that quiet horizontal edge into paper around the first-person line; do not show the mother changing the subject in the counterfactual frame.",
+    "holdSeconds": [
+      0.6,
+      1.2
+    ],
+    "holdSkippable": true,
+    "camera": "Stop following; keep selected final relation/prop frame. Cut to paper if reduced motion; no orbit or NPC reaction insert.",
+    "sound": "Neutral bed fades under editorial transition, not as a factual silence. No applause, gasp, music sting, synthetic author voice or replayed quote.",
+    "transition": "Carry motif into warm paper margin. Persistent fictional label; bridge: “That is where your version stops. Here is what I did.”",
+    "firstAuthorLine": "I said, “I’m his partner.”",
+    "actEntry": "Automatic after enactment receipt or visual skip, then hold/bridge; never require another choice.",
+    "whyEntry": "Reader Continue / scroll; no timed disclosure.",
+    "aftermathEntry": "Reader Continue / scroll after why. Missing fields would be absent, never synthesized.",
+    "socialAvailable": "Only after aftermath is presented, or reader explicitly chooses Skip the rest of the account. Skipping is logged as skipped, not read.",
+    "continuation": "Primary: Open another fictional story. Secondary: I have a related story (private unsent draft only). No public counts or fake replies.",
+    "failure": "Keep accepted act; Retry author account / exit. No re-commit, substitute outcome or wrong-option inference."
+  },
+  "authorOption": "name_partner"
+}

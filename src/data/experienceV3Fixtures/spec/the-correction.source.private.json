@@ -1,0 +1,364 @@
+{
+  "packVersion": "vivi-format-proof-1",
+  "status": "fictional_editorial",
+  "approvalAuthority": "Vivi editorial fiction; no real contributor confirmation claimed",
+  "experienceId": "the-correction",
+  "sourceRevision": "correction-source-1",
+  "originalPreBoundary": "I was on a six-month contract. My team lead, Mira, wrote the recommendation that would decide whether I stayed.\n\nI had spent six weeks building the forecast she was about to present.\n\nAt my desk, I opened her slide deck on the desk display. The title said “Mira’s forecast.”\n\nYesterday I had asked about credit. She said, “Let me lead this one. I’ll mention your work.”\n\nMy own printed summary was with me at the desk. I walked to the meeting room with it.\n\nThe director looked at the title slide and said, “Mira, this could become our board proposal.”\n\nMira began showing the figures. I recognized the change I had made the previous evening. I hadn’t heard my name.\n\nBefore questions, we had a short break. I stepped into the hallway. Mira and the director stayed in the meeting room; the door was open.\n\nI could return to the room and step into the hallway again during the break. When the meeting resumed, I could go back to my seat or stand nearer the director.\n\nI looked at my summary, with my name at the top. Below it was the revision I recognized on the screen.\n\nWhen I returned and the meeting resumed, the director asked, “Anything to add before we use this?”\n\nI could speak to the room then, ask the director now that we clarify the credit privately after the meeting, or let this question pass without speaking. I didn’t know whether Mira would still mention me or how she would write my recommendation if I challenged the credit.\n\nI was willing to let her present. I wanted my work named, and I wanted to keep the contract.",
+  "normalizedPreBoundary": "I was on a six-month contract. My team lead, Mira, wrote the recommendation that would decide whether I stayed.\n\nI had spent six weeks building the forecast she was about to present.\n\nAt my desk, I opened her slide deck on the desk display. The title said “Mira’s forecast.”\n\nYesterday I had asked about credit. She said, “Let me lead this one. I’ll mention your work.”\n\nMy own printed summary was with me at the desk. I walked to the meeting room with it.\n\nThe director looked at the title slide and said, “Mira, this could become our board proposal.”\n\nMira began showing the figures. I recognized the change I had made the previous evening. I hadn’t heard my name.\n\nBefore questions, we had a short break. I stepped into the hallway. Mira and the director stayed in the meeting room; the door was open.\n\nI could return to the room and step into the hallway again during the break. When the meeting resumed, I could go back to my seat or stand nearer the director.\n\nI looked at my summary, with my name at the top. Below it was the revision I recognized on the screen.\n\nWhen I returned and the meeting resumed, the director asked, “Anything to add before we use this?”\n\nI could speak to the room then, ask the director now that we clarify the credit privately after the meeting, or let this question pass without speaking. I didn’t know whether Mira would still mention me or how she would write my recommendation if I challenged the credit.\n\nI was willing to let her present. I wanted my work named, and I wanted to keep the contract.",
+  "sourceSha256": "b7be36746cb8df5a839d3ae199a72e939bd48513f0d869bf33d3aec6abd5edce",
+  "offsetConvention": "NFC Unicode code points; half-open ranges; paragraphs joined by two LF characters",
+  "spans": [
+    {
+      "id": "S01",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 0,
+      "endCodePoint": 111,
+      "excerpt": "I was on a six-month contract. My team lead, Mira, wrote the recommendation that would decide whether I stayed.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S02",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 113,
+      "endCodePoint": 182,
+      "excerpt": "I had spent six weeks building the forecast she was about to present.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S03",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 184,
+      "endCodePoint": 274,
+      "excerpt": "At my desk, I opened her slide deck on the desk display. The title said “Mira’s forecast.”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S04",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 276,
+      "endCodePoint": 369,
+      "excerpt": "Yesterday I had asked about credit. She said, “Let me lead this one. I’ll mention your work.”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S05",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 371,
+      "endCodePoint": 456,
+      "excerpt": "My own printed summary was with me at the desk. I walked to the meeting room with it.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S06",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 458,
+      "endCodePoint": 552,
+      "excerpt": "The director looked at the title slide and said, “Mira, this could become our board proposal.”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S07",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 554,
+      "endCodePoint": 666,
+      "excerpt": "Mira began showing the figures. I recognized the change I had made the previous evening. I hadn’t heard my name.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S08",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 668,
+      "endCodePoint": 804,
+      "excerpt": "Before questions, we had a short break. I stepped into the hallway. Mira and the director stayed in the meeting room; the door was open.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S09",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 806,
+      "endCodePoint": 965,
+      "excerpt": "I could return to the room and step into the hallway again during the break. When the meeting resumed, I could go back to my seat or stand nearer the director.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S10",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 967,
+      "endCodePoint": 1069,
+      "excerpt": "I looked at my summary, with my name at the top. Below it was the revision I recognized on the screen.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S11",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 1071,
+      "endCodePoint": 1169,
+      "excerpt": "When I returned and the meeting resumed, the director asked, “Anything to add before we use this?”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S12",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 1171,
+      "endCodePoint": 1442,
+      "excerpt": "I could speak to the room then, ask the director now that we clarify the credit privately after the meeting, or let this question pass without speaking. I didn’t know whether Mira would still mention me or how she would write my recommendation if I challenged the credit.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S13",
+      "sourceRevision": "correction-source-1",
+      "startCodePoint": 1444,
+      "endCodePoint": 1536,
+      "excerpt": "I was willing to let her present. I wanted my work named, and I wanted to keep the contract.",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "evidenceFacts": [
+    {
+      "id": "F01",
+      "sourceSpanIds": [
+        "S01"
+      ],
+      "claim": "I was on a six-month contract; Mira controlled the deciding recommendation.",
+      "type": "relationship",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F02",
+      "sourceSpanIds": [
+        "S02"
+      ],
+      "claim": "I had built the forecast over six weeks.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F03",
+      "sourceSpanIds": [
+        "S03"
+      ],
+      "claim": "The deck title read “Mira’s forecast” on my desk display.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F04",
+      "sourceSpanIds": [
+        "S04"
+      ],
+      "claim": "Yesterday Mira said, “Let me lead this one. I’ll mention your work.”",
+      "type": "quote",
+      "required": true,
+      "approval": "verbatim",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F05",
+      "sourceSpanIds": [
+        "S05"
+      ],
+      "claim": "I carried my own printed summary to the meeting.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F06",
+      "sourceSpanIds": [
+        "S06"
+      ],
+      "claim": "The director said, “Mira, this could become our board proposal.”",
+      "type": "quote",
+      "required": true,
+      "approval": "verbatim",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F07",
+      "sourceSpanIds": [
+        "S07"
+      ],
+      "claim": "I recognized my previous-evening revision in the figures and had not heard my name so far.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F08",
+      "sourceSpanIds": [
+        "S08"
+      ],
+      "claim": "A break preceded questions; I went to the hallway; Mira and the director stayed; the door was open.",
+      "type": "timing",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F09",
+      "sourceSpanIds": [
+        "S09"
+      ],
+      "claim": "During the break I could return and step out again; on resuming I could sit or stand nearer the director.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F10",
+      "sourceSpanIds": [
+        "S10"
+      ],
+      "claim": "My name was at the top of my summary; below it was the same revision.",
+      "type": "observed",
+      "required": false,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F11",
+      "sourceSpanIds": [
+        "S11"
+      ],
+      "claim": "On resuming the director asked, “Anything to add before we use this?”",
+      "type": "quote",
+      "required": true,
+      "approval": "verbatim",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F12",
+      "sourceSpanIds": [
+        "S12"
+      ],
+      "claim": "I could speak now, request private credit clarification later, or explicitly let this question pass.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F13",
+      "sourceSpanIds": [
+        "S12"
+      ],
+      "claim": "I did not know if Mira would credit me later or how a challenge would affect her recommendation.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F14",
+      "sourceSpanIds": [
+        "S13"
+      ],
+      "claim": "I accepted her presenting, wanted my work named, and wanted to keep the contract.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "unknowns": [
+    "Mira’s intention in the title and omission.",
+    "Whether Mira would have credited me later.",
+    "The director’s existing knowledge of authorship.",
+    "Whether speaking, deferring, or silence would change the recommendation.",
+    "Whether a private request would be agreed to; its eventual result."
+  ],
+  "stagingApproval": {
+    "approvalId": "editorial-staging-correction-1",
+    "neutral": [
+      "Shallow three-quarter office geometry with one unlettered table and open meeting threshold.",
+      "Anonymous adult figures; no additional meeting attendees, badges, career titles or likeness.",
+      "Initial Mira/director meeting marks allocate their later-view placement only; no offscreen action or earlier whereabouts are delivered as evidence while hero is at the desk.",
+      "Neutral paper/ink palette, practical overhead light and optional low office ventilation; no supplied time of day.",
+      "The named summary uses DOM text “My name” as an editorial representation; no fictional personal name or numerical forecast is added. The public slide shows only the sourced title plus non-readable figure texture."
+    ],
+    "forbidden": [
+      "Night skyline, clock time, staring colleagues, Mira’s smirk, director sympathy, board approval, withheld recommendation letter."
+    ],
+    "composition": "Desk: display heading dominates hero’s sightline; summary is a carried edge, not a second task. Meeting: public display in back plane, Mira beside it, hero on table side and director reachable in hearing. Hallway: open jamb divides held summary from visible room. Return: matched table geometry, same actors; hero can sit or stand nearer director. At 390px use a desk insert and a threshold crop that preserves paper/jamb, never shrink the whole office.",
+    "hero": "Printed summary versus public title",
+    "extra": "A room visit during the break is a projection of c_meeting_before with a break-state overlay, not replay of its historical beats. It is not a fifth spine scene. After Resume, portals to the prior break close; the transcript remains. The desk is earlier time, never a reversible live portal."
+  },
+  "revealSource": {
+    "text": "I said, “I built the forecast, and I can explain the revision.” My voice shook.\n\nI could accept not being the presenter. I couldn’t accept watching my work become hers in the board proposal.\n\nMira did not look at me. After the meeting she said I had embarrassed her. I kept the contract, but she stopped inviting me to preparation meetings. A month later, the director asked me to present the next update. I still don’t know whether speaking helped my contract or nearly cost it.",
+    "spans": [
+      {
+        "id": "R01",
+        "field": "act",
+        "sourceRevision": "correction-source-1",
+        "startCodePoint": 0,
+        "endCodePoint": 79,
+        "excerpt": "I said, “I built the forecast, and I can explain the revision.” My voice shook.",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R02",
+        "field": "why",
+        "sourceRevision": "correction-source-1",
+        "startCodePoint": 81,
+        "endCodePoint": 190,
+        "excerpt": "I could accept not being the presenter. I couldn’t accept watching my work become hers in the board proposal.",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R03",
+        "field": "aftermath",
+        "sourceRevision": "correction-source-1",
+        "startCodePoint": 192,
+        "endCodePoint": 479,
+        "excerpt": "Mira did not look at me. After the meeting she said I had embarrassed her. I kept the contract, but she stopped inviting me to preparation meetings. A month later, the director asked me to present the next update. I still don’t know whether speaking helped my contract or nearly cost it.",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "evidenceFacts": [
+      {
+        "id": "RF01",
+        "sourceSpanIds": [
+          "R01"
+        ],
+        "claim": "I said, “I built the forecast, and I can explain the revision.” My voice shook.",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF02",
+        "sourceSpanIds": [
+          "R02"
+        ],
+        "claim": "I could accept not being the presenter. I couldn’t accept watching my work become hers in the board proposal.",
+        "type": "belief",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF03",
+        "sourceSpanIds": [
+          "R03"
+        ],
+        "claim": "Mira did not look at me. After the meeting she said I had embarrassed her. I kept the contract, but she stopped inviting me to preparation meetings. A month later, the director asked me to present the next update. I still don’t know whether speaking helped my contract or nearly cost it.",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "deliberatelyWithheld": "The content of the recommendation, the director’s private view, and Mira’s motive are not disclosed. The account does not establish why the contract was retained."
+  }
+}
