@@ -24,6 +24,9 @@ const DirectorLab = import.meta.env.DEV ? lazy(() => import('./components/dev/Di
 /** Development-only V3 foundation harness (`?v3=foundation`); compiled out of production builds. */
 const V3Harness = import.meta.env.DEV ? lazy(() => import('./components/experience/v3/V3Harness')) : null;
 const v3HarnessRequested = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('v3') === 'foundation';
+/** Development-only visual V3 slice, The Correction (`?v3=correction`); compiled out of production builds. Not a product route. */
+const CorrectionDevEntry = import.meta.env.DEV ? lazy(() => import('./components/experience/v3/CorrectionDevEntry')) : null;
+const v3CorrectionRequested = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('v3') === 'correction';
 
 export default function App() {
   const [games, setGames] = useState<(StoredPlayablePost | GameSpec)[]>(() => {
@@ -178,6 +181,14 @@ export default function App() {
   const legacyGamesForStudio: GameSpec[] = useMemo(() => {
     return games.map((g) => (isStoredPlayablePost(g) ? g.legacyGameSpec : g));
   }, [games]);
+
+  if (CorrectionDevEntry && v3CorrectionRequested) {
+    return (
+      <Suspense fallback={null}>
+        <CorrectionDevEntry />
+      </Suspense>
+    );
+  }
 
   if (V3Harness && v3HarnessRequested) {
     return (

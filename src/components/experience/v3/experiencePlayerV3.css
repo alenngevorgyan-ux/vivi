@@ -1,0 +1,476 @@
+/* ExperiencePlayerV3 — paper / ink / rust from the Design r4 kit. Rem-based so 200% text zoom reflows, not clips. */
+
+.v3p-page {
+  --paper: #e4dac6;
+  --paper-2: #ece3cf;
+  --ink: #211f1d;
+  --graph: #5e5953;
+  --rust: #b5523a;
+  --rust-ink: #8e3b28;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow-x: clip;
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.v3p-page *,
+.v3p-page *::before,
+.v3p-page *::after {
+  box-sizing: border-box;
+}
+.v3p {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- header */
+.v3p-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.v3p-fiction-label {
+  margin: 0;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a5442e;
+  flex-basis: 100%;
+}
+.v3p-title {
+  margin: 0;
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+  flex: 1 1 12rem;
+}
+.v3p-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------- buttons */
+.v3p-page button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #8a8279;
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  max-width: 100%;
+}
+.v3p-page button[aria-pressed='true'] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+.v3p-page button:focus-visible,
+.v3p-world:focus-visible,
+.v3p-page [tabindex='-1']:focus-visible {
+  outline: 3px solid var(--rust);
+  outline-offset: 2px;
+}
+.v3p-page .v3p-primary {
+  background: var(--rust);
+  border-color: var(--rust-ink);
+  color: #fff;
+}
+
+/* ----------------------------------------------------------------- stage */
+.v3p-stage-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.v3p-stage-col > [data-testid='entry-button'] {
+  align-self: flex-start;
+}
+.v3p-world {
+  display: block;
+  border-radius: 4px;
+}
+.v3p-viewport {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.v3p-stage {
+  position: relative;
+  overflow: hidden;
+  background: #d9cfbb;
+  border-radius: 4px;
+}
+.v3p-layers {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.v3p-layers img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.v3p-paint {
+  transition: opacity 1.2s ease;
+  pointer-events: none;
+}
+.v3p-paint.is-withdrawn {
+  opacity: 0;
+}
+.v3p-paint.is-still {
+  transition-duration: 0.4s;
+}
+.v3p-surface {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  transition: filter 1.2s ease, opacity 1.2s ease;
+}
+.v3p-surface-texture {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.v3p-surface-title {
+  position: absolute;
+  left: 8%;
+  top: 9%;
+  width: 52%;
+  height: 14%;
+  display: flex;
+  align-items: center;
+  padding-left: 2%;
+  font-family: Newsreader, Georgia, serif;
+  color: #26343d;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 1;
+}
+.v3p-surface.is-dim {
+  filter: grayscale(0.9);
+  opacity: 0.6;
+}
+.v3p-cutout {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.v3p-body {
+  position: absolute;
+  pointer-events: none;
+  transition: opacity 1.2s ease, filter 1.2s ease;
+}
+.v3p-body.is-still {
+  transition-duration: 0.4s;
+}
+.v3p-body.is-graphite {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.v3p-body.is-through_glass {
+  opacity: 0.3;
+  filter: grayscale(0.4);
+}
+.v3p-stage-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.v3p-stage-controls button {
+  pointer-events: auto;
+}
+.v3p-stage-missing {
+  padding: 2rem;
+}
+
+/* -------------------------------------------------------------- decision */
+.v3p-page .v3p-option {
+  font-family: Newsreader, Georgia, serif;
+  font-style: italic;
+  font-size: 1.0625rem;
+  background: rgba(236, 227, 207, 0.95);
+  box-shadow: 0 1px 3px rgba(33, 31, 29, 0.18);
+}
+.v3p-page .v3p-option.is-confirming {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  border-color: var(--rust);
+}
+.v3p-decision.is-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+.v3p-decision.is-stacked .v3p-option {
+  width: 100%;
+}
+
+/* ----------------------------------------------------------------- panel */
+.v3p-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.v3p-panel {
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.v3p-story p,
+.v3p-hook {
+  margin: 0 0 0.5rem;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1.1875rem;
+  line-height: 1.5;
+}
+.v3p-hook {
+  font-style: italic;
+  color: var(--graph);
+}
+.v3p-quote {
+  font-style: italic;
+}
+.v3p-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.v3p-hint {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #5a554e;
+}
+.v3p-context ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+.v3p-context li + li {
+  margin-top: 0.35rem;
+}
+.v3p-page [role='alert'] {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--rust);
+  background: var(--paper-2);
+}
+.v3p-page [role='status'] {
+  margin: 0;
+}
+
+/* ------------------------------------------------------- act / boundary */
+.v3p-caption {
+  margin: 0 0 0.5rem;
+  font-family: Newsreader, Georgia, serif;
+  font-style: italic;
+  font-size: 1.375rem;
+  line-height: 1.35;
+}
+.v3p-enactment,
+.v3p-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.v3p-boundary-line {
+  margin: 0;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1.375rem;
+}
+.v3p-motif {
+  width: min(10rem, 40vw);
+  height: auto;
+  transform: rotate(-3deg);
+  box-shadow: 0 2px 6px rgba(33, 31, 29, 0.15);
+}
+
+/* ---------------------------------------------------------------- reveal */
+.v3p-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.v3p-reveal h2 {
+  margin: 0;
+  font-family: Newsreader, Georgia, serif;
+  font-weight: 400;
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+.v3p-reveal h3 {
+  margin: 0 0 0.25rem;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a5442e;
+}
+.v3p-account {
+  margin: 0;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1.3125rem;
+  line-height: 1.5;
+}
+.v3p-author,
+.v3p-withheld {
+  margin: 0;
+  color: #5a554e;
+}
+.v3p-reveal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------- dialogs */
+.v3p-dialog {
+  position: fixed;
+  z-index: 20;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  max-width: 34rem;
+  margin: 0 auto;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 1rem;
+  background: var(--paper-2);
+  color: var(--ink);
+  border: 1px solid #8a8279;
+  border-top: 3px solid var(--rust);
+  box-shadow: 0 8px 24px rgba(33, 31, 29, 0.25);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+.v3p-dialog h3 {
+  margin: 0 0 0.5rem;
+  font-family: Newsreader, Georgia, serif;
+  font-weight: 400;
+  font-size: 1.3125rem;
+}
+.v3p-dialog p {
+  line-height: 1.45;
+}
+.v3p-dialog ul {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.v3p-dialog button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #8a8279;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.v3p-dialog .v3p-primary {
+  background: var(--rust);
+  border-color: var(--rust-ink);
+  color: #fff;
+}
+.v3p-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.v3p-insert {
+  margin: 0 0 0.75rem;
+}
+.v3p-insert figcaption {
+  margin-top: 0.5rem;
+}
+.v3p-insert-display,
+.v3p-insert-paper {
+  position: relative;
+  width: 100%;
+  max-width: 22rem;
+}
+.v3p-insert-display img,
+.v3p-insert-paper img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.v3p-insert-paper {
+  max-width: 12rem;
+}
+.v3p-insert-title {
+  position: absolute;
+  left: 9%;
+  top: 9%;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1.25rem;
+  color: #26343d;
+}
+.v3p-insert-name {
+  position: absolute;
+  left: 10%;
+  top: 6%;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 1rem;
+}
+.v3p-insert-name small {
+  display: block;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: #5a554e;
+}
+
+.v3p-sr-only,
+.v3p-page .v3p-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .v3p-paint,
+  .v3p-body,
+  .v3p-surface {
+    transition-duration: 0.4s;
+  }
+}
+.v3p.is-reduced-motion .v3p-paint,
+.v3p.is-reduced-motion .v3p-body,
+.v3p.is-reduced-motion .v3p-surface {
+  transition-duration: 0.4s;
+}

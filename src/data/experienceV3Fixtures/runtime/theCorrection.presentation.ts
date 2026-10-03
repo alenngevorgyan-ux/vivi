@@ -154,6 +154,11 @@ export function correctionPublicCopy() {
     /** Gold F11, verbatim. */
     directorQuestion: quoted('F11'),
     observations: Object.fromEntries(env.observations.map(o => [o.id, o.accessibleEquivalent])) as Record<string, string>,
+    /**
+     * Gold §L step 4 bridge (docs/v3/format-proof/THE_CORRECTION.md), Design copy slot `boundary.line` (HOST: Gold copy,
+     * verbatim). Shown at the boundary, before and independent of the private record; identical for every act.
+     */
+    boundaryLine: 'That is where your version stops. Here is what I did.',
   };
 }
 
