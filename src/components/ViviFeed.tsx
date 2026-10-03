@@ -15,6 +15,12 @@ import type { GameSpec } from '../types/gameSpec';
 import { type StoredPlayablePost, isStoredPlayablePost } from '../engine/runtime/generationPipeline';
 import { SceneArt } from '../assets/worlds/SceneArt';
 import { worldTemplates, type ViviWorldId } from '../world/templates';
+import { EXPERIENCE_FIXTURES } from '../data/experienceFixtures';
+import { SOCIAL_MEMORIES } from '../data/socialMemories';
+
+const FIXTURE_WORLD: Record<string, ViviWorldId> = { apartment: 'apartment_night', office: 'office_night', night_hallway: 'hallway_night' };
+const SEED_IDS = new Set(SOCIAL_MEMORIES.map(m => m.id));
+const FORMAT_LABEL: Record<string, string> = { playable: 'СИТУАЦИЯ', illustrated_memory: 'ВОСПОМИНАНИЕ', text_story: 'ТЕКСТ' };
 
 /**
  * Seeded legacy stories still name pre-V2 environments. SceneArt only knows
@@ -40,6 +46,8 @@ const categories = [
 
 interface ViviFeedProps {
   customGames?: (StoredPlayablePost | GameSpec)[];
+  /** Editorial QA fixtures (fictional), compiled through the production pipeline on open. */
+  onEnterFixture?: (id: string) => void;
   onEnter: (story: HeroStory) => void;
   onEnterGameSpec: (game: StoredPlayablePost | GameSpec) => void;
   onCreate: () => void;
@@ -48,6 +56,7 @@ interface ViviFeedProps {
 
 export function ViviFeed({
   customGames = [],
+  onEnterFixture,
   onEnter,
   onEnterGameSpec,
   onCreate,
@@ -120,10 +129,33 @@ export function ViviFeed({
             <em>Ваш следующий шаг.</em>
           </h1>
           <p>
-            Настоящие человеческие ситуации, воссозданные как крошечные 2D миры. Войдите внутрь. Сделайте свой выбор. И узнайте, что произошло в реальности.
+            Человеческие ситуации, воссозданные как крошечные миры. Войдите внутрь, сделайте свой выбор — и узнайте, как поступил автор.
           </p>
         </div>
       </section>
+
+      {/* Editorial Experience V2 episodes: fictional, labelled, played through the production pipeline. */}
+      {feedTab === 'curated' && onEnterFixture && (
+        <section className="vivi-editorial" aria-label="Редакционные эпизоды">
+          <div className="vivi-editorial-head">
+            <span className="vivi-eyebrow">РЕДАКЦИОННЫЕ ЭПИЗОДЫ · EXPERIENCE V2</span>
+            <p>Вымышленные истории, написанные командой Vivi для проверки опыта. Это не посты настоящих людей.</p>
+          </div>
+          <div className="vivi-editorial-grid">
+            {EXPERIENCE_FIXTURES.map(f => (
+              <button key={f.id} type="button" className="vivi-editorial-card" onClick={() => onEnterFixture(f.id)}>
+                <div className="vivi-editorial-art" aria-hidden="true">
+                  <SceneArt world={FIXTURE_WORLD[f.world]} active />
+                </div>
+                <span className="vivi-eyebrow">
+                  {FORMAT_LABEL[f.expectedFormat]} · {f.lang.toUpperCase()}
+                </span>
+                <strong>{f.title}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Featured Experience */}
       {feedTab === 'curated' && (
@@ -252,8 +284,8 @@ export function ViviFeed({
                       <span className="vivi-eyebrow">
                         {story.pillar.replace('_', ' ').toUpperCase()} · {story.duration.toUpperCase()}
                       </span>
-                      <span className="text-[10px] text-stone-500 font-mono">
-                        {1200 + index * 42} вошли
+                      <span className="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-[9px] font-mono">
+                        ДЕМО
                       </span>
                     </div>
 
@@ -319,7 +351,7 @@ export function ViviFeed({
                         {genre.toUpperCase()} · 3 MIN
                       </span>
                       <span className="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-[9px] font-mono">
-                        СООБЩЕСТВО
+                        {SEED_IDS.has(game.id) ? 'ПРИМЕР' : isPost && game.format ? FORMAT_LABEL[game.format] : 'ВАША ИСТОРИЯ'}
                       </span>
                     </div>
 

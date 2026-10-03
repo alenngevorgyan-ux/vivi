@@ -12,6 +12,8 @@ import {
   isStoredPlayablePost,
 } from './engine/runtime/generationPipeline';
 import type { CanonicalScenario } from './engine/runtime/RuntimeCompiler';
+import { experienceFixtureById } from './data/experienceFixtures';
+import { compileFixture } from './data/experienceFixtures/replay';
 
 const STORAGE_KEY = 'vivi_community_stories_v1';
 
@@ -50,6 +52,7 @@ export default function App() {
     devPlayId && heroStoryById[devPlayId] ? heroStoryById[devPlayId] : null
   );
   const [activeScenario, setActiveScenario] = useState<CanonicalScenario | null>(null);
+  const [activePost, setActivePost] = useState<StoredPlayablePost | null>(null);
   const [activeLegacyGame, setActiveLegacyGame] = useState<GameSpec | null>(null);
   const [postToEdit, setPostToEdit] = useState<StoredPlayablePost | null>(null);
   const [gameToEdit, setGameToEdit] = useState<GameSpec | null>(null);
@@ -74,6 +77,7 @@ export default function App() {
 
   const handleEnterHero = (story: HeroStory) => {
     setActiveScenario(null);
+    setActivePost(null);
     setActiveLegacyGame(null);
     setActiveHero(story);
     setActiveTab('play');
@@ -84,11 +88,34 @@ export default function App() {
     if (isStoredPlayablePost(post)) {
       setActiveLegacyGame(null);
       setActiveScenario(post.scenario);
+      setActivePost(post);
     } else {
       setActiveScenario(null);
+      setActivePost(null);
       setActiveLegacyGame(post);
     }
     setActiveTab('play');
+  };
+
+  /** Editorial QA fixtures play through the same pipeline and runtime as any generated post. */
+  const handleEnterFixture = (fixtureId: string) => {
+    const fixture = experienceFixtureById[fixtureId];
+    if (!fixture) return;
+    compileFixture(fixture).then(result => handleEnterPost(result.post));
+  };
+
+  // Development only: ?play=<editorial fixture id> opens it directly, for QA and screenshots.
+  useEffect(() => {
+    if (devPlayId && experienceFixtureById[devPlayId]) handleEnterFixture(devPlayId);
+  }, []);
+
+  /** A story told in reply to this one, or the one this replies to — only real links, never a guess. */
+  const relatedFor = (id: string | undefined) => {
+    if (!id) return null;
+    const posts = games.filter(isStoredPlayablePost);
+    const current = posts.find(p => p.id === id);
+    const found = posts.find(p => p.responseToPostId === id) ?? (current?.responseToPostId ? posts.find(p => p.id === current.responseToPostId) : undefined);
+    return found ? { id: found.id, title: found.title, synopsis: found.synopsis } : null;
   };
 
   const handleCreateNew = () => {
@@ -127,6 +154,7 @@ export default function App() {
     });
     if (isStoredPlayablePost(updatedItem)) {
       setActiveScenario(updatedItem.scenario);
+      setActivePost(updatedItem);
       setActiveLegacyGame(null);
     } else {
       setActiveLegacyGame(updatedItem);
@@ -177,6 +205,7 @@ export default function App() {
         {activeTab === 'feed' && !showArchive && !labOpen && (
           <ViviFeed
             customGames={games}
+            onEnterFixture={handleEnterFixture}
             onEnter={handleEnterHero}
             onEnterGameSpec={handleEnterPost}
             onCreate={handleCreateNew}
@@ -240,6 +269,12 @@ export default function App() {
             key={activeHero?.id || activeScenario?.id || activeLegacyGame?.id}
             story={activeHero}
             scenario={activeScenario}
+            post={activePost}
+            related={relatedFor(activeScenario?.id)}
+            onOpenRelated={id => {
+              const found = games.find(g => g.id === id);
+              if (found) handleEnterPost(found);
+            }}
             gameSpec={activeLegacyGame}
             onExit={() => {
               setActiveHero(null);
