@@ -1,0 +1,238 @@
+{
+  "packVersion": "vivi-format-proof-1",
+  "status": "fictional_editorial",
+  "approvalAuthority": "Vivi editorial fiction; no real contributor confirmation claimed",
+  "experienceId": "the-introduction",
+  "sourceRevision": "introduction-source-1",
+  "originalPreBoundary": "At my first dinner with my partner’s family, his mother introduced me to a neighbor as “his friend.”\n\nWe had been together for two years. We were both adults.\n\nMy partner heard the introduction and kept setting the table.\n\nHis mother was paying our rent while I looked for work.\n\nThe neighbor smiled at me and waited.\n\nI was standing by the table, close enough to speak to the neighbor and for my partner and his mother to hear. I could say I was his partner, or let this introduction pass.\n\nI wanted to be recognized as his partner. I was also afraid of putting the rent help at risk; I did not know whether she would stop helping or why she had used “friend.”",
+  "normalizedPreBoundary": "At my first dinner with my partner’s family, his mother introduced me to a neighbor as “his friend.”\n\nWe had been together for two years. We were both adults.\n\nMy partner heard the introduction and kept setting the table.\n\nHis mother was paying our rent while I looked for work.\n\nThe neighbor smiled at me and waited.\n\nI was standing by the table, close enough to speak to the neighbor and for my partner and his mother to hear. I could say I was his partner, or let this introduction pass.\n\nI wanted to be recognized as his partner. I was also afraid of putting the rent help at risk; I did not know whether she would stop helping or why she had used “friend.”",
+  "sourceSha256": "deda18d042d75928eab0f36ff73eead2d13d6351cd5582a47a489e1e9ef75580",
+  "offsetConvention": "NFC Unicode code points; half-open ranges; paragraphs joined by two LF characters",
+  "spans": [
+    {
+      "id": "S01",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 0,
+      "endCodePoint": 100,
+      "excerpt": "At my first dinner with my partner’s family, his mother introduced me to a neighbor as “his friend.”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S02",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 102,
+      "endCodePoint": 158,
+      "excerpt": "We had been together for two years. We were both adults.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S03",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 160,
+      "endCodePoint": 221,
+      "excerpt": "My partner heard the introduction and kept setting the table.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S04",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 223,
+      "endCodePoint": 278,
+      "excerpt": "His mother was paying our rent while I looked for work.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S05",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 280,
+      "endCodePoint": 317,
+      "excerpt": "The neighbor smiled at me and waited.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S06",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 319,
+      "endCodePoint": 490,
+      "excerpt": "I was standing by the table, close enough to speak to the neighbor and for my partner and his mother to hear. I could say I was his partner, or let this introduction pass.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S07",
+      "sourceRevision": "introduction-source-1",
+      "startCodePoint": 492,
+      "endCodePoint": 661,
+      "excerpt": "I wanted to be recognized as his partner. I was also afraid of putting the rent help at risk; I did not know whether she would stop helping or why she had used “friend.”",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "evidenceFacts": [
+    {
+      "id": "F01",
+      "sourceSpanIds": [
+        "S01"
+      ],
+      "claim": "At my first family dinner, his mother introduced me to a neighbor as “his friend.”",
+      "type": "quote",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F02",
+      "sourceSpanIds": [
+        "S02"
+      ],
+      "claim": "We had been together for two years and were adults.",
+      "type": "relationship",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F03",
+      "sourceSpanIds": [
+        "S03"
+      ],
+      "claim": "My partner heard the introduction and kept setting the table.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F04",
+      "sourceSpanIds": [
+        "S04"
+      ],
+      "claim": "His mother paid our rent while I looked for work.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F05",
+      "sourceSpanIds": [
+        "S05"
+      ],
+      "claim": "The neighbor smiled at me and waited.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F06",
+      "sourceSpanIds": [
+        "S06"
+      ],
+      "claim": "I stood by the table, could speak within their hearing, and could correct the introduction or let it pass.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F07",
+      "sourceSpanIds": [
+        "S07"
+      ],
+      "claim": "I wanted recognition and feared risking rent help; withdrawal and the mother’s reason were unknown.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "unknowns": [
+    "Why the mother used “friend.”",
+    "What my partner was thinking then.",
+    "Whether correcting would change rent assistance.",
+    "What the neighbor understood.",
+    "Whether the family already recognized the relationship elsewhere."
+  ],
+  "stagingApproval": {
+    "approvalId": "editorial-staging-introduction-1",
+    "neutral": [
+      "Anonymous adult silhouettes for all four people. No gender presentation inferred for the narrator.",
+      "Table setting represented by a single place-setting motion then a held task pose; plates are neutral set dressing, not persistent interactable objects.",
+      "Ordinary domestic light, warm paper and muted fabric; mother and hero receive equal exposure.",
+      "All actors are within ordinary hearing range; no invented doorway or inaccessible corner."
+    ],
+    "forbidden": [
+      "Hostile mother, shamed partner posture, marriage or sexuality labels, explicit financial ultimatum, ticking dinner cue, accepting nod on silence."
+    ],
+    "composition": "One held relation frame: hero at near table edge; partner’s table-setting hand readable in midground; mother adjacent to neighbor, whose existing smile is minimal. Mobile composition keeps all four silhouettes and the table-setting relationship, with captions below. No required pan or walking. First cue shifts attention by text/facing composition rather than a dramatic push.",
+    "hero": "Partner’s hand continuing at the table while I am introduced",
+    "extra": "There are no observations, portals or movement prerequisites. Optional re-read context is not a knowledge collection task. The table is an evidence-bearing setting, not an inventory surface. The already-sourced smile is not a reaction to either act."
+  },
+  "revealSource": {
+    "text": "I said, “I’m his partner.”\n\nI wanted him to hear me say it. I didn’t want another evening spent pretending.\n\nHis mother changed the subject. On the way home he told me he had been afraid of losing her help.",
+    "spans": [
+      {
+        "id": "R01",
+        "field": "act",
+        "sourceRevision": "introduction-source-1",
+        "startCodePoint": 0,
+        "endCodePoint": 26,
+        "excerpt": "I said, “I’m his partner.”",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R02",
+        "field": "why",
+        "sourceRevision": "introduction-source-1",
+        "startCodePoint": 28,
+        "endCodePoint": 107,
+        "excerpt": "I wanted him to hear me say it. I didn’t want another evening spent pretending.",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R03",
+        "field": "aftermath",
+        "sourceRevision": "introduction-source-1",
+        "startCodePoint": 109,
+        "endCodePoint": 206,
+        "excerpt": "His mother changed the subject. On the way home he told me he had been afraid of losing her help.",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "evidenceFacts": [
+      {
+        "id": "RF01",
+        "sourceSpanIds": [
+          "R01"
+        ],
+        "claim": "I said, “I’m his partner.”",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF02",
+        "sourceSpanIds": [
+          "R02"
+        ],
+        "claim": "I wanted him to hear me say it. I didn’t want another evening spent pretending.",
+        "type": "belief",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF03",
+        "sourceSpanIds": [
+          "R03"
+        ],
+        "claim": "His mother changed the subject. On the way home he told me he had been afraid of losing her help.",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "deliberatelyWithheld": "No later rent outcome or reconciliation is disclosed. The mother’s reason for “friend,” the neighbor’s interpretation and the partner’s private thoughts at the table remain unknown."
+  }
+}

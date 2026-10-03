@@ -1,0 +1,301 @@
+{
+  "packVersion": "vivi-format-proof-1",
+  "status": "fictional_editorial",
+  "approvalAuthority": "Vivi editorial fiction; no real contributor confirmation claimed",
+  "experienceId": "the-spare-key",
+  "sourceRevision": "spare-key-source-1",
+  "originalPreBoundary": "My adult sister had a spare key to my apartment while I worked nights. We had agreed she would ask before coming over.\n\nAt home I found her coat and school bag on the chair. She had come in with the key without asking and then gone back into the building hallway. She took evening classes.\n\nMy own phone was in my hand. Her message said, “I’m in the hallway. Please don’t tell Mum I’m here.”\n\nShe had told me earlier that she had argued with Mum, but not why.\n\nI went into the building hallway. My sister stood outside my apartment door. She said, “Can I stay tonight?”\n\nI had promised my partner that we would have the flat to ourselves before an early medical appointment. My partner was not home yet. I did not know whether my sister had anywhere else safe to go.\n\nMy sister said she could wait there while I went back into the flat to think. I went back inside. I could return to her without making her leave. Her coat and bag remained on the chair, and I kept my phone.\n\nI could invite her in now, ask what had happened before agreeing, or say tonight could not work and offer to help find somewhere. I did not know what answer I would get or whether another place could be found.\n\nI wanted her to have somewhere safe. I also wanted to keep my promise and our agreement about the key. I hadn’t agreed to a stay yet.",
+  "normalizedPreBoundary": "My adult sister had a spare key to my apartment while I worked nights. We had agreed she would ask before coming over.\n\nAt home I found her coat and school bag on the chair. She had come in with the key without asking and then gone back into the building hallway. She took evening classes.\n\nMy own phone was in my hand. Her message said, “I’m in the hallway. Please don’t tell Mum I’m here.”\n\nShe had told me earlier that she had argued with Mum, but not why.\n\nI went into the building hallway. My sister stood outside my apartment door. She said, “Can I stay tonight?”\n\nI had promised my partner that we would have the flat to ourselves before an early medical appointment. My partner was not home yet. I did not know whether my sister had anywhere else safe to go.\n\nMy sister said she could wait there while I went back into the flat to think. I went back inside. I could return to her without making her leave. Her coat and bag remained on the chair, and I kept my phone.\n\nI could invite her in now, ask what had happened before agreeing, or say tonight could not work and offer to help find somewhere. I did not know what answer I would get or whether another place could be found.\n\nI wanted her to have somewhere safe. I also wanted to keep my promise and our agreement about the key. I hadn’t agreed to a stay yet.",
+  "sourceSha256": "70d635272cc996ae5d69e397a40fc066a9ad851b2ca8a7e9a41a9a67343bac33",
+  "offsetConvention": "NFC Unicode code points; half-open ranges; paragraphs joined by two LF characters",
+  "spans": [
+    {
+      "id": "S01",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 0,
+      "endCodePoint": 118,
+      "excerpt": "My adult sister had a spare key to my apartment while I worked nights. We had agreed she would ask before coming over.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S02",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 120,
+      "endCodePoint": 289,
+      "excerpt": "At home I found her coat and school bag on the chair. She had come in with the key without asking and then gone back into the building hallway. She took evening classes.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S03",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 291,
+      "endCodePoint": 391,
+      "excerpt": "My own phone was in my hand. Her message said, “I’m in the hallway. Please don’t tell Mum I’m here.”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S04",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 393,
+      "endCodePoint": 459,
+      "excerpt": "She had told me earlier that she had argued with Mum, but not why.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S05",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 461,
+      "endCodePoint": 569,
+      "excerpt": "I went into the building hallway. My sister stood outside my apartment door. She said, “Can I stay tonight?”",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S06",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 571,
+      "endCodePoint": 766,
+      "excerpt": "I had promised my partner that we would have the flat to ourselves before an early medical appointment. My partner was not home yet. I did not know whether my sister had anywhere else safe to go.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S07",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 768,
+      "endCodePoint": 974,
+      "excerpt": "My sister said she could wait there while I went back into the flat to think. I went back inside. I could return to her without making her leave. Her coat and bag remained on the chair, and I kept my phone.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S08",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 976,
+      "endCodePoint": 1185,
+      "excerpt": "I could invite her in now, ask what had happened before agreeing, or say tonight could not work and offer to help find somewhere. I did not know what answer I would get or whether another place could be found.",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "S09",
+      "sourceRevision": "spare-key-source-1",
+      "startCodePoint": 1187,
+      "endCodePoint": 1320,
+      "excerpt": "I wanted her to have somewhere safe. I also wanted to keep my promise and our agreement about the key. I hadn’t agreed to a stay yet.",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "evidenceFacts": [
+    {
+      "id": "F01",
+      "sourceSpanIds": [
+        "S01"
+      ],
+      "claim": "My adult sister had a spare key during my night work; we agreed she would ask before coming over.",
+      "type": "relationship",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F02",
+      "sourceSpanIds": [
+        "S02"
+      ],
+      "claim": "Her coat and school bag were on the chair; she had used the key without asking and gone back to the hallway; she took evening classes.",
+      "type": "observed",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F03",
+      "sourceSpanIds": [
+        "S03"
+      ],
+      "claim": "I held my own phone; her message read “I’m in the hallway. Please don’t tell Mum I’m here.”",
+      "type": "quote",
+      "required": true,
+      "approval": "verbatim",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F04",
+      "sourceSpanIds": [
+        "S04"
+      ],
+      "claim": "She had reported an argument with Mum earlier, without saying why.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F05",
+      "sourceSpanIds": [
+        "S05"
+      ],
+      "claim": "In the building hallway my sister stood outside my door and asked, “Can I stay tonight?”",
+      "type": "quote",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F06",
+      "sourceSpanIds": [
+        "S06"
+      ],
+      "claim": "I promised my partner the flat to ourselves before an early medical appointment; my partner was not home yet.",
+      "type": "relationship",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F07",
+      "sourceSpanIds": [
+        "S06"
+      ],
+      "claim": "I did not know if my sister had anywhere else safe to go.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F08",
+      "sourceSpanIds": [
+        "S07"
+      ],
+      "claim": "My sister said she could wait while I thought inside; I could return; belongings stayed on the chair and I retained the phone.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F09",
+      "sourceSpanIds": [
+        "S08"
+      ],
+      "claim": "I could invite her now, ask what happened before agreeing, or decline tonight and offer to help find somewhere.",
+      "type": "context",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F10",
+      "sourceSpanIds": [
+        "S08"
+      ],
+      "claim": "Her answer and the availability of another place were unknown.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    },
+    {
+      "id": "F11",
+      "sourceSpanIds": [
+        "S09"
+      ],
+      "claim": "I wanted her safe and wanted to keep both promises; I had not agreed to a stay.",
+      "type": "belief",
+      "required": true,
+      "approval": "author_confirmed",
+      "disclosure": "before_boundary"
+    }
+  ],
+  "unknowns": [
+    "Why the argument with Mum happened; no allegation of abuse is established.",
+    "Whether my sister had somewhere else safe.",
+    "Whether alternative accommodation would be possible.",
+    "How my partner would respond.",
+    "What the appointment was for.",
+    "Why she used the key without asking.",
+    "Whether asking would supply enough information to decide.",
+    "Why she needs to stay this night beyond the unexplained argument."
+  ],
+  "stagingApproval": {
+    "approvalId": "editorial-staging-key-1",
+    "neutral": [
+      "Anonymous adult sibling figures; school bag is an adult class bag, without school crest or child styling.",
+      "One chair with coat/bag and a doorway joining living interior to building hall. No key prop: ownership of a spare key is a source fact, not a visible find.",
+      "Doorway is staged open enough for direct speech and view during the supported thinking interval; this is editorial geometry approval, not an added historical door-opening event.",
+      "Neutral domestic and hall practicals, optional low room tone; no weather, exact hour, bus noise or medical props."
+    ],
+    "forbidden": [
+      "Crying, bruises, threatening mother shadow, exhausted patient, partner text, phone call availability, keys to confiscate, locking door, emergency countdown."
+    ],
+    "composition": "Living: chair silhouettes visibly occupy a place while its person is absent; phone insert reveals only own received message. Hall: sister on hall floor, hero on living-side edge, jamb between. Return: matching chair arrangement, phone retained, open sightline toward waiting sister. A threshold-facing crop can show the sister through the door without changing her registered location. On mobile preserve chair-to-door relation using two composed crops, not extra scenes.",
+    "hero": "Belongings already inside while permission remains at the doorway",
+    "extra": "k_return remains the primary scene and living is the hero’s location. Auto-approach goes only to an inside_threshold mark in living; sister stays registered in threshold and is visible across the portal. This adjacent visible actor is a projection, never duplicate ownership. Revisiting threshold after F08 projects the same final decision phase; request is not replayed and all three acts stay reachable from the action list. No new scene, second request or offscreen dialogue is introduced."
+  },
+  "revealSource": {
+    "text": "I told my sister I would let her stay, but that I would tell my partner before bringing her back in. I then told my partner before inviting her inside.\n\nI couldn’t promise my partner a private evening and secretly give it away. I also couldn’t ask my sister to leave without knowing where she would go.\n\nLater that night, my sister told me she had missed the last bus. The argument with Mum was still not explained. I had let her stay that night; we did not settle a new rule about the key.",
+    "spans": [
+      {
+        "id": "R01",
+        "field": "act",
+        "sourceRevision": "spare-key-source-1",
+        "startCodePoint": 0,
+        "endCodePoint": 151,
+        "excerpt": "I told my sister I would let her stay, but that I would tell my partner before bringing her back in. I then told my partner before inviting her inside.",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R02",
+        "field": "why",
+        "sourceRevision": "spare-key-source-1",
+        "startCodePoint": 153,
+        "endCodePoint": 302,
+        "excerpt": "I couldn’t promise my partner a private evening and secretly give it away. I also couldn’t ask my sister to leave without knowing where she would go.",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "R03",
+        "field": "aftermath",
+        "sourceRevision": "spare-key-source-1",
+        "startCodePoint": 304,
+        "endCodePoint": 490,
+        "excerpt": "Later that night, my sister told me she had missed the last bus. The argument with Mum was still not explained. I had let her stay that night; we did not settle a new rule about the key.",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "evidenceFacts": [
+      {
+        "id": "RF01",
+        "sourceSpanIds": [
+          "R01"
+        ],
+        "claim": "I told my sister I would let her stay, but that I would tell my partner before bringing her back in. I then told my partner before inviting her inside.",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF02",
+        "sourceSpanIds": [
+          "R02"
+        ],
+        "claim": "I couldn’t promise my partner a private evening and secretly give it away. I also couldn’t ask my sister to leave without knowing where she would go.",
+        "type": "belief",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      },
+      {
+        "id": "RF03",
+        "sourceSpanIds": [
+          "R03"
+        ],
+        "claim": "Later that night, my sister told me she had missed the last bus. The argument with Mum was still not explained. I had let her stay that night; we did not settle a new rule about the key.",
+        "type": "observed",
+        "required": true,
+        "approval": "verbatim",
+        "disclosure": "reveal_only"
+      }
+    ],
+    "deliberatelyWithheld": "The medical reason, partner’s response, mother’s behavior, exact argument and long-term key arrangement are withheld. Missing the last bus is later testimony, not evidence known at the threshold."
+  }
+}

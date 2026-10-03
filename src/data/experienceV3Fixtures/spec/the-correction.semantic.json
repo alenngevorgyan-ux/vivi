@@ -1,0 +1,1017 @@
+{
+  "specStatus": "planning_only_not_runtime_manifest",
+  "specEnvelopeVersion": "vivi-format-proof-1",
+  "experienceId": "the-correction",
+  "revision": "gold-1",
+  "semanticSchemaVersion": 3,
+  "locale": "en",
+  "editorialStatus": "fictional_editorial",
+  "stagingDisclosure": "Fictional editorial test story. Illustrated staging; not a real user submission.",
+  "title": "THE CORRECTION",
+  "hook": "My work is becoming a board proposal. My lead controls the recommendation that could keep me here.",
+  "formatProposal": "sequence",
+  "targetActivePresentationSeconds": [
+    75,
+    110
+  ],
+  "evidenceFacts": [
+    {
+      "id": "F01",
+      "claim": "I was on a six-month contract; Mira controlled the deciding recommendation.",
+      "type": "relationship",
+      "required": true
+    },
+    {
+      "id": "F02",
+      "claim": "I had built the forecast over six weeks.",
+      "type": "context",
+      "required": true
+    },
+    {
+      "id": "F03",
+      "claim": "The deck title read “Mira’s forecast” on my desk display.",
+      "type": "observed",
+      "required": true
+    },
+    {
+      "id": "F04",
+      "claim": "Yesterday Mira said, “Let me lead this one. I’ll mention your work.”",
+      "type": "quote",
+      "required": true
+    },
+    {
+      "id": "F05",
+      "claim": "I carried my own printed summary to the meeting.",
+      "type": "observed",
+      "required": true
+    },
+    {
+      "id": "F06",
+      "claim": "The director said, “Mira, this could become our board proposal.”",
+      "type": "quote",
+      "required": true
+    },
+    {
+      "id": "F07",
+      "claim": "I recognized my previous-evening revision in the figures and had not heard my name so far.",
+      "type": "observed",
+      "required": true
+    },
+    {
+      "id": "F08",
+      "claim": "A break preceded questions; I went to the hallway; Mira and the director stayed; the door was open.",
+      "type": "timing",
+      "required": true
+    },
+    {
+      "id": "F09",
+      "claim": "During the break I could return and step out again; on resuming I could sit or stand nearer the director.",
+      "type": "context",
+      "required": true
+    },
+    {
+      "id": "F10",
+      "claim": "My name was at the top of my summary; below it was the same revision.",
+      "type": "observed",
+      "required": false
+    },
+    {
+      "id": "F11",
+      "claim": "On resuming the director asked, “Anything to add before we use this?”",
+      "type": "quote",
+      "required": true
+    },
+    {
+      "id": "F12",
+      "claim": "I could speak now, request private credit clarification later, or explicitly let this question pass.",
+      "type": "context",
+      "required": true
+    },
+    {
+      "id": "F13",
+      "claim": "I did not know if Mira would credit me later or how a challenge would affect her recommendation.",
+      "type": "belief",
+      "required": true
+    },
+    {
+      "id": "F14",
+      "claim": "I accepted her presenting, wanted my work named, and wanted to keep the contract.",
+      "type": "belief",
+      "required": true
+    }
+  ],
+  "tension": {
+    "protect": "Ownership of six weeks of work and the livelihood attached to the contract.",
+    "description": "A public invitation to add something is also a chance to challenge the person whose recommendation decides whether I stay.",
+    "poles": [
+      {
+        "motive": "Make my authorship visible before the forecast travels onward.",
+        "stakeFacts": [
+          "F02",
+          "F03",
+          "F06",
+          "F07",
+          "F14"
+        ]
+      },
+      {
+        "motive": "Preserve the working relationship and the recommendation while finding a less exposed path.",
+        "stakeFacts": [
+          "F01",
+          "F04",
+          "F13",
+          "F14"
+        ]
+      }
+    ],
+    "ethicalAsymmetry": "The title and missing credit are a real inequity. Silence is an intelligible response to dependence, not agreement that Mira owns the work. A private request protects a relationship but knowingly postpones attribution; it does not secure either result.",
+    "whyNow": "Only I can name my contribution from this perspective, and the director has invited additions before use. My authorship and dependence coexist in the same room.",
+    "power": "Mira is my team lead and recommendation writer. The director has organizational authority; the source does not establish that this director can overrule Mira.",
+    "perspectiveActor": "a_me",
+    "unknowns": [
+      "Mira’s intention in the title and omission.",
+      "Whether Mira would have credited me later.",
+      "The director’s existing knowledge of authorship.",
+      "Whether speaking, deferring, or silence would change the recommendation.",
+      "Whether a private request would be agreed to; its eventual result."
+    ]
+  },
+  "actors": [
+    {
+      "id": "a_me",
+      "role": "contract worker",
+      "initialLocation": "desk",
+      "supportFacts": [
+        "F01",
+        "F02",
+        "F14"
+      ]
+    },
+    {
+      "id": "a_mira",
+      "role": "team lead and presenter",
+      "initialLocation": "meeting",
+      "supportFacts": [
+        "F01",
+        "F04",
+        "F07",
+        "F08"
+      ]
+    },
+    {
+      "id": "a_director",
+      "role": "director",
+      "initialLocation": "meeting",
+      "supportFacts": [
+        "F06",
+        "F08",
+        "F11"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "id": "o_deck",
+      "assetClass": "document_surface",
+      "owner": {
+        "kind": "location",
+        "id": "desk"
+      },
+      "supportFacts": [
+        "F03"
+      ]
+    },
+    {
+      "id": "o_slide",
+      "assetClass": "presentation_surface",
+      "owner": {
+        "kind": "location",
+        "id": "meeting"
+      },
+      "supportFacts": [
+        "F03",
+        "F06",
+        "F07"
+      ]
+    },
+    {
+      "id": "o_summary",
+      "assetClass": "owned_document",
+      "owner": {
+        "kind": "actor",
+        "id": "a_me"
+      },
+      "supportFacts": [
+        "F05",
+        "F10"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "desk",
+      "kitFamily": "office_desk",
+      "supportFacts": [
+        "F03"
+      ]
+    },
+    {
+      "id": "meeting",
+      "kitFamily": "office_meeting",
+      "supportFacts": [
+        "F05",
+        "F06",
+        "F08"
+      ]
+    },
+    {
+      "id": "hallway",
+      "kitFamily": "office_threshold",
+      "supportFacts": [
+        "F08",
+        "F09"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "c_desk",
+      "location": "desk",
+      "kind": "inhabited",
+      "viewpoint": "hero",
+      "purpose": "orient",
+      "entryState": "I know my contract situation and the six weeks of work. I have not yet seen what this deck calls the work.",
+      "presentActors": [
+        "a_me"
+      ],
+      "persistentObjects": [
+        "o_deck",
+        "o_summary"
+      ],
+      "requiredFacts": [
+        "F01",
+        "F02",
+        "F04",
+        "F05",
+        "F13",
+        "F14",
+        "F03"
+      ],
+      "optionalFacts": [],
+      "arc": {
+        "change": "The displayed title places Mira’s name where my work is represented. Her prior promise is recalled as yesterday’s speech, not a live voice.",
+        "understanding": "Presenting for me and naming my work are different things. Her power makes an ordinary correction costly.",
+        "nextSceneReason": "Go to the meeting to learn what use this credit will have.",
+        "removalLoss": "Without this scene the omission can feel like an isolated slip; the promise and dependence arrive as an explanation after the fact."
+      },
+      "exitState": "Required context and deck title received; summary remains held; go-to-meeting enabled.",
+      "observationIds": [
+        "obs_title"
+      ],
+      "preparationIds": [],
+      "opportunityIds": [],
+      "beats": [
+        "ev_desk_context",
+        "ev_title"
+      ],
+      "composition": "c_desk_paper"
+    },
+    {
+      "id": "c_meeting_before",
+      "location": "meeting",
+      "kind": "inhabited",
+      "viewpoint": "hero",
+      "purpose": "discover",
+      "entryState": "I know the promise and title; I arrive carrying my summary. No claim has been made about board use yet.",
+      "presentActors": [
+        "a_me",
+        "a_mira",
+        "a_director"
+      ],
+      "persistentObjects": [
+        "o_slide",
+        "o_summary"
+      ],
+      "requiredFacts": [
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "optionalFacts": [],
+      "arc": {
+        "change": "The director proposes board use; I recognize my own revision and still have not heard my name. A source-backed break becomes available.",
+        "understanding": "This attribution may travel beyond this meeting. My knowledge is personal recognition, not proof of Mira’s intention.",
+        "nextSceneReason": "The break creates a private physical interval to see my named copy beside the public version.",
+        "removalLoss": "Removing it removes the widening stakes and turns the board proposal into bare briefing text."
+      },
+      "exitState": "Board quote delivered once, recognition received; break opened by reader advance.",
+      "observationIds": [],
+      "preparationIds": [],
+      "opportunityIds": [],
+      "beats": [
+        "ev_arrive_meeting",
+        "ev_board",
+        "ev_recognize",
+        "ev_break"
+      ],
+      "composition": "c_meeting_before_paper"
+    },
+    {
+      "id": "c_hallway",
+      "location": "hallway",
+      "kind": "inhabited",
+      "viewpoint": "hero",
+      "purpose": "reframe",
+      "entryState": "The break is active. Mira and the director remain inside; I carry the summary outside.",
+      "presentActors": [
+        "a_me"
+      ],
+      "persistentObjects": [
+        "o_summary"
+      ],
+      "requiredFacts": [
+        "F09"
+      ],
+      "optionalFacts": [
+        "F10"
+      ],
+      "arc": {
+        "change": "The open threshold separates my named copy from the room displaying Mira’s title. I can revisit the room without progressing the question.",
+        "understanding": "I can change where I stand, but not the power relation. Having my name on paper does not make the public act safe.",
+        "nextSceneReason": "Resume is a deliberate return to the invitation, not a forced door timer.",
+        "removalLoss": "This is the riskiest scene: without the contrast and a voluntary return it is merely a corridor. Keep only if testing finds added ownership/care."
+      },
+      "exitState": "Break state retained; summary unchanged; Resume meeting explicitly ends the reversible excursion.",
+      "observationIds": [
+        "obs_summary"
+      ],
+      "preparationIds": [],
+      "opportunityIds": [],
+      "beats": [
+        "ev_hall_context"
+      ],
+      "composition": "c_hallway_paper"
+    },
+    {
+      "id": "c_meeting_question",
+      "location": "meeting",
+      "kind": "inhabited",
+      "viewpoint": "hero",
+      "purpose": "decide",
+      "entryState": "I return with all required context. Seat/near-director position is a reversible choice.",
+      "presentActors": [
+        "a_me",
+        "a_mira",
+        "a_director"
+      ],
+      "persistentObjects": [
+        "o_slide",
+        "o_summary"
+      ],
+      "requiredFacts": [
+        "F11",
+        "F12"
+      ],
+      "optionalFacts": [
+        "F10"
+      ],
+      "arc": {
+        "change": "The director addresses the room with the invitation. The same title now sits behind an available act.",
+        "understanding": "Speaking is feasible now; private clarification is a request, not a guaranteed meeting. Silence is an explicit decision about this question.",
+        "nextSceneReason": "The next material is the author’s account after one accepted act.",
+        "removalLoss": "Without this frame there is no sourced opportunity to act, only a menu over a memory."
+      },
+      "exitState": "One primary act accepted; no further world progression; enter held trace and reveal.",
+      "observationIds": [
+        "obs_summary"
+      ],
+      "preparationIds": [
+        "prep_seat",
+        "prep_near"
+      ],
+      "opportunityIds": [
+        "correct_public",
+        "request_private",
+        "pass_question"
+      ],
+      "beats": [
+        "ev_resume",
+        "ev_question"
+      ],
+      "composition": "c_meeting_question_paper"
+    }
+  ],
+  "spine": [
+    "c_desk",
+    "c_meeting_before",
+    "c_hallway",
+    "c_meeting_question"
+  ],
+  "portals": [
+    {
+      "id": "p_hall",
+      "fromLocation": "meeting",
+      "toLocation": "hallway",
+      "returnPortal": "p_room",
+      "supportFacts": [
+        "F08",
+        "F09"
+      ],
+      "authority": "source",
+      "available": {
+        "kind": "state_is",
+        "key": "break",
+        "value": "open"
+      },
+      "phase": "break only"
+    },
+    {
+      "id": "p_room",
+      "fromLocation": "hallway",
+      "toLocation": "meeting",
+      "returnPortal": "p_hall",
+      "supportFacts": [
+        "F08",
+        "F09"
+      ],
+      "authority": "source",
+      "available": {
+        "kind": "state_is",
+        "key": "break",
+        "value": "open"
+      },
+      "phase": "break only"
+    }
+  ],
+  "sceneTransitions": [
+    {
+      "id": "cut_to_meeting",
+      "kind": "scene_cut",
+      "fromScene": "c_desk",
+      "toScene": "c_meeting_before",
+      "supportFacts": [
+        "F05"
+      ],
+      "label": "Go to the meeting"
+    },
+    {
+      "id": "start_break",
+      "kind": "spine_transition",
+      "fromScene": "c_meeting_before",
+      "toScene": "c_hallway",
+      "supportFacts": [
+        "F08"
+      ],
+      "label": "Step into the hallway"
+    },
+    {
+      "id": "resume_meeting",
+      "kind": "spine_transition",
+      "fromScene": "c_hallway",
+      "toScene": "c_meeting_question",
+      "supportFacts": [
+        "F09",
+        "F11"
+      ],
+      "label": "Resume meeting"
+    }
+  ],
+  "observations": [
+    {
+      "id": "obs_title",
+      "target": {
+        "kind": "object",
+        "id": "o_deck"
+      },
+      "label": "Read the deck title",
+      "facts": [
+        "F03"
+      ],
+      "physicalNotice": "On the desk display: “Mira’s forecast.” No byline or extra text is supplied.",
+      "spatialBenefit": "The attribution occupies the display I am preparing to support; authorship is materially absent from its heading.",
+      "discoverability": "The display faces my work position; focus cue says Read the deck title. Context also offers it.",
+      "required": true,
+      "scenes": [
+        "c_desk"
+      ],
+      "presentation": "insert",
+      "accessibleEquivalent": "On the desk display: “Mira’s forecast.” No byline or extra text is supplied.",
+      "available": {
+        "kind": "state_is",
+        "key": "scene",
+        "value": "c_desk"
+      }
+    },
+    {
+      "id": "obs_summary",
+      "target": {
+        "kind": "object",
+        "id": "o_summary"
+      },
+      "label": "Look at my summary",
+      "facts": [
+        "F10"
+      ],
+      "physicalNotice": "My name is at the top of my own printed summary; the revision below matches what I recognized. The actual name and figures are withheld, represented by labeled editorial text.",
+      "spatialBenefit": "The copy in my hand contrasts with the title inside the open room. It demonstrates an owned reference, not a document-solving puzzle.",
+      "discoverability": "The paper is already carried, held at a readable angle; Context / my summary remains available.",
+      "required": false,
+      "scenes": [
+        "c_hallway",
+        "c_meeting_question"
+      ],
+      "presentation": "insert",
+      "accessibleEquivalent": "My name is at the top of my own printed summary; the revision below matches what I recognized. The actual name and figures are withheld, represented by labeled editorial text.",
+      "available": {
+        "kind": "fact_received",
+        "id": "F08"
+      }
+    }
+  ],
+  "preparations": [
+    {
+      "id": "prep_seat",
+      "label": "Return to my seat",
+      "target": {
+        "kind": "self"
+      },
+      "supportFacts": [
+        "F09"
+      ],
+      "action": {
+        "kind": "reposition",
+        "markRole": "own_seat"
+      },
+      "scenes": [
+        "c_meeting_question"
+      ],
+      "effect": "Only hero mark/facing changes.",
+      "undo": "Select stand nearer the director; neither movement accepts an act.",
+      "available": {
+        "kind": "state_is",
+        "key": "scene",
+        "value": "c_meeting_question"
+      }
+    },
+    {
+      "id": "prep_near",
+      "label": "Stand nearer the director",
+      "target": {
+        "kind": "self"
+      },
+      "supportFacts": [
+        "F09"
+      ],
+      "action": {
+        "kind": "reposition",
+        "markRole": "near_director"
+      },
+      "scenes": [
+        "c_meeting_question"
+      ],
+      "effect": "Only hero mark/facing changes; no NPC turns or acknowledges me.",
+      "undo": "Return to my seat.",
+      "available": {
+        "kind": "state_is",
+        "key": "scene",
+        "value": "c_meeting_question"
+      }
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "correct_public",
+      "verb": "speak",
+      "label": "Say I built the forecast",
+      "target": {
+        "kind": "self"
+      },
+      "motive": "Name my contribution before use.",
+      "fearedCostFacts": [
+        "F01",
+        "F13"
+      ],
+      "feasibilityFacts": [
+        "F11",
+        "F12"
+      ],
+      "minimumKnowledge": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
+      "physicalEnactment": "Hero turns from the selected seat/standing mark toward the room, raises a hand minimally, begins speaking; caption names the intention without inventing a sentence.",
+      "confirmationCopy": "Say to the room that I built the forecast? Your version ends as you say it; no one’s response is simulated.",
+      "confirmLabel": "Do this",
+      "cancelLabel": "Keep considering",
+      "finalPose": "Hero speaking, summary still owned and held; other bodies unchanged.",
+      "stopFrame": "First hero speaking pose with the complete intention caption delivered. No Mira or director reaction frame.",
+      "decision": "d_the_correction_1",
+      "available": {
+        "kind": "all",
+        "gates": [
+          {
+            "kind": "state_is",
+            "key": "decisionPhase",
+            "value": "ready"
+          },
+          {
+            "kind": "beat_delivered",
+            "id": "ev_question"
+          }
+        ]
+      }
+    },
+    {
+      "id": "request_private",
+      "verb": "ask",
+      "label": "Ask to clarify credit privately afterward",
+      "target": {
+        "kind": "actor",
+        "id": "a_director"
+      },
+      "motive": "Seek a less public way to address credit without pretending the title is harmless.",
+      "fearedCostFacts": [
+        "F03",
+        "F06",
+        "F13"
+      ],
+      "feasibilityFacts": [
+        "F11",
+        "F12"
+      ],
+      "minimumKnowledge": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
+      "physicalEnactment": "Hero addresses the director from current mark with a small speaking gesture; this is a request now for later clarification, not leaving the room.",
+      "confirmationCopy": "Ask the director now to clarify the credit privately after this meeting? The request ends your version; agreement is unknown.",
+      "confirmLabel": "Do this",
+      "cancelLabel": "Keep considering",
+      "finalPose": "Hero oriented to director; paper retained.",
+      "stopFrame": "Request intention delivered, before any acknowledgement or scheduled private meeting.",
+      "decision": "d_the_correction_1",
+      "available": {
+        "kind": "all",
+        "gates": [
+          {
+            "kind": "state_is",
+            "key": "decisionPhase",
+            "value": "ready"
+          },
+          {
+            "kind": "beat_delivered",
+            "id": "ev_question"
+          }
+        ]
+      }
+    },
+    {
+      "id": "pass_question",
+      "verb": "remain_silent",
+      "label": "Let this question pass without speaking",
+      "target": {
+        "kind": "self"
+      },
+      "motive": "Protect the relationship on which the contract depends; hope credit can still be addressed.",
+      "fearedCostFacts": [
+        "F02",
+        "F03",
+        "F06",
+        "F14"
+      ],
+      "feasibilityFacts": [
+        "F11",
+        "F12"
+      ],
+      "minimumKnowledge": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
+      "physicalEnactment": "Hero settles at current supported mark, keeps the summary, and makes no speaking gesture. Caption: “You let this question pass without speaking.” No clock advances to an NPC’s next line.",
+      "confirmationCopy": "Let this question pass without speaking? This records silence for this question only, then opens the author’s account.",
+      "confirmLabel": "Do this",
+      "cancelLabel": "Keep considering",
+      "finalPose": "Hero seated or standing as chosen, paper held, mouth/hand neutral.",
+      "stopFrame": "Explicit silence caption and held pose. Do not show the proposal being approved or credit passing to Mira.",
+      "decision": "d_the_correction_1",
+      "available": {
+        "kind": "all",
+        "gates": [
+          {
+            "kind": "state_is",
+            "key": "decisionPhase",
+            "value": "ready"
+          },
+          {
+            "kind": "beat_delivered",
+            "id": "ev_question"
+          }
+        ]
+      }
+    }
+  ],
+  "primaryDecision": {
+    "id": "d_the_correction_1",
+    "scene": "c_meeting_question",
+    "minimumKnowledge": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F11",
+      "F12",
+      "F13",
+      "F14"
+    ],
+    "options": [
+      "correct_public",
+      "request_private",
+      "pass_question"
+    ],
+    "version": "gold-1"
+  },
+  "truthBoundary": {
+    "scene": "c_meeting_question",
+    "after": "primary_act",
+    "stopFrames": {
+      "correct_public": "First hero speaking pose with the complete intention caption delivered. No Mira or director reaction frame.",
+      "request_private": "Request intention delivered, before any acknowledgement or scheduled private meeting.",
+      "pass_question": "Explicit silence caption and held pose. Do not show the proposal being approved or credit passing to Mira."
+    },
+    "prohibitedAfter": [
+      "NPC response",
+      "new evidence",
+      "offscreen causal event",
+      "second decision",
+      "counterfactual aftermath"
+    ]
+  },
+  "softTimeEvents": [
+    {
+      "id": "ev_desk_context",
+      "classification": "evidence_delivery",
+      "after": [],
+      "facts": [
+        "F01",
+        "F02",
+        "F04",
+        "F05",
+        "F13",
+        "F14"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_title",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_desk_context"
+      ],
+      "facts": [
+        "F03"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_arrive_meeting",
+      "classification": "causal",
+      "after": [
+        "ev_title"
+      ],
+      "facts": [
+        "F05"
+      ],
+      "effects": [
+        {
+          "kind": "entity_transfer",
+          "entity": "a_me",
+          "to": "meeting"
+        }
+      ],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_board",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_arrive_meeting"
+      ],
+      "facts": [
+        "F06"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_recognize",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_board"
+      ],
+      "facts": [
+        "F07"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_break",
+      "classification": "causal",
+      "after": [
+        "ev_recognize"
+      ],
+      "facts": [
+        "F08"
+      ],
+      "effects": [
+        {
+          "kind": "set_state",
+          "key": "break",
+          "value": "open"
+        }
+      ],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_hall_context",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_break"
+      ],
+      "facts": [
+        "F09"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_resume",
+      "classification": "causal",
+      "after": [
+        "ev_hall_context"
+      ],
+      "facts": [
+        "F09",
+        "F11"
+      ],
+      "effects": [
+        {
+          "kind": "set_state",
+          "key": "break",
+          "value": "closed"
+        }
+      ],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_question",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_resume"
+      ],
+      "facts": [
+        "F11",
+        "F12"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_office_bed",
+      "classification": "ambient",
+      "after": [],
+      "facts": [],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Continue neutral sampled presentation only.",
+      "whileReading": "May continue if non-distracting; freezes on user pause/hidden tab/reduced-motion still.",
+      "onLeave": "Stop bed for this location; do not simulate offscreen activity.",
+      "onReturn": "Resume bed without replaying missed one-shots.",
+      "purePresentation": true
+    }
+  ],
+  "worldPersistence": {
+    "initial": "Hero at desk with summary already owned/carried; Mira and director registered in meeting. Deck surface belongs to desk, slide surface to meeting; these are two physical displays of the same authored deck content, not two transferred documents.",
+    "transitions": "Desk → meeting transfers only hero. Meeting → hallway and back transfer only hero; summary remains attached to hero. Mira/director do not leave or change mark. Resume changes break=open to closed once, then delivers question once.",
+    "returnInvariant": "Break excursion returns the same meeting actors, same displayed figures and summary ownership. ev_board/ev_recognize remain consumed. Re-entry into hallway restores the local hero mark; F10 is retained if seen. On final return the meeting question is new, not a repeat of the initial board quote.",
+    "variables": {
+      "break": [
+        "not_started",
+        "open",
+        "closed"
+      ],
+      "heroPosition": [
+        "desk",
+        "own_seat",
+        "hall_threshold",
+        "near_director"
+      ]
+    },
+    "end": "No travel after accepted act. Position can differ at acceptance but never changes the offered options, costs or author account.",
+    "decisionReadyRule": "Derive decisionPhase=ready only when the final decision phase is entered, all primaryDecision.minimumKnowledge facts have receipts, and no act is accepted. Cancel preserves readiness; acceptance closes all opportunities atomically. A final-phase location revisit does not rewind the arc."
+  },
+  "presentation": {
+    "style": "paper_diorama",
+    "time": "soft",
+    "timer": null,
+    "stagingApprovalId": "editorial-staging-correction-1",
+    "compositionBrief": "Desk: display heading dominates hero’s sightline; summary is a carried edge, not a second task. Meeting: public display in back plane, Mira beside it, hero on table side and director reachable in hearing. Hallway: open jamb divides held summary from visible room. Return: matched table geometry, same actors; hero can sit or stand nearer director. At 390px use a desk insert and a threshold crop that preserves paper/jamb, never shrink the whole office.",
+    "specialProjectionRule": "A room visit during the break is a projection of c_meeting_before with a break-state overlay, not replay of its historical beats. It is not a fifth spine scene. After Resume, portals to the prior break close; the transcript remains. The desk is earlier time, never a reversible live portal."
+  },
+  "controls": {
+    "id": "correction-compressed",
+    "targetSeconds": [
+      40,
+      65
+    ],
+    "structure": "One meeting location, two frames: an editorial before-meeting frame with the desk title and yesterday’s promise explicitly labeled recollection; then the board quote, recognition, summary insert, break/resume captions and question in the present meeting frame.",
+    "preserved": "All F01–F14 evidence, both observations, the same three acts and confirmations, the same reveal. Summary is carried. No fake walking from desk inside this frame.",
+    "removed": "Desk travel and walkable hallway; break is narrated with the same open-door facts. Seat/near-director preparation remains. No optional fact becomes required.",
+    "hypothesis": "The rich version may make private authorship versus public attribution physically legible, and returning may feel like entering risk oneself. It must improve understanding or care beyond this equally clear edited version."
+  }
+}

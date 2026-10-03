@@ -1,0 +1,428 @@
+{
+  "specStatus": "planning_only_not_runtime_manifest",
+  "specEnvelopeVersion": "vivi-format-proof-1",
+  "experienceId": "the-introduction",
+  "revision": "gold-1",
+  "semanticSchemaVersion": 3,
+  "locale": "en",
+  "editorialStatus": "fictional_editorial",
+  "stagingDisclosure": "Fictional editorial test story. Illustrated staging; not a real user submission.",
+  "title": "THE INTRODUCTION",
+  "hook": "After two years together, I am introduced as his friend. His mother is paying our rent.",
+  "formatProposal": "micro",
+  "targetActivePresentationSeconds": [
+    15,
+    30
+  ],
+  "evidenceFacts": [
+    {
+      "id": "F01",
+      "claim": "At my first family dinner, his mother introduced me to a neighbor as “his friend.”",
+      "type": "quote",
+      "required": true
+    },
+    {
+      "id": "F02",
+      "claim": "We had been together for two years and were adults.",
+      "type": "relationship",
+      "required": true
+    },
+    {
+      "id": "F03",
+      "claim": "My partner heard the introduction and kept setting the table.",
+      "type": "observed",
+      "required": true
+    },
+    {
+      "id": "F04",
+      "claim": "His mother paid our rent while I looked for work.",
+      "type": "context",
+      "required": true
+    },
+    {
+      "id": "F05",
+      "claim": "The neighbor smiled at me and waited.",
+      "type": "observed",
+      "required": true
+    },
+    {
+      "id": "F06",
+      "claim": "I stood by the table, could speak within their hearing, and could correct the introduction or let it pass.",
+      "type": "context",
+      "required": true
+    },
+    {
+      "id": "F07",
+      "claim": "I wanted recognition and feared risking rent help; withdrawal and the mother’s reason were unknown.",
+      "type": "belief",
+      "required": true
+    }
+  ],
+  "tension": {
+    "protect": "Public recognition of an established relationship, and the housing help we depend on.",
+    "description": "One ordinary introduction asks me to decide whether to name a relationship in front of someone who materially supports us.",
+    "poles": [
+      {
+        "motive": "Be introduced as the partner I am, within my partner’s hearing.",
+        "stakeFacts": [
+          "F01",
+          "F02",
+          "F03",
+          "F07"
+        ]
+      },
+      {
+        "motive": "Avoid risking rent help in an unfamiliar family setting.",
+        "stakeFacts": [
+          "F01",
+          "F04",
+          "F07"
+        ]
+      }
+    ],
+    "ethicalAsymmetry": "Misnaming the relationship is not made equally legitimate by financial support. Letting it pass is understandable under dependence, without endorsing erasure. Correcting is not promised to be safe or celebrated.",
+    "whyNow": "The introduction concerns me, and the neighbor is waiting for me. I can speak for my own relationship; I cannot make my partner speak.",
+    "power": "The mother controls current financial assistance; the source gives no explicit threat. The partner is present and heard it, but his motive becomes available only in reveal.",
+    "perspectiveActor": "a_me",
+    "unknowns": [
+      "Why the mother used “friend.”",
+      "What my partner was thinking then.",
+      "Whether correcting would change rent assistance.",
+      "What the neighbor understood.",
+      "Whether the family already recognized the relationship elsewhere."
+    ]
+  },
+  "actors": [
+    {
+      "id": "a_me",
+      "role": "adult partner looking for work",
+      "initialLocation": "dining",
+      "supportFacts": [
+        "F02",
+        "F04",
+        "F06"
+      ]
+    },
+    {
+      "id": "a_partner",
+      "role": "adult partner setting table",
+      "initialLocation": "dining",
+      "supportFacts": [
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "id": "a_mother",
+      "role": "partner’s mother and rent supporter",
+      "initialLocation": "dining",
+      "supportFacts": [
+        "F01",
+        "F04"
+      ]
+    },
+    {
+      "id": "a_neighbor",
+      "role": "neighbor receiving introduction",
+      "initialLocation": "dining",
+      "supportFacts": [
+        "F01",
+        "F05"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "id": "o_table",
+      "assetClass": "dining_surface",
+      "owner": {
+        "kind": "location",
+        "id": "dining"
+      },
+      "supportFacts": [
+        "F03",
+        "F06"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "dining",
+      "kitFamily": "domestic_dining",
+      "supportFacts": [
+        "F01",
+        "F03",
+        "F06"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "i_table",
+      "location": "dining",
+      "kind": "inhabited",
+      "viewpoint": "hero",
+      "purpose": "decide",
+      "entryState": "I am at my first dinner with this family, in an established two-year relationship, materially dependent on rent help.",
+      "presentActors": [
+        "a_me",
+        "a_partner",
+        "a_mother",
+        "a_neighbor"
+      ],
+      "persistentObjects": [
+        "o_table"
+      ],
+      "requiredFacts": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07"
+      ],
+      "optionalFacts": [],
+      "arc": {
+        "change": "The mother introduces me as “his friend.” My partner keeps setting the table within hearing; the neighbor waits for my response.",
+        "understanding": "Recognition and dependence are present at once. I do not know whether the wording is intentional or what correction would cost.",
+        "nextSceneReason": "Only my accepted response can lead to the author encounter; there is no next room or informational quest.",
+        "removalLoss": "The single frame is the whole opportunity. Removing it leaves text, which is a valid competing format."
+      },
+      "exitState": "One of two acts accepted; neighbor smile remains the sourced entry expression without changing.",
+      "observationIds": [],
+      "preparationIds": [],
+      "opportunityIds": [
+        "name_partner",
+        "let_pass"
+      ],
+      "beats": [
+        "ev_dinner_context",
+        "ev_introduction"
+      ],
+      "composition": "i_table_paper"
+    }
+  ],
+  "spine": [
+    "i_table"
+  ],
+  "portals": [],
+  "sceneTransitions": [],
+  "observations": [],
+  "preparations": [],
+  "opportunities": [
+    {
+      "id": "name_partner",
+      "verb": "speak",
+      "label": "Say I am his partner",
+      "target": {
+        "kind": "actor",
+        "id": "a_neighbor"
+      },
+      "motive": "Make the relationship visible in my partner’s hearing.",
+      "fearedCostFacts": [
+        "F04",
+        "F07"
+      ],
+      "feasibilityFacts": [
+        "F05",
+        "F06"
+      ],
+      "minimumKnowledge": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07"
+      ],
+      "physicalEnactment": "Hero turns toward the neighbor and begins a small speaking gesture; caption: “You say you are his partner.” No synthetic dialogue.",
+      "confirmationCopy": "Say to the neighbor that I am his partner, within their hearing? Your version ends as you say it.",
+      "confirmLabel": "Do this",
+      "cancelLabel": "Keep considering",
+      "finalPose": "Hero facing neighbor, hand relaxed near body; partner still setting table in the held reconstruction.",
+      "stopFrame": "Hero speaking intention delivered before any change in mother, partner or neighbor.",
+      "decision": "d_the_introduction_1",
+      "available": {
+        "kind": "all",
+        "gates": [
+          {
+            "kind": "state_is",
+            "key": "decisionPhase",
+            "value": "ready"
+          },
+          {
+            "kind": "beat_delivered",
+            "id": "ev_introduction"
+          }
+        ]
+      }
+    },
+    {
+      "id": "let_pass",
+      "verb": "remain_silent",
+      "label": "Let this introduction pass",
+      "target": {
+        "kind": "self"
+      },
+      "motive": "Avoid a public correction while depending on rent assistance.",
+      "fearedCostFacts": [
+        "F01",
+        "F02",
+        "F07"
+      ],
+      "feasibilityFacts": [
+        "F05",
+        "F06"
+      ],
+      "minimumKnowledge": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07"
+      ],
+      "physicalEnactment": "Hero stays by table in a neutral pose; caption: “You let this introduction pass without correcting it.” No nod or friendly agreement invented.",
+      "confirmationCopy": "Let this introduction pass without correcting it? Silence will be recorded only because you confirm.",
+      "confirmLabel": "Do this",
+      "cancelLabel": "Keep considering",
+      "finalPose": "Hero at original mark, unspeaking; neighbor retains existing smile.",
+      "stopFrame": "Explicit pass caption delivered. No dinner continuation or inferred agreement.",
+      "decision": "d_the_introduction_1",
+      "available": {
+        "kind": "all",
+        "gates": [
+          {
+            "kind": "state_is",
+            "key": "decisionPhase",
+            "value": "ready"
+          },
+          {
+            "kind": "beat_delivered",
+            "id": "ev_introduction"
+          }
+        ]
+      }
+    }
+  ],
+  "primaryDecision": {
+    "id": "d_the_introduction_1",
+    "scene": "i_table",
+    "minimumKnowledge": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07"
+    ],
+    "options": [
+      "name_partner",
+      "let_pass"
+    ],
+    "version": "gold-1"
+  },
+  "truthBoundary": {
+    "scene": "i_table",
+    "after": "primary_act",
+    "stopFrames": {
+      "name_partner": "Hero speaking intention delivered before any change in mother, partner or neighbor.",
+      "let_pass": "Explicit pass caption delivered. No dinner continuation or inferred agreement."
+    },
+    "prohibitedAfter": [
+      "NPC response",
+      "new evidence",
+      "offscreen causal event",
+      "second decision",
+      "counterfactual aftermath"
+    ]
+  },
+  "softTimeEvents": [
+    {
+      "id": "ev_dinner_context",
+      "classification": "evidence_delivery",
+      "after": [],
+      "facts": [
+        "F02",
+        "F04",
+        "F06",
+        "F07"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_introduction",
+      "classification": "evidence_delivery",
+      "after": [
+        "ev_dinner_context"
+      ],
+      "facts": [
+        "F01",
+        "F03",
+        "F05"
+      ],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Deliver only after prerequisites and explicit reader advance/observation receipt, with readable hold.",
+      "whileReading": "Pause. No transition or next evidence delivery behind open text, action sheet, confirmation, modal, blur or hidden tab.",
+      "onLeave": "If consumed, retain receipt. If pending, suspend until eligible source view; never expire.",
+      "onReturn": "Restore consumed effects; pending evidence waits for reader. Never repeat live quote.",
+      "purePresentation": false
+    },
+    {
+      "id": "ev_table_settle",
+      "classification": "ambient",
+      "after": [],
+      "facts": [],
+      "effects": [],
+      "delivery": "reader",
+      "whileStill": "Continue neutral sampled presentation only.",
+      "whileReading": "May continue if non-distracting; freezes on user pause/hidden tab/reduced-motion still.",
+      "onLeave": "Stop bed for this location; do not simulate offscreen activity.",
+      "onReturn": "Resume bed without replaying missed one-shots.",
+      "purePresentation": true
+    }
+  ],
+  "worldPersistence": {
+    "initial": "Four actors and table in dining; hero fixed at table edge. No carried prop, portal or offstage actor.",
+    "transitions": "None. Partner’s task pose may settle once as ambient presentation; it does not advance dinner or deliver a second statement.",
+    "returnInvariant": "Pause/resume or closing context restores the same relation frame, received facts and introduction receipt. The introduction is not repeated as live speech; transcript is rereadable.",
+    "variables": {
+      "introduction": [
+        "not_delivered",
+        "delivered"
+      ]
+    },
+    "end": "The existing neighbor smile remains in the final frame; no additional smile or nod is triggered by acceptance.",
+    "decisionReadyRule": "Derive decisionPhase=ready only when the final decision phase is entered, all primaryDecision.minimumKnowledge facts have receipts, and no act is accepted. Cancel preserves readiness; acceptance closes all opportunities atomically. A final-phase location revisit does not rewind the arc."
+  },
+  "presentation": {
+    "style": "paper_diorama",
+    "time": "soft",
+    "timer": null,
+    "stagingApprovalId": "editorial-staging-introduction-1",
+    "compositionBrief": "One held relation frame: hero at near table edge; partner’s table-setting hand readable in midground; mother adjacent to neighbor, whose existing smile is minimal. Mobile composition keeps all four silhouettes and the table-setting relationship, with captions below. No required pan or walking. First cue shifts attention by text/facing composition rather than a dramatic push.",
+    "specialProjectionRule": "There are no observations, portals or movement prerequisites. Optional re-read context is not a knowledge collection task. The table is an evidence-bearing setting, not an inventory surface. The already-sourced smile is not a reaction to either act."
+  },
+  "controls": {
+    "id": "introduction-no-extra-scene",
+    "targetSeconds": [
+      15,
+      30
+    ],
+    "structure": "Already the minimum one-scene form. No shorter spatial version is required. Text-only is the principal control.",
+    "preserved": "All facts and two acts.",
+    "removed": "No mandatory walking, object inspection or second camera destination.",
+    "hypothesis": "The simultaneous table-setting and uncorrected introduction may establish the partner’s presence more immediately than prose. If it adds no presence, use text."
+  }
+}

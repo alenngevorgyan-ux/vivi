@@ -1,0 +1,34 @@
+{
+  "experienceId": "the-correction",
+  "revision": "gold-1",
+  "status": "fictional_editorial",
+  "authorHandle": "Fictional office narrator",
+  "act": "I said, “I built the forecast, and I can explain the revision.” My voice shook.",
+  "why": "I could accept not being the presenter. I couldn’t accept watching my work become hers in the board proposal.",
+  "aftermath": "Mira did not look at me. After the meeting she said I had embarrassed her. I kept the contract, but she stopped inviting me to preparation meetings. A month later, the director asked me to present the next update. I still don’t know whether speaking helped my contract or nearly cost it.",
+  "deliberatelyWithheld": "The content of the recommendation, the director’s private view, and Mira’s motive are not disclosed. The account does not establish why the contract was retained.",
+  "choreography": {
+    "finalPlayerPoseByOption": {
+      "correct_public": "Hero speaking, summary still owned and held; other bodies unchanged.",
+      "request_private": "Hero oriented to director; paper retained.",
+      "pass_question": "Hero seated or standing as chosen, paper held, mouth/hand neutral."
+    },
+    "heldVisualTrace": "The edge of the named summary stays in the lower frame as the public display softens into a held illustration. The room is not redrawn to show the author’s later outcome.",
+    "holdSeconds": [
+      0.6,
+      1.2
+    ],
+    "holdSkippable": true,
+    "camera": "Stop following; keep selected final relation/prop frame. Cut to paper if reduced motion; no orbit or NPC reaction insert.",
+    "sound": "Neutral bed fades under editorial transition, not as a factual silence. No applause, gasp, music sting, synthetic author voice or replayed quote.",
+    "transition": "Carry motif into warm paper margin. Persistent fictional label; bridge: “That is where your version stops. Here is what I did.”",
+    "firstAuthorLine": "I said, “I built the forecast, and I can explain the revision.” My voice shook.",
+    "actEntry": "Automatic after enactment receipt or visual skip, then hold/bridge; never require another choice.",
+    "whyEntry": "Reader Continue / scroll; no timed disclosure.",
+    "aftermathEntry": "Reader Continue / scroll after why. Missing fields would be absent, never synthesized.",
+    "socialAvailable": "Only after aftermath is presented, or reader explicitly chooses Skip the rest of the account. Skipping is logged as skipped, not read.",
+    "continuation": "Primary: Open another fictional story. Secondary: I have a related story (private unsent draft only). No public counts or fake replies.",
+    "failure": "Keep accepted act; Retry author account / exit. No re-commit, substitute outcome or wrong-option inference."
+  },
+  "authorOption": "correct_public"
+}
