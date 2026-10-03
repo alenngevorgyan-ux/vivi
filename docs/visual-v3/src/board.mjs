@@ -3,6 +3,7 @@ import { C, defs } from './kit.mjs';
 import { render } from './render.mjs';
 
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// Historical optional Armenian fallback below is inert for current EN/RU board text, not a required font or HY localization task.
 const FAM = { serif: "Newsreader, 'Noto Serif Armenian', Georgia, serif", sans: "Inter, sans-serif", mono: "'IBM Plex Mono', monospace" };
 
 export function T(x, y, str, { size = 15, fam = 'sans', weight = 400, fill = C.text, anchor = 'start', style = 'normal', ls = 0, op = 1 } = {}) {

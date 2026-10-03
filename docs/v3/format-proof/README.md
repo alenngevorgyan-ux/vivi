@@ -1,6 +1,8 @@
 # VIVI V3 — Phase 0 gold standard pack
 
-Planning/specification deliverable · 2026-10-03 · parent planning commit `d035b4a4e8831a8dc687576d1f678e26d1ff72f9` · branch `prep/vivi-v3-format-proof`.
+Original planning/specification deliverable · 2026-10-03 · parent planning commit `d035b4a4e8831a8dc687576d1f678e26d1ff72f9` · branch `prep/vivi-v3-format-proof`. Imported intact from final `028e400fb78d888036a5e184a8060200e63a5a0b`; integration reconciliation edits only operational scope/presentation notes. Original source and all nine JSON blobs remain unchanged.
+
+Current authority: [Integration baseline](../../VIVI_V3_INTEGRATION_BASELINE.md). V3 requires EN/RU; HY is future localization only. Format Proof is **COMPLETE AS A SPEC PACK**; prototype/human/product Phase 0 remains pending. Remembered Room is provisional pending explicit visual approval, not a competing truth specification.
 
 **Every account in this pack is FICTIONAL EDITORIAL TEST MATERIAL. None is a real user submission, an observed participant result, or evidence that the product works.** The fictional label must appear in the feed/hook, entry, readable mode, reveal and any research stimulus. The first-person author is an editorial character, not a fabricated account holder or testimonial.
 
@@ -38,11 +40,11 @@ One explicit primary decision per attempt. Acceptance freezes NPC/causal progres
 
 ## Shared presentation and reveal contract
 
-Painted paper diorama, editorial frames, varied anonymous adult bodies, readable hero relation/prop at 390 CSS px. Kit geometry is Design’s authority; paths/camera bounds are derived by Foundation. No universal V2 horizon, procedural moral tint, random stare, soundtrack verdict, tiny figure maze or forced joystick. Build only the assets these stories need, with the master plan’s byte/decode and mobile acceptance targets.
+Provisional Remembered Room (pending explicit product-owner visual approval), editorial frames, varied anonymous adult bodies, readable hero relation/prop at 390 CSS px. Kit geometry is Design’s authority; paths/camera bounds are derived by Foundation. No universal V2 horizon, procedural moral tint, random stare, soundtrack verdict, tiny figure maze or forced joystick. Build only the assets these stories need, with the master plan’s byte/decode and mobile acceptance targets.
 
 Every event has `ambient`, `evidence_delivery`, or `causal` classification. No real timer or automatic act. Evidence and causal advancement pause during reading/selection/settings/modal/blur; ambient may continue neutrally where unobtrusive and stops on hidden/user pause. Quote receipts are one-shot; transcript reread is not a new utterance. Travel never spends decision time. A plateau is a supported held composition, not endless repetitive NPC activity.
 
-The hero act stops at its explicit frame. Hold its physical trace, stop camera follow, then carry one motif onto paper. The first author act appears automatically; why and aftermath are reader-paced. No authored aftermath is reenacted as the player’s consequence. No textarea or comparison before the account. After account presentation, offer one honest continuation: another fictional experience, with a secondary private unsent related-story draft. This pack contains no counts, replies or sharing service. Reduced motion/mute/readable modes preserve all facts, intent, boundary and account order without animation locks. EN is authored; RU/HY variants require fluent source/meaning review and font specimens before parity is claimed.
+The hero act stops at its explicit frame. Hold its physical trace, stop camera follow, then carry one motif onto paper. The first author act appears automatically; why and aftermath are reader-paced. No authored aftermath is reenacted as the player’s consequence. No textarea or comparison before the account. After account presentation, offer one honest continuation: another fictional experience, with a secondary private unsent related-story draft. This pack contains no counts, replies or sharing service. Reduced motion/mute/readable modes preserve all facts, intent, boundary and account order without animation locks. EN is authored; the required Russian variant needs fluent source/meaning review and font specimens before parity is claimed. HY requires no current V3 work.
 
 ## Amendments to master-plan examples
 
@@ -53,7 +55,7 @@ The hero act stops at its explicit frame. Hold its physical trace, stop camera f
 | Spare Key | Sister adult and in evening classes; own held phone; sister outside flat in building hallway; key use without asking explicitly confirmed; partner absent; sister supports a return inside to think; narrator actually returns; three initial acts feasible and unresolved | Avoids implying a minor, eviction or unsourced abandonment. Phone insert is not a fourth scene/third location. |
 | Spare Key account | Author agrees conditionally and tells partner before entry; why/aftermath/withheld limits are now complete explicit editorial source | The master-plan compound response is preserved. It is not forced into an immediate-invite option mapping. Missed bus stays reveal-only; argument is still unexplained. |
 
-The master plan’s X example calls the 75–110-second piece `situation` while AG calls it rich sequence; this fixture uses the requested **sequence** label with that same bounded length. Format ranges are stated expectations, not hard duration rules; no architecture rewrite is required. An adjacent actor visible through a doorway requires a location projection, not a duplicate actor; this follows the plan’s existing entity ownership rule. Foundation should record its exact supported adapter shape before integration.
+The original master-plan X example called the 75–110-second piece `situation` while AG called it rich sequence; this baseline reconciles X to the requested **sequence** label with that same bounded length. Format ranges are stated expectations, not hard duration rules; no architecture rewrite is required. An adjacent actor visible through a doorway requires a location projection, not a duplicate actor; this follows the plan’s existing entity ownership rule. Foundation should record its exact supported adapter shape before integration.
 
 ## Readiness and remaining decisions
 
@@ -61,7 +63,7 @@ Foundation can build input/focus, loader boundaries, a reducer, fact receipts, i
 
 Exact remaining product questions:
 
-- Which final visual material and locale scope should integration accept? Parallel Design commits `cb45606` / `02f4c6c` propose Remembered Room and EN/RU-only; the supplied master plan remains authoritative here. The [execution board](../../VIVI_V3_EXECUTION_BOARD.md) records this conflict and forbids the proposed V2-first implementation path from changing production behavior.
+- Does the product owner approve Remembered Room, and which final recipes/rig satisfy readability, visual truth and performance? Language scope is resolved to EN/RU; HY is deferred. V2-first modification is rejected. See the [baseline](../../VIVI_V3_INTEGRATION_BASELINE.md).
 - Does Correction’s hallway and deliberate return improve understanding/care over its equally edited two-frame control? If not, cut to a threshold insert or compressed version.
 - Does Introduction’s simultaneous partner table-setting add presence beyond excellent prose? If not, retain as text.
 - Does Spare Key’s return inside help distinguish consent from access and make the partner promise tangible? If not, use the threshold control.

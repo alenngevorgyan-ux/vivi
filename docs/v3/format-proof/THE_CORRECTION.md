@@ -396,7 +396,7 @@ Mira did not look at me. After the meeting she said I had embarrassed her. I kep
 
 ## O. Visual design brief and approval surface
 
-Painted paper diorama with editorial framing; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
+Provisional Remembered Room presentation (pending explicit product-owner visual approval), using the shared illustrated/editorial foundation; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
 
 **Composition:** Desk: display heading dominates hero’s sightline; summary is a carried edge, not a second task. Meeting: public display in back plane, Mira beside it, hero on table side and director reachable in hearing. Hallway: open jamb divides held summary from visible room. Return: matched table geometry, same actors; hero can sit or stand nearer director. At 390px use a desk insert and a threshold crop that preserves paper/jamb, never shrink the whole office.
 
@@ -412,7 +412,7 @@ Painted paper diorama with editorial framing; restrained adult figures, baked su
 
 **Forbidden inference-bearing decoration:** Night skyline, clock time, staring colleagues, Mira’s smirk, director sympathy, board approval, withheld recommendation letter.
 
-Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All four options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Review blind screenshots for unintended factual inferences before integration.
+Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All offered options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Attention islands, graphite periphery and paint-to-author-page may express this composition without adding facts; they are Design-owned, provisional and never alter receipts or stop frames. Review blind screenshots for unintended factual inferences before integration.
 
 ## P. Per-story human test and acceptance
 

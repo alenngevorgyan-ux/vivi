@@ -1,6 +1,6 @@
 # V3 format proof — human test protocol
 
-Formative protocol, not completed research · gold-1 · all three stimuli fictional editorial accounts. No recruitment, recordings or tests have been run by this task. The outcome is an iteration decision, not a population estimate or marketing claim.
+Formative protocol, not completed research · gold-1 · current V3 EN/RU only; HY is deferred future localization with no current evaluation requirement · all three stimuli fictional editorial accounts. No recruitment, recordings or tests have been run by this task. The outcome is an iteration decision, not a population estimate or marketing claim.
 
 ## What must be learned
 
@@ -16,7 +16,7 @@ The central question is whether spatial Vivi helps someone understand a particul
 
 Use approved visual contact sheets and a clickable prototype first; then the actual V3 candidate for behavioral/control evidence. Report the fidelity used. Paper/click prototypes cannot pass locomotion/focus/device gates. Freeze source, copy, decision revision, account and experimental variant for a round. The compressed and text controls in each story are binding, not something a researcher casually rewrites.
 
-Two reviewed rounds of 8–12 target players each, as in the master plan, with phone and keyboard participants, EN/RU/HY fluency and at least one assistive-technology participant across rounds. Fluent-reviewed RU/HY stimuli must exist before assigning those variants; do not auto-translate quotes during playback or claim language parity from English testing. Include people unfamiliar with the project and sources. Recruit adults; screen prior reveal familiarity without supplying outcome. Obtain participation/recording consent, intended retention and withdrawal path separately. A participant can decline reflection/recording or leave without explanation.
+Two reviewed rounds of 8–12 target players each, as in the master plan, with phone and keyboard participants, EN/RU fluency and at least one assistive-technology participant across rounds. Fluent-reviewed EN/RU stimuli must exist before assigning those variants; do not auto-translate quotes during playback or claim language parity from English testing. Include people unfamiliar with the project and sources. Recruit adults; screen prior reveal familiarity without supplying outcome. Obtain participation/recording consent, intended retention and withdrawal path separately. A participant can decline reflection/recording or leave without explanation.
 
 Three first-exposure conditions: rich spatial, compressed spatial (Correction/Spare Key only), and text-only. Introduction compares its single tableau to text. With a small sample, do not pretend to achieve powered between-group significance. Use a balanced assignment sheet: each person sees three different stories, each in a different condition where possible, in rotated order. No participant sees the same story twice before its first-exposure results are locked. Across rounds balance story×condition×device as closely as possible and publish the achieved cell counts, including empty cells. If a control cell is too sparse for a decision, recruit a focused follow-up; do not infer rich superiority from a pooled pass rate.
 

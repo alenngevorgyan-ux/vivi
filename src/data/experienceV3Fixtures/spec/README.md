@@ -1,6 +1,8 @@
 # Isolated V3 gold specifications
 
-Planning only. Nothing here is imported, compiled or registered by V1/V2 or a production route. JSON avoids competing TypeScript/runtime contracts while another agent owns Foundation. The directory follows the V3 plan’s fixture ownership; `spec/` prevents accidental assumption that these are playable records.
+Planning only. Current operational authority: [Integration baseline](../../../../docs/VIVI_V3_INTEGRATION_BASELINE.md). Current V3 languages are EN/RU only; HY is deferred future localization. Original gold-1 source and all nine JSON files are preserved byte-for-byte from `028e400fb78d888036a5e184a8060200e63a5a0b`. Russian approved content is still required before claiming parity; it is not supplied by the English-only JSON.
+
+ Nothing here is imported, compiled or registered by V1/V2 or a production route. JSON avoids competing TypeScript/runtime contracts while another agent owns Foundation. The directory follows the V3 plan’s fixture ownership; `spec/` prevents accidental assumption that these are playable records.
 
 Each experience has three physically separate files:
 
@@ -36,3 +38,7 @@ All reference IDs are experience-scoped. There is no coordinate geometry, asset 
 Run `python3 src/data/experienceV3Fixtures/spec/validate.py` from the repository root. The audit checks exact excerpts/offsets/hashes, source/fact/entity/scene/event references, required knowledge, gate references, causal ordering, reversible portal counterparts, option limits and obvious reveal leakage. It is a planning-artifact audit only: it cannot prove entailment, visual honesty, control behavior or human care. No paid or network calls. No package/dependency changes.
 
 The pack’s [human README](../../../../docs/v3/format-proof/README.md), [research protocol](../../../../docs/v3/format-proof/HUMAN_TEST_PROTOCOL.md) and [red-team report](../../../../reports/v3-format-proof-red-team.md) supply the evaluation that JSON validity cannot.
+
+## Provisional visual-label interpretation
+
+The unchanged semantic JSON `presentation.style = paper_diorama` is the original gold-1 **planning-family label**, not a final art approval, Foundation enum or demand for a different renderer. Its illustrated layers/editorial framing can carry Design’s provisional Remembered Room attention islands, graphite periphery and author-page reveal. Foundation chooses the executable vocabulary in one complete contract revision; a future adapter maps this inert label without source edits or story-ID branches. Gold stop frames, ownership and fact receipts govern either presentation. Visual motion cannot mark evidence read, create NPC behavior or alter the boundary. No JSON conversion/schema implementation is done in this branch.

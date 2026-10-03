@@ -2,32 +2,34 @@
 
 2026-10-03 · authority: [V3 master plan](VIVI_EXPERIENCE_V3_MASTER_PLAN.md), planning commit `d035b4a4e8831a8dc687576d1f678e26d1ff72f9`.
 
-This is a coordination board, not authorization to deploy, use paid models, modify main or change V1/V2 production behavior. This task owns C on `prep/vivi-v3-format-proof`. The implementation agent owns A; Claude Design owns B. D–H owners below are role assignments to establish, not claims that agents are running or have completed work. Every workstream uses its own branch/worktree and named file owner. Multiple agents must not switch a shared worktree branch or edit the same module concurrently.
+This is a coordination board, not authorization to deploy, use paid models, modify main or change V1/V2 production behavior. Format Proof C was completed on `prep/vivi-v3-format-proof` at `028e400fb78d888036a5e184a8060200e63a5a0b`; this reconciliation owns docs/spec baseline on `planning/vivi-v3-integration-readiness`. The [integration baseline](VIVI_V3_INTEGRATION_BASELINE.md) is the current operational index; EN/RU is required, HY future only. The implementation agent owns A; Claude Design owns B. D–H owners below are role assignments to establish, not claims that agents are running or have completed work. Every workstream uses its own branch/worktree and named file owner. Multiple agents must not switch a shared worktree branch or edit the same module concurrently.
 
 ## Current gate state
 
 | Stream | Owner | State at this handoff | Next dependency / evidence |
 |---|---|---|---|
-| A — Foundation | Implementation agent | Parallel work reported by user; unverified here | Freeze authoritative contracts and demonstrate one input→accept→boundary path |
-| B — Visual language | Claude Design | Ready for parallel asset/prototype work; not performed here | Gold-1 source/staging briefs plus first geometry handshake with A |
-| C — Format proof | This Codex task | Source/spec pack authored and offline-audited; prototype/human gates pending | Editorial review + B contact sheets + D clickable/working slice |
+| A — Foundation | Implementation agent | **IN PROGRESS / UNVERIFIED**; user reports implementation; no pushed origin Foundation head at read-only check | Freeze authoritative contracts and demonstrate one input→accept→boundary path |
+| B — Visual language | Claude Design | **IN PROGRESS** by user report; visible visual doc/boards are proposals; direction **PROVISIONAL** | Gold-1 source/staging briefs plus first geometry handshake with A |
+| C — Format proof | Format Proof Codex/editorial | **COMPLETE AS A SPEC PACK** and imported; prototype/human/product Phase 0 still pending | Editorial review + B contact sheets + D clickable/working slice |
 | D — First sequence | Integration engineer, coordinate with A | Ready to plan; implementation pending | A core, C gold-1, B approved office frames |
 | E — QA / red team | Independent QA/research owner | Protocol and self-review available; independent evidence pending | A/D candidate and B fidelity; real devices/participants |
 | F — Author flow | Authoring engineer + editorial reviewer | Deferred until first coherent slice | Stable A contracts and C/E evidence review model |
-| G — General generation | Semantic-generation engineer | **BLOCKED** | All three format slices through two reviewed iterations; A–F gates/author corrections |
+| G — General generation | Semantic-generation engineer | **HARD BLOCKED** | All three format slices through two reviewed iterations; A–F gates/author corrections |
 | H — Social | Service/product owner | Later; independently scoped | Proven format, identity/privacy/moderation specification and explicit release authorization |
 
 C is ready as source material, not a declaration that Phase 0 fully passed. The master plan also requires approved storyboard/contact sheet and clickable interaction/reveal prototype. Human proof remains evidence to collect, not a planning score.
 
-## Parallel planning changes observed during handoff
+## Reconciled status and visible evidence
 
-The shared checkout was switched externally to planning commit `02f4c6c1691269c4dab4b4bf3be7d6a5663915a6` while C drafted. C caught this before any commit, returned to the authorized prep branch at the supplied parent, and did not merge/cherry-pick those changes. A preceding Design commit `cb45606` adds `docs/VIVI_VISUAL_LANGUAGE_V3.md` and boards; `02f4c6c` narrows that document to EN/RU and defers HY. Those are parallel proposals, not changes to C’s cited authoritative master-plan commit.
+Planning/Design documentation is visible at `02f4c6c1691269c4dab4b4bf3be7d6a5663915a6` with earlier boards/bible commit `cb45606`. Format Proof is visibly pushed at `028e400fb78d888036a5e184a8060200e63a5a0b` and imported as complete commits. A read-only `git ls-remote origin refs/heads/implementation/vivi-v3-foundation` returned no head at this review; a local separate Foundation worktree exists at the planning baseline, which does not prove implementation completion. Do not inspect or merge its uncommitted work, claim its tests pass, or block Design sketching on a nonexistent pushed contract.
 
-Three exact integration questions need product/architecture reconciliation: the Design document proposes “The Remembered Room” in place of master-plan section L; it defers Armenian while the supplied master plan expects reviewed RU/EN/HY; and its first visual slice proposes changes on an existing V2 fixture while this task explicitly forbids modifying V1/V2 production behavior. C retains the supplied master plan’s material and language targets as planning requirements, with English-only authored gold fixtures and no claim of translation parity. B can explore its proposed visual treatment in an isolated V3 prototype. No Design proposal authorizes altering V2 or expanding C’s fixture stories. Resolve material/localization scope on the integration branch before acceptance, and keep the V2 path immutable.
+User decisions resolve language to **EN/RU required; HY deferred**. Current V3 requires no Armenian fixture, typography, screenshot, QA, human or generator evaluation; existing V1/V2 support remains untouched. Remembered Room is **provisional pending explicit product-owner visual approval**, owned by Design. A can expose generic attention/layer/phase/entity hooks without fixing that art. Visual V2-first replacement is rejected: all new implementation/prototypes stay isolated V3. The gold-1 source and nine JSON files are preserved; their `paper_diorama` planning label is not approval or an executable enum.
+
+Foundation and Design can continue independently against the [semantic/presentation handshake and assembly plan](VIVI_V3_INTEGRATION_BASELINE.md); full contract agreement and source-safe geometry are required before Integration binds them. Next Codex review is triggered by a **pushed complete Foundation contract/minimal-path revision plus Design’s versioned geometry/phase mapping**, or sooner by a source/boundary conflict. Human/product evidence remains separately pending.
 
 ## Ownership rules and handshakes
 
-The first integration meeting freezes: public semantic/manifest versus private source/reveal boundaries; gold-1 ID map; finite roles/assets/state keys; adjacent actor projection; source quote/receipt handling; explicit decision phase; breakpoint between observation and acceptance; and kit anchor/portal geometry. C’s JSON is an isolated planning envelope. **A alone** defines executable runtime schemas and adapters. Do not copy planning prose into unrestricted runtime expressions or create a second types.ts in the fixture directory.
+The first integration meeting freezes: public semantic/manifest versus private source/reveal boundaries; gold-1 ID map; finite roles/assets/state keys; adjacent actor projection; source quote/receipt handling; explicit decision phase; breakpoint between observation and acceptance; and kit anchor/portal geometry. C’s JSON is an isolated planning envelope. **A alone** defines executable runtime schemas and normalization interfaces; D owns the later gold-fixture adapter against A’s complete versioned contract. Do not copy planning prose into unrestricted runtime expressions or create a second types.ts in the fixture directory.
 
 A publishes one contract/loader revision and a minimal reviewed fixture adaptation shape. B publishes one geometry manifest per kit (floor, collision, anchors, portal sightlines, occlusion and mobile safe frame); A derives navigation/camera bounds from that source. C publishes any source/fact revision via review; B cannot invent affect or factual props to solve a composition. E can block a candidate; it does not quietly rewrite source or runtime while testing. F owns preview corrections, not semantic generation. D adapts fixtures and integrates these outputs without special branches keyed by story ID.
 
@@ -53,11 +55,11 @@ Escalate a file collision by naming the file and intended change in the board/PR
 
 **Owner:** Claude Design. **Inputs:** V3 L–S/AC, C source ledgers/visual briefs/staging approvals, A’s interface and B/A geometry agreement; V2 visual/cinematic code only as legacy reference.
 
-**Exact outputs:** mobile/desktop contact sheets for every gold scene; office desk/meeting/hallway and domestic living/threshold/dining kit layers; hero display/summary/phone/bag-coat components; anonymous adult silhouette/pose sheets; equal-dignity act poses and reduced-motion stills; camera/transition/reveal recipes; practical light/audio/mute equivalents; source/license/export metadata; kit anchors/occlusion/navigation polygons and decoded-byte measurements; EN/RU/HY type specimens after font/license review. Do not generate bespoke art in playback. Asset tools/vendor budget require their own established authorization; this task authorizes no paid model use.
+**Exact outputs:** mobile/desktop contact sheets for every gold scene; office desk/meeting/hallway and domestic living/threshold/dining kit layers; hero display/summary/phone/bag-coat components; anonymous adult silhouette/pose sheets; equal-dignity act poses and reduced-motion stills; camera/transition/reveal recipes; practical light/audio/mute equivalents; source/license/export metadata; kit anchors/occlusion/navigation polygons and decoded-byte measurements; EN/RU type specimens after font/license review. Do not generate bespoke art in playback. Asset tools/vendor budget require their own established authorization; this task authorizes no paid model use. Asset recipe/clip counts are provisional inventories; build only what gold-slice integration needs, without adding board-reference stories.
 
 **Likely owned files:** `src/assets/v3/`; `art/source/`; composition specs/contact sheets under a new `art/v3/` or Design-owned reports directory; `src/engine/v3/presentation/` only once A supplies interfaces and explicitly hands presentation implementation to B; view-only `SceneViewport`/`AuthorReveal` styling by agreed handoff. Source/private fixtures remain C-owned.
 
-**Dependencies:** can start sketches/contact sheets directly from gold-1 now. Integration waits for A’s geometry/recipe vocabulary, then D renderer binding. RU/HY final copy waits on fluent editorial review, not mechanical font substitution.
+**Dependencies:** can start sketches/contact sheets directly from gold-1 now. Integration waits for A’s geometry/recipe vocabulary, then D renderer binding. EN/RU final copy waits on fluent editorial review, not mechanical font substitution.
 
 **Acceptance:** readable 390px hero relation/prop and desktop frame; blind screenshot audit does not imply unsourced guilt, danger, wealth, identity, hostility or deadline; no visually rewarded option. Bodies contact floors/props, no duplicate adjacent actor, approved crop/zoom/high contrast/200% text; reduced motion preserves meaning. Master-plan asset/decode targets measured on named profiles. Reveal preserves hero motif, exposes author act before reflection, and uses no invented response shot. Contact sheet approved by editorial/source reviewer before expensive asset expansion.
 
@@ -67,17 +69,17 @@ Escalate a file collision by naming the file and intended change in the board/PR
 
 ## C — FORMAT PROOF
 
-**Owner:** this Codex task. **Inputs:** complete master plan, product/experience/visual/cinematic/world bibles and V2 QA; source is new clearly labeled editorial fiction. No real author confirmation or participant evidence is claimed.
+**Owner:** Format Proof Codex/editorial; current task reconciles specifications only. **Inputs:** complete master plan, product/experience/visual/cinematic/world bibles and V2 QA; source is new clearly labeled editorial fiction. No real author confirmation or participant evidence is claimed.
 
 **Exact outputs:** A–N complete source packs for three formats, exact private ledgers, tension/arc/scene/persistence/time/observation/preparation/act/boundary/reveal specifications, visual briefs/build traces, shorter/text controls, isolated JSON planning specs and offline audit, research protocol, execution board and destructive review.
 
-**Owned files:** `docs/v3/format-proof/`; `src/data/experienceV3Fixtures/spec/`; `reports/v3-format-proof-red-team.md`; this board. `docs/VIVI_EXPERIENCE_V3_MASTER_PLAN.md` remains architecture authority and is edited only for a genuine reviewed requirement contradiction, none needed in this pass.
+**Owned files:** `docs/v3/format-proof/`; `src/data/experienceV3Fixtures/spec/`; `reports/v3-format-proof-red-team.md`; this board. `docs/VIVI_EXPERIENCE_V3_MASTER_PLAN.md` remains architecture authority and was left unchanged in the original Format Proof pass. This readiness reconciliation makes only the explicitly authorized language/visual-status/precedence and genuine cross-document consistency corrections; no runtime design is duplicated.
 
 **Dependencies:** no runtime dependency for this deliverable. Full Phase 0 exit waits for B contact sheet/prototype, D usable interaction/reveal and E/product/editorial review. C answers source questions by explicit revision, never an informal runtime invention.
 
 **Acceptance:** every claim/event/entity maps to final source or distinct approved non-informational staging; all unknowns remain unknown; three decision units distinct and comprehensible; no private material in semantics; every scene has removal rationale and control; every act has feasible initiation, confirmation and stop frame; offline audit passes; human evidence does not yet exist. Product/editorial reviewers must later approve motives and storyboard before declaring proof.
 
-**Integration order:** this branch is pushed as a planning/spec reference, then reviewed/cherry-picked into the V3 integration branch independently of A runtime. Do not wire C files into production while merging the docs.
+**Integration order:** the complete Format Proof pack is imported into this readiness baseline; merge the readiness baseline into eventual `integration/vivi-v3-first-slice`, then complete A revisions and Design outputs by the baseline’s branch sequence. Do not wire C files into production while merging the docs.
 
 **Other agents must NOT edit simultaneously:** source packs, private ledgers/reveal, gold semantic specs/validator, test stimulus text or red-team report. Request amendments with fact/scene IDs and reason. C must not add runtime contracts, implementation tests/dependencies, live routes or alter B assets.
 

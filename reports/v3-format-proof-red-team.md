@@ -1,6 +1,6 @@
 # V3 format proof — destructive editorial review
 
-2026-10-03 · gold-1 · self-review by the format-proof author, **not independent QA or participant research**. Authority: V3 master plan at `d035b4a4e8831a8dc687576d1f678e26d1ff72f9`. All stories fictional editorial material. No runtime, paid calls, main merge or deployment.
+2026-10-03 · gold-1 · original self-review from `028e400fb78d888036a5e184a8060200e63a5a0b`, with current scope addendum; self-review by the format-proof author, **not independent QA or participant research**. Authority: V3 master plan at `d035b4a4e8831a8dc687576d1f678e26d1ff72f9`. All stories fictional editorial material. No runtime, paid calls, main merge or deployment.
 
 Review questions for every retained unit: is it actually supported; does it add understanding; is it busywork; could it imply a false fact; is the choice difficult in a human rather than semantic sense; would a normal reader care; can they explain each attraction/cost; does author disclosure pay off; could excellent prose do as well; and are rooms present only because V3 can support them?
 
@@ -174,7 +174,7 @@ Repeated known-versus-unknown/fiction-versus-user/act-versus-response misunderst
 
 ## Parallel handoff conflict
 
-The shared checkout changed to the planning branch during drafting, with Design commits `cb45606` / `02f4c6c`. C switched back before committing; no changes were committed by C to planning. The new visual document proposes a different material, EN/RU-only scope and a V2-first visual slice. The execution board records these as unresolved integration proposals: the supplied master plan remains authority for this pack; production V1/V2 stays immutable. No cherry-pick, main change or Design-file rewrite was made.
+Historical note: the Format Proof checkout changed to the planning branch during drafting, with Design commits `cb45606` / `02f4c6c`. C returned to prep before committing. Those proposals were unresolved at that handoff. **Current integration resolution:** EN/RU is locked and HY deferred; Remembered Room is provisional pending explicit visual approval; V2-first production modification is rejected. The original source and JSON remain unchanged. The [integration baseline](../docs/VIVI_V3_INTEGRATION_BASELINE.md) now owns operational precedence; the original source-based destructive findings and product hypotheses above still stand.
 
 ## Verification and practical limits
 

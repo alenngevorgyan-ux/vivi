@@ -2,6 +2,8 @@
 
 Planning specification · 2026-10-03 · No V3 implementation authorized by this document.
 
+Current scope reconciliation: [Integration baseline](VIVI_V3_INTEGRATION_BASELINE.md) is the operational authority index. V3 currently requires **EN/RU only**; HY is future localization, with existing V1/V2 support untouched. **The Remembered Room is the provisional V3 visual direction, pending explicit product-owner visual approval**; section L’s earlier material decision is historical. Executable contracts belong exclusively to Foundation. Final gold story source/IDs supersede illustrative X/Y/AG examples for integration. See the [first-slice acceptance matrix](v3/V3_FIRST_SLICE_ACCEPTANCE.md).
+
 ## Decision
 
 Build **authored situation sequences**: a short arc of illustrated scenes, with bounded movement inside selected scenes, reversible preparation, a single primary consequential act, and a deliberate handoff to the author's account. Presentation can flow; consequential time is evidence-gated. A sequence may contain one scene. More scenes are justified only when they change knowledge, social position, availability, or the meaning of acting.
@@ -133,7 +135,7 @@ On leaving the surface, focus moving to a DOM control, window blur, hidden docum
 
 Prevent scrolling **only** for owned movement keys on the focused world surface, and handled custom widget navigation. Prevent default synchronously once eligibility is known. Do not intercept browser modifiers, shortcuts, text composition, contenteditable, input/select/textarea, links or buttons; check `event.composedPath()` and `isComposing`. A disabled movement phase still consumes movement keys while the world surface owns them, emits a gentle state hint once, and offers focusable skip/pause; it must not suddenly start scrolling. Outside that scope browser behavior remains native.
 
-Arrows and physical WASD both exist. Movement maps physical `code` values so RU/HY layouts work; arrows are the universally labeled default. Expose remapping and a layout-appropriate help label. For text commands use logical `key`, not physical location. [MDN documents the physical-key distinction](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code).
+Arrows and physical WASD both exist. Movement maps physical `code` values so EN/RU layouts work; arrows are the universally labeled default. Expose remapping and a layout-appropriate help label. For text commands use logical `key`, not physical location. [MDN documents the physical-key distinction](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code).
 
 Enter never means “commit whatever happens to be nearest.” World Enter opens a contextual action, including the action list if no target is selected. Native Enter selects an act, then a separate release and subsequent activation confirms. Reject repeats and duplicate synthesized activations; confirmation cannot open and commit from one held key. A direct single-observation target may open its observation; an act always names its physical effect before confirmation.
 
@@ -147,7 +149,7 @@ Pointer target activation, keyboard selection and action-list activation all dis
 
 ### Control acceptance
 
-Browser tests must assert unchanged `scrollY` for every owned arrow; normal scrolling outside ownership; no behind-dialog movement; one act per confirmation; normal RU/HY typing and IME; native Tab escape; focus restoration; held-key reset on blur; pointer scroll does not become walking; equivalent pointer/keyboard/touch event traces. These are release blockers, not optional polish.
+Browser tests must assert unchanged `scrollY` for every owned arrow; normal scrolling outside ownership; no behind-dialog movement; one act per confirmation; normal EN/RU typing and IME; native Tab escape; focus restoration; held-key reset on blur; pointer scroll does not become walking; equivalent pointer/keyboard/touch event traces. These are release blockers, not optional polish.
 
 ## E. Multi-scene / multi-location runtime
 
@@ -202,6 +204,8 @@ Presence criterion: a player can alter attention or position in a way that chang
 
 ## H. Narrative compiler V3
 
+Future semantic generation design only: current general generation is HARD BLOCKED by the [baseline](VIVI_V3_INTEGRATION_BASELINE.md). Hand-authored gold adaptation through Foundation’s ordinary deterministic path is the first implementation target; no provider or paid benchmark is authorized here.
+
 Keep one server entrypoint and one bounded semantic call plus at most one repair. Replace the model-facing V1 tuple contract with named, strict V3 semantic records. Compression can be a stored encoding later; do not ask a small model to encode causal structure in obscure positional tuples.
 
 Pipeline:
@@ -235,7 +239,7 @@ Model can propose named scene boundaries and arrangement of evidence. Engine dec
 | Illustrated memory | Reader-paced | 1–6 framed memories | Strong account, no viable player decision or no safe counterfactual boundary |
 | Text story | Reader-paced | Editorial text | Spatialization adds little, source is unclear, or assets/geography do not fit |
 
-These are expectations, never countdowns. Estimate from locale-specific readable text, semantic event count, intended traversal and held shots, then validate with players. A long text need not produce many rooms. A 20-second story is dense if it gives a relationship, a stake and an act; it is thin if it supplies only a prompt.
+These are expectations, never countdowns. The hand-authored Correction is a bounded 75–110-second `sequence` with four views; its approved format label does not require stretching it to two minutes. Estimate from locale-specific readable text, semantic event count, intended traversal and held shots, then validate with players. A long text need not produce many rooms. A 20-second story is dense if it gives a relationship, a stake and an act; it is thin if it supplies only a prompt.
 
 Routing priority: safety/truth completeness → meaningful decision → evidence density → spatial benefit → supported kits → duration. Author may choose a shorter non-playable format. Do not pressure authors to add drama to qualify. Keep one clarification at a time, with at most two optional clarification cycles per draft before offering memory/text. Lack of author disclosure can be valid: label withheld truth and do not sell an “actual choice” climax that cannot be delivered.
 
@@ -267,7 +271,7 @@ Design the ending as an encounter, with these sequentially paced layers:
 
 1. **My act:** body performs exactly the named action. Concrete verb and target; no invented answer. Minimal caption remains available.
 2. **A held trace:** camera holds the place/body/hero object for approximately 0.6–1.2 s; skip always works. A held frame is a presentation beat, not a claim that real life fell silent.
-3. **Truth boundary:** a small author-voice bridge: “That is where your version stops. Here is what I did.” Prefer less copy where the transition is self-evident; disclose illustrative staging persistently.
+3. **Boundary disclosure:** the counterfactual has already stopped at the exact gold act frame; the following bridge cannot extend it. A small author-voice bridge: “That is where your version stops. Here is what I did.” Prefer less copy where the transition is self-evident; disclose illustrative staging persistently.
 4. **Author act:** same visual motif becomes an editorial author card or still. Author text is first-person and unchanged; identity/pseudonym and account status visible. No synthetic voice by default. Optional actual author recording with transcript can come later.
 5. **Why:** a separate natural continuation, not a questionnaire heading. Missing why stays missing. No model-written motive.
 6. **Aftermath:** appears on reader advance or scroll; absent if undisclosed. Never back-project it into the player's scene.
@@ -279,7 +283,7 @@ V3 local vertical slices use honest local first-choice and private note storage.
 
 Suggested future APIs: `POST /api/posts/:id/attempts`, `POST /api/attempts/:id/decision` with idempotency key, `GET /api/attempts/:id/reveal`, `GET /api/posts/:id/comparison`. The service validates manifest version, offered choice, availability policy and ownership; it cannot prove an untrusted client actually read the scene. Server release is spoiler gating, not secrecy once anyone can complete a post.
 
-Public explanation sharing is separate opt-in from a private note; offer no psychological diagnosis or morality ranking. Similar stories are editorial/tag-based recommendations from real posts; response/follow-up relations are explicit post IDs. Share previews exclude author outcome. No fabricated replies to seed empty state; small cohorts can show counts without percentages or public notes. Public social release is a later project with moderation, deletion and consent controls, not required for the four-week format test.
+Public explanation sharing is separate opt-in from a private note; offer no psychological diagnosis or morality ranking. Similar stories are editorial/tag-based recommendations from real posts; response/follow-up relations are explicit post IDs. Share previews exclude author outcome. No fabricated replies to seed empty state; small cohorts can show counts without percentages or public notes. Public social release is a later, currently blocked project with moderation, deletion and consent controls, not required for the four-week format test. Current fictional slices expose no counts or fictional community and offer another fictional story/private unsent draft only.
 
 ## L. Vivi visual language: choose a material, not an effect
 
@@ -291,7 +295,7 @@ Three coherent directions:
 | Painted paper diorama | Layered gouache-like surfaces, cut-paper depth, practical light, restrained adult figures | Requires controlled kit seams, texture scale and a good character library |
 | Graphic memory panels | Bold silhouettes, sequential framing, selective closeups, strong montage | Risks reading as a comic quiz; motion can clash with panel composition |
 
-Choose **painted paper diorama with editorial framing**. Its recognizable qualities are tangible surfaces, asymmetrical inhabited compositions, a restrained gesture vocabulary, one specific hero detail, and generous author typography. It supports stills, local movement and montage with the same materials. Memory is represented by framing and author voice, not automatic sepia. Do not imitate a named living artist.
+**Historical material recommendation:** painted paper diorama with editorial framing. **Current provisional direction:** [The Remembered Room](VIVI_VISUAL_LANGUAGE_V3.md), subject to explicit product-owner visual approval. The shared illustrated/editorial architecture below remains; no exact material, coat rule, mask algorithm or renderer is permanently approved. Its recognizable qualities are tangible surfaces, asymmetrical inhabited compositions, a restrained gesture vocabulary, one specific hero detail, and generous author typography. It supports stills, local movement and montage with the same materials. Memory is represented by framing and author voice, not automatic sepia. Do not imitate a named living artist.
 
 ### World art
 
@@ -309,7 +313,7 @@ Camera holds more than it moves. Cut for new information; follow only when trave
 
 ### UI and material brand
 
-Warm paper shell, dark ink, restrained rust accent for focus/brand, charcoal worlds with readable light. No glowing gold dots as the permanent meaning layer; focus uses a small edge/bracket plus a plain verb. Persistent pause/mute/exit and an action-list alternative remain accessible. Author voice uses generous editorial type; controls use clear sans. Texture is baked into assets at known scale; avoid full-screen animated noise and generalized blur. Scene framing and typography should be recognizable at thumbnail size without a logo.
+The earlier recommendation used a warm paper shell, dark ink and charcoal worlds. Remembered Room provisionally unifies world and author page through painted attention islands on paper and graphite periphery. Exact surface/mark choices belong to Design and remain pending approval; readable light and focus are required. No glowing gold dots as the permanent meaning layer; focus uses a small edge/bracket plus a plain verb. Persistent pause/mute/exit and an action-list alternative remain accessible. Author voice uses generous editorial type; controls use clear sans. Texture is baked into assets at known scale; avoid full-screen animated noise and generalized blur. Scene framing and typography should be recognizable at thumbnail size without a logo.
 
 Art acceptance: blind contact sheet can distinguish Vivi from a generic SVG scene; scenes remain readable without all narrative text; one hero prop and body relation are legible at 390 CSS px; screenshots have intentional compositions at both mobile and desktop; no option is visually privileged as “correct.” These need human review, not screenshot pixel thresholds alone.
 
@@ -332,9 +336,9 @@ recipes/{composition,camera,transition,motion}/...
 
 Source production files and licenses live outside the client bundle in `art/source/` with export recipes. Runtime assets have immutable IDs, hashes, dimensions, anchors, depth/occlusion metadata, accessibility descriptions, compatible light variants and licensing references. One authoritative spatial manifest drives art anchors, portals, collision and camera safe frames; do not hand-maintain geometry in three registries.
 
-First asset set: office desk/meeting/hallway (one building kit), apartment living/door threshold, a simple lift landing; six hero props; four body families with four facings; nine motion recipes; six room/door/device sounds; three transition recipes. Many story variants reuse these. Nonmatching stories route to memory/text; no forced “office” for a scene whose geography carries meaning.
+Earlier illustrative asset inventory (quantities provisional, not first-slice acceptance): office desk/meeting/hallway (one building kit), apartment living/door threshold, a simple lift landing; six hero props; four body families with four facings; nine motion recipes; six room/door/device sounds; three transition recipes. Current gold needs are office desk/meeting/hallway and domestic living/threshold/dining; Design owns the reviewed subset and exact recipe/rig counts. Lift inventory is a later reference, not extra gold scope. Many story variants may reuse these. Nonmatching stories route to memory/text; no forced “office” for a scene whose geography carries meaning.
 
-Hero props are separate inspectable plates with localized text rendered as real text. Draw a slide's surface/material once; populate a supported name/title in the runtime. Do not rasterize important RU/EN/HY text into art. Door frames contain swappable open/closed pieces; evidence-bearing slots cannot randomly vary. World variation is bounded: material and furniture variants from reviewed combinations, not arbitrary collage or broad random seed changes.
+Hero props are separate inspectable plates with localized text rendered as real text. Draw a slide's surface/material once; populate a supported name/title in the runtime. Do not rasterize important EN/RU text into art. Door frames contain swappable open/closed pieces; evidence-bearing slots cannot randomly vary. World variation is bounded: material and furniture variants from reviewed combinations, not arbitrary collage or broad random seed changes.
 
 Asset workflow: composition sketches → mobile contact sheet → geometry/anchor validation → art/gesture review → layer export → byte/decode budget → integration snapshot → player test. Kit manifests version separately from story schemas. Asset upgrades do not silently reframe published evidence: pin kits/recipes per manifest.
 
@@ -388,15 +392,17 @@ Narration is first-person context or labeled reconstructed staging. Separate aut
 
 Reveal preserves the scene's hero motif into author text; spacing and a held still do more than another panel animation. Publish/reflection controls enter only after the account. A readable view offers equivalent scene facts/actions without locomotion; it is part of the same manifest and state machine, not a separate simplified story.
 
-## S. Multilingual implications: RU / EN / HY
+## S. Current localization: EN / RU; HY future only
 
 Keep semantic IDs/verbs independent of prose. Explicit source language beats stem detection; mixed-language quotes carry their own tag. Pin source revisions and use Unicode-aware offsets; define offsets as code-point indices over NFC-normalized source, storing a hash and exact excerpt for verification. Preserve original source separately; normalization cannot silently rewrite the author's displayed words.
 
 UI dictionaries extend `copy.ts`; V3 has typed message keys and parameters. Scene text, quotes and author reveal each have locale variants with source provenance. Translations are opt-in compiled variants, not live model calls; never present a translated quotation as the exact original. Original author text remains accessible. A translation review verifies uncertainty, power dynamics and option meaning, not only grammar.
 
-Newsreader lacks Armenian according to current QA; do not continue accidental system fallback. Select a licensed Armenian serif/sans pair with comparable x-height and complete punctuation coverage through a mobile specimen review. Noto Serif Armenian / Noto Sans Armenian are candidates to verify during asset production, not an untested font requirement. No new package/font version is assumed here. Test `։`, `՞`, `՜`, Cyrillic quotes, long Russian labels, Armenian wrapping and mixed scripts. Minimum body 16 CSS px, flexible line height, no clipped 200% zoom, no font-dependent camera cue timings.
+Current EN/RU work requires reviewed Latin/Cyrillic specimens: Russian quotes and long labels, mixed EN/RU, body text at least 16 CSS px, 200% zoom without clipping, and no font-dependent cue timing. The font pairing and measurements belong to Design and require review on named devices.
 
-Required text is reader-paced in every language. Movement uses physical key positions plus arrows and remapping. Automated fact matching cannot reuse English/Russian stems as a truth oracle for Armenian. Recruit fluent reviewers for the three slices before claiming parity.
+HY is deferred future localization. Current V3 requires no Armenian fixtures, typography, screenshots, QA, human evaluation or generator evaluation. Retain locale-independent IDs, DOM text and Unicode-aware provenance for future extension; do not remove or change existing V1/V2 Armenian support. No Armenian font choice or specimen work is required now.
+
+Required text remains reader-paced in EN/RU. Movement uses physical key positions plus arrows/remapping; text/IME stays browser-owned. Recruit fluent EN/RU reviewers before claiming parity. English-authored gold specs do not themselves establish Russian coverage.
 
 ## T. Compatibility and migration
 
@@ -410,11 +416,11 @@ Migrate in order: versioned loader → V3 manifest validation → local player �
 
 ## U. Concrete TypeScript contract
 
-These are implementation contracts, not executable production code. A module may split files, but it must preserve the semantic/compiled/private boundary. Runtime JSON validation, caps and referenced-ID checks are mandatory; TypeScript alone validates nothing untrusted.
+This is an architectural contract sketch, not an executable or competing schema. Foundation owns the sole executable contracts/validators and publishes a complete versioned revision for integration. The capabilities/boundaries below remain requirements; illustrative field/style vocabulary can be normalized by Foundation with owner review. A module may split files, but it must preserve the semantic/compiled/private boundary. Runtime JSON validation, caps and referenced-ID checks are mandatory; TypeScript alone validates nothing untrusted.
 
 ```ts
 type Id = string;
-type Locale = 'en' | 'ru' | 'hy';
+type Locale = 'en' | 'ru'; // Current V3 scope; HY is future localization, not a launch requirement.
 type Format = 'micro' | 'situation' | 'sequence' | 'memory' | 'text';
 type FactId = Id;
 type SceneId = Id;
@@ -561,6 +567,8 @@ interface SemanticPlanV3 {
   primaryDecision: { id: DecisionId; scene: SceneId;
     minimumKnowledge: FactId[]; options: OpportunityId[] } | null;
   truthBoundary: { scene: SceneId; after: 'primary_act' | 'memory_end' };
+  // 'paper_diorama' is an illustrative legacy planning-family token, not final art approval.
+  // Foundation owns executable presentation vocabularies; Design owns recipes.
   presentation: { style: 'paper_diorama'; mood: 'intimate' | 'public' | 'uncertain';
     time: 'soft' | 'evidence_window' };
 }
@@ -745,6 +753,8 @@ Observation flow: target → availability → route/attention → deliver fact I
 
 ### Editorial source: “The correction”
 
+**Historical illustrative example:** integration uses the final source, ledger, required/optional facts and IDs in [The Correction gold pack](v3/format-proof/THE_CORRECTION.md). The older feasibility caveat below is resolved there; do not combine this example’s facts with gold-1.
+
 This is a **new fictional editorial test story**, not a real submission and not a retrofit of V2's office fixture. All details below belong to its explicit source. The first slice must carry the fictional label throughout.
 
 Pre-boundary account:
@@ -783,7 +793,7 @@ The player never sees the private material before acting. The source establishes
 | f8 | “Anything to add…” | Return decision beat |
 | r1–r4 | Actual speaking, response, why, aftermath | Reveal-only separate record |
 
-Semantic proposal: format `situation` (target 75–110 s); tension recognition/dignity versus career protection; three locations; four scenes `desk → meeting_before → hallway → meeting_question`. One primary decision; no reaction branches. Unknowns: whether Mira will credit later, how speaking will affect recommendation, director's understanding. “Mira is stealing intentionally” is not a fact.
+Semantic proposal: format `sequence` (target 75–110 s); tension recognition/dignity versus career protection; three locations; four scenes `desk → meeting_before → hallway → meeting_question`. One primary decision; no reaction branches. Unknowns: whether Mira will credit later, how speaking will affect recommendation, director's understanding. “Mira is stealing intentionally” is not a fact.
 
 Entities: hero `a_me`; lead `a_mira`; director `a_director`; summary `o_summary` owned by hero; slide `o_slide` in meeting; desk deck is an insert of that content with scene-specific view, not a duplicated physical slide object. The hero's summary persists across scenes. Kit includes only source-compatible background silhouettes; no invented judging crowd.
 
@@ -828,6 +838,8 @@ End-to-end acceptance: 4 scenes/3 locations, one persistent summary, stable meet
 
 ## Y. One dense 20-second micro moment
 
+**Historical illustrative example:** [The Introduction gold pack](v3/format-proof/THE_INTRODUCTION.md) owns the final complete source and separate act/why/aftermath for integration.
+
 New fictional editorial story, “The introduction.”
 
 Before: “At my first dinner with my partner's family, his mother introduced me to a neighbor as ‘his friend.’ We had been together for two years. My partner heard it and kept setting the table. His mother was paying our rent while I looked for work. The neighbor smiled at me and waited.”
@@ -870,7 +882,7 @@ Suggested harness locations: `scripts/test-experience-v3.ts` for pure invariants
 
 ## AB. Human evaluation: product success is separate
 
-Two rounds of 8–12 target players, with desktop keyboard and phone participants; recruit RU/EN/HY fluency and at least one assistive-technology user across rounds. This is formative research, not a statistically powered market claim. Avoid relying entirely on friends who know the source stories. Counterbalance story order and V2/V3 comparison; separate think-aloud control sessions from uninterrupted atmosphere sessions.
+Two rounds of 8–12 target players, with desktop keyboard and phone participants; recruit EN/RU fluency and at least one assistive-technology user across rounds. This is formative research, not a statistically powered market claim. Avoid relying entirely on friends who know the source stories. Counterbalance story order and V2/V3 comparison; separate think-aloud control sessions from uninterrupted atmosphere sessions.
 
 Before reveal, ask after play or at a natural boundary: “What matters to you here?”, “Why might someone take the other act?”, “What don't you know?” Do not prime them with the values rubric. Measure whether they can name both costs, whether they care what the author did, and what physical detail they remember. After reveal: “Did you learn something about the person?”, “Did anything feel invented?”, “Would you send this setup to someone or tell your own?” Record spontaneous comments and behavior, not only ratings.
 
@@ -932,9 +944,11 @@ Minimum acceptance: no arrows scroll while movement owns input; Enter always has
 
 ### First three hand-authored stories before general generation
 
+The following sketches are historical format examples. The [gold pack](v3/format-proof/README.md) owns final source/IDs/acts: Correction 4 views/3 locations; Introduction 1/1; Spare Key 3/2 with an in-scene phone insert. No extra phone scene or room is required.
+
 1. **The correction** (X): 75–110 s, 4 scenes/3 locations; dignity versus recommendation risk; persistence, return, quote/attention and public speaking.
 2. **The introduction** (Y): nominal 20 s, 1 scene; recognition versus material dependence; proves density and no-walking format, reveal rhythm and readable parity.
-3. **The spare key**: nominal 60–90 s, 3 scenes/2 locations plus a phone insert; loyalty versus a personal boundary. Fictional source: “My sister had a key to my apartment while I worked nights. We had agreed she would ask before coming over. At home I found her coat and school bag on the chair. Her message said, ‘I'm in the hallway. Please don't tell Mum I'm here.’ She had told me earlier that she'd argued with Mum, but not why. In the hall she said, ‘Can I stay tonight?’ I had promised my partner that we would have the flat to ourselves before an early medical appointment. I didn't know whether my sister had anywhere else safe to go.” Author decision and aftermath are separate hand-authored fields: author lets her stay, tells partner first, later learns she had missed the last bus; no claim that the mother's argument was abusive. Options require author-approved feasibility: invite her in now; ask what happened before agreeing; say tonight cannot work and offer to help find somewhere. Stop after the chosen intention, before sister's hypothetical answer. The story tests uncertain information, a real threshold, carried phone evidence, two people with different claims on the hero and an unknown that must remain unknown.
+3. **The spare key**: nominal 60–90 s, 3 scenes/2 locations with an in-scene phone insert; loyalty versus a personal boundary. Fictional source: “My sister had a key to my apartment while I worked nights. We had agreed she would ask before coming over. At home I found her coat and school bag on the chair. Her message said, ‘I'm in the hallway. Please don't tell Mum I'm here.’ She had told me earlier that she'd argued with Mum, but not why. In the hall she said, ‘Can I stay tonight?’ I had promised my partner that we would have the flat to ourselves before an early medical appointment. I didn't know whether my sister had anywhere else safe to go.” Author decision and aftermath are separate hand-authored fields: author lets her stay, tells partner first, later learns she had missed the last bus; no claim that the mother's argument was abusive. Options require author-approved feasibility: invite her in now; ask what happened before agreeing; say tonight cannot work and offer to help find somewhere. Stop after the chosen intention, before sister's hypothetical answer. The story tests uncertain information, a real threshold, carried phone evidence, two people with different claims on the hero and an unknown that must remain unknown.
 
 The third story's “ask what happened” is a consequential primary act in the launch slice, so it ends at the boundary; it does not generate an answer and then continue into another choice. If reviewers feel this boundary makes the story unsatisfying, revise the source/intake or make it a memory sequence, rather than fabricating the sister's answer. No real timer in any of the three. These are new editorial test accounts, labeled fictional; later validate format with consenting real contributors.
 
@@ -969,7 +983,7 @@ Assumption: two engineers, one illustrator/motion designer, one product/research
 
 **Week 2:** finish The correction across desk/meeting/hallway/return with persistent summary, required facts and soft time. Integrate first finished office layers, character poses, matched frames and sound/mute equivalent. Run first 8–12 participant round, source-inference audit and real-phone control checks. Friday gate: the complete sequence is coherent and demonstrably better than its shorter control on understanding/care; otherwise cut scenes and iterate.
 
-**Week 3:** finish The introduction and The spare key with the same compiler/controller; add domestic threshold kit and a minimum motion/sound vocabulary. Add readable mode, RU/EN/HY typography specimens, reduced motion and restored-focus tests. Build author scene/evidence preview with manual corrections and version pinning; keep semantic input hand-authored. Run second human round. Friday gate: three distinct formats, no new invention, reliable phone/keyboard paths, acceptable frames and author encounter.
+**Week 3:** finish The introduction and The spare key with the same compiler/controller; add domestic threshold kit and a minimum motion/sound vocabulary. Add readable mode, EN/RU typography specimens, reduced motion and restored-focus tests. Build author scene/evidence preview with manual corrections and version pinning; keep semantic input hand-authored. Run second human round. Friday gate: three distinct formats, no new invention, reliable phone/keyboard paths, acceptable frames and author encounter.
 
 **Week 4:** resolve observed failures; finalize asset byte/decode budgets, snapshot/resume, fallback and compatibility audit. Report controls, truth, product understanding/care, art and performance separately. If all three pass, wire a small development-only V3 semantic provider adapter and replay/holdout harness within the one-repair budget, leaving general production generation disabled pending live evidence. If they do not pass, spend the week on format revision, not provider plumbing. No paid/live benchmark without a separately established budget.
 

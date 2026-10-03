@@ -256,7 +256,7 @@ His mother changed the subject. On the way home he told me he had been afraid of
 
 ## O. Visual design brief and approval surface
 
-Painted paper diorama with editorial framing; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
+Provisional Remembered Room presentation (pending explicit product-owner visual approval), using the shared illustrated/editorial foundation; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
 
 **Composition:** One held relation frame: hero at near table edge; partner’s table-setting hand readable in midground; mother adjacent to neighbor, whose existing smile is minimal. Mobile composition keeps all four silhouettes and the table-setting relationship, with captions below. No required pan or walking. First cue shifts attention by text/facing composition rather than a dramatic push.
 
@@ -271,7 +271,7 @@ Painted paper diorama with editorial framing; restrained adult figures, baked su
 
 **Forbidden inference-bearing decoration:** Hostile mother, shamed partner posture, marriage or sexuality labels, explicit financial ultimatum, ticking dinner cue, accepting nod on silence.
 
-Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All four options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Review blind screenshots for unintended factual inferences before integration.
+Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All offered options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Attention islands, graphite periphery and paint-to-author-page may express this composition without adding facts; they are Design-owned, provisional and never alter receipts or stop frames. Review blind screenshots for unintended factual inferences before integration.
 
 ## P. Per-story human test and acceptance
 

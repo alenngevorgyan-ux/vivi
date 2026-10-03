@@ -363,7 +363,7 @@ Later that night, my sister told me she had missed the last bus. The argument wi
 
 ## O. Visual design brief and approval surface
 
-Painted paper diorama with editorial framing; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
+Provisional Remembered Room presentation (pending explicit product-owner visual approval), using the shared illustrated/editorial foundation; restrained adult figures, baked surface texture, contact shadows, useful negative space. This pack specifies visual relationships and semantic anchors, not final geometry, assets or a runtime recipe enum. Design owns the authoritative kit geometry; Foundation derives paths from it.
 
 **Composition:** Living: chair silhouettes visibly occupy a place while its person is absent; phone insert reveals only own received message. Hall: sister on hall floor, hero on living-side edge, jamb between. Return: matching chair arrangement, phone retained, open sightline toward waiting sister. A threshold-facing crop can show the sister through the door without changing her registered location. On mobile preserve chair-to-door relation using two composed crops, not extra scenes.
 
@@ -378,7 +378,7 @@ Painted paper diorama with editorial framing; restrained adult figures, baked su
 
 **Forbidden inference-bearing decoration:** Crying, bruises, threatening mother shadow, exhausted patient, partner text, phone call availability, keys to confiscate, locking door, emergency countdown.
 
-Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All four options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Review blind screenshots for unintended factual inferences before integration.
+Design handoff: landscape and 390px contact sheet for every scene, accessible still and high-contrast focus state, hero-prop insert, selected-act silhouette poses, reduced-motion boundary/author frame, and layer/anchor/decode budget plan. Evidence text must remain DOM text. All offered options/acts across stories need equal visual dignity. No source likeness, invented facial affect, medical diagnosis, wealth stereotype or asset ID that leaks reveal. Attention islands, graphite periphery and paint-to-author-page may express this composition without adding facts; they are Design-owned, provisional and never alter receipts or stop frames. Review blind screenshots for unintended factual inferences before integration.
 
 ## P. Per-story human test and acceptance
 
