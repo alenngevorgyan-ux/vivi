@@ -1,0 +1,1842 @@
+{
+ "revision": "correction-geo-r4",
+ "units": "metres",
+ "convention": {
+  "origin": "south-west inner floor corner of each location",
+  "axes": {
+   "x": "east",
+   "y": "up",
+   "z": "north"
+  },
+  "floor_plane": "y = 0",
+  "yaw": "rig yaw degrees: 0 = facing south (camera side), 90 = east, 180 = north, -90 = west"
+ },
+ "cast": {
+  "hero": "protagonist (player)",
+  "mira": "Mira, team lead",
+  "director": "director"
+ },
+ "locations": {
+  "correction.open_plan": {
+   "id": "correction.open_plan",
+   "bounds": {
+    "xMin": 0.0,
+    "xMax": 9.6,
+    "zMin": 0.0,
+    "zMax": 11.0,
+    "ceiling": 2.9
+   },
+   "walls": {
+    "north": {
+     "z": 11.0,
+     "kind": "window wall"
+    },
+    "east": {
+     "x": 9.6,
+     "kind": "plaster",
+     "opening": "P0"
+    }
+   },
+   "walkable": [
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      9.35,
+      0.25
+     ],
+     [
+      9.35,
+      10.75
+     ],
+     [
+      0.25,
+      10.75
+     ]
+    ]
+   ],
+   "obstacles": {
+    "hero_desk": {
+     "poly": [
+      [
+       4.05,
+       1.95
+      ],
+      [
+       5.75,
+       1.95
+      ],
+      [
+       5.75,
+       2.65
+      ],
+      [
+       4.05,
+       2.65
+      ]
+     ],
+     "height": 0.74
+    },
+    "hero_chair": {
+     "poly": [
+      [
+       4.91,
+       2.71
+      ],
+      [
+       5.39,
+       2.71
+      ],
+      [
+       5.39,
+       3.19
+      ],
+      [
+       4.91,
+       3.19
+      ]
+     ],
+     "height": 1.02
+    },
+    "desk_row_1a": {
+     "poly": [
+      [
+       0.6,
+       5.0
+      ],
+      [
+       2.2,
+       5.0
+      ],
+      [
+       2.2,
+       5.75
+      ],
+      [
+       0.6,
+       5.75
+      ]
+     ],
+     "height": 0.75
+    },
+    "desk_row_1b": {
+     "poly": [
+      [
+       3.0,
+       5.0
+      ],
+      [
+       4.6,
+       5.0
+      ],
+      [
+       4.6,
+       5.75
+      ],
+      [
+       3.0,
+       5.75
+      ]
+     ],
+     "height": 0.75
+    },
+    "desk_row_2a": {
+     "poly": [
+      [
+       0.6,
+       6.8
+      ],
+      [
+       2.2,
+       6.8
+      ],
+      [
+       2.2,
+       7.55
+      ],
+      [
+       0.6,
+       7.55
+      ]
+     ],
+     "height": 0.75
+    },
+    "desk_row_2b": {
+     "poly": [
+      [
+       3.0,
+       6.8
+      ],
+      [
+       4.6,
+       6.8
+      ],
+      [
+       4.6,
+       7.55
+      ],
+      [
+       3.0,
+       7.55
+      ]
+     ],
+     "height": 0.75
+    }
+   },
+   "occluders": {
+    "hero_desk": {
+     "poly": [
+      [
+       4.05,
+       1.95
+      ],
+      [
+       5.75,
+       1.95
+      ],
+      [
+       5.75,
+       2.65
+      ],
+      [
+       4.05,
+       2.65
+      ]
+     ],
+     "yMin": 0.0,
+     "yMax": 0.74
+    },
+    "monitor": {
+     "segment": [
+      [
+       4.29,
+       2.45
+      ],
+      [
+       5.01,
+       2.45
+      ]
+     ],
+     "yMin": 0.86,
+     "yMax": 1.27
+    }
+   },
+   "portals": {
+    "P0": {
+     "segment": [
+      [
+       9.6,
+       8.6
+      ],
+      [
+       9.6,
+       9.8
+      ]
+     ],
+     "height": 2.3,
+     "to": "correction.corridor",
+     "paired": "P0",
+     "jambs": [
+      [
+       9.6,
+       8.6
+      ],
+      [
+       9.6,
+       9.8
+      ]
+     ],
+     "threshold_inside": [
+      9.2,
+      9.2
+     ],
+     "threshold_outside": [
+      10.0,
+      9.2
+     ]
+    }
+   },
+   "display_surfaces": {
+    "monitor": {
+     "plane": "z=2.45",
+     "corners": [
+      [
+       4.29,
+       1.27,
+       2.45
+      ],
+      [
+       5.01,
+       1.27,
+       2.45
+      ],
+      [
+       5.01,
+       0.86,
+       2.45
+      ],
+      [
+       4.29,
+       0.86,
+       2.45
+      ]
+     ],
+     "live_text_slots": [
+      "display.title"
+     ],
+     "content": "deck thumbnail, neutral chart texture, no data"
+    }
+   },
+   "actors": {},
+   "hero_anchors": {
+    "at_desk": {
+     "root": [
+      5.97,
+      2.3
+     ],
+     "yaw": -80,
+     "head_yaw": -14,
+     "posture": "stand",
+     "note": "standing at the east end of hero_desk, turned toward the monitor; monitor unoccluded from both recipes"
+    },
+    "to_corridor": {
+     "root": [
+      9.2,
+      9.2
+     ],
+     "yaw": 90,
+     "posture": "stand"
+    }
+   },
+   "routes": {
+    "desk_to_P0": [
+     [
+      5.97,
+      2.3
+     ],
+     [
+      6.4,
+      3.4
+     ],
+     [
+      8.6,
+      8.6
+     ],
+     [
+      9.2,
+      9.2
+     ]
+    ]
+   },
+   "objects": {
+    "summary": {
+     "attached": "hero.hand_R.summary"
+    },
+    "mug": {
+     "pos": [
+      4.28,
+      0.74,
+      2.1
+     ]
+    },
+    "sheet": {
+     "pos": [
+      4.92,
+      0.745,
+      2.18
+     ],
+     "footprint": [
+      0.4,
+      0.28
+     ]
+    }
+   },
+   "attachments": [
+    "hero.hand_R.summary"
+   ],
+   "cameras": {
+    "desktop": {
+     "position": [
+      5.0,
+      1.55,
+      -1.0
+     ],
+     "look": "+z (north)",
+     "focal_px": 1220,
+     "frame": [
+      1920,
+      1080
+     ],
+     "principal": [
+      900,
+      400
+     ]
+    },
+    "portrait": {
+     "position": [
+      5.3,
+      1.55,
+      -0.8
+     ],
+     "look": "+z (north)",
+     "focal_px": 1150,
+     "frame": [
+      780,
+      1688
+     ],
+     "principal": [
+      390,
+      760
+     ]
+    }
+   },
+   "camera_safe": {
+    "desktop": {
+     "title_safe": [
+      96,
+      54,
+      1824,
+      1026
+     ],
+     "line_zone": [
+      0,
+      0,
+      1920,
+      130
+     ],
+     "intent_zone": [
+      0,
+      930,
+      1920,
+      1080
+     ]
+    },
+    "portrait": {
+     "title_safe": [
+      40,
+      60,
+      740,
+      1628
+     ],
+     "text_zone": [
+      0,
+      0,
+      780,
+      230
+     ],
+     "thumb_zone": [
+      0,
+      1180,
+      780,
+      1688
+     ]
+    }
+   }
+  },
+  "correction.corridor": {
+   "id": "correction.corridor",
+   "bounds": {
+    "xMin": 0.0,
+    "xMax": 3.3,
+    "zMin": 0.0,
+    "zMax": 15.0,
+    "ceiling": 2.7
+   },
+   "walls": {
+    "west": {
+     "x": 0.0,
+     "kind": "plaster",
+     "window_bay": {
+      "z": [
+       6.8,
+       9.2
+      ],
+      "y": [
+       0.75,
+       2.4
+      ]
+     }
+    },
+    "east": {
+     "x": 3.3,
+     "kind": "glass z 1.5–8.9 (meeting room), plaster elsewhere",
+     "glass_z": [
+      1.5,
+      8.9
+     ]
+    }
+   },
+   "walkable": [
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      3.05,
+      0.25
+     ],
+     [
+      3.05,
+      14.75
+     ],
+     [
+      0.25,
+      14.75
+     ]
+    ]
+   ],
+   "obstacles": {
+    "bench": {
+     "poly": [
+      [
+       0.0,
+       9.6
+      ],
+      [
+       0.42,
+       9.6
+      ],
+      [
+       0.42,
+       11.2
+      ],
+      [
+       0.0,
+       11.2
+      ]
+     ],
+     "height": 0.47
+    },
+    "sill": {
+     "poly": [
+      [
+       0.0,
+       6.8
+      ],
+      [
+       0.18,
+       6.8
+      ],
+      [
+       0.18,
+       9.2
+      ],
+      [
+       0.0,
+       9.2
+      ]
+     ],
+     "height": 0.76
+    }
+   },
+   "occluders": {
+    "glass_mullions": {
+     "x": 3.3,
+     "z": [
+      1.5,
+      2.9,
+      4.3,
+      5.3,
+      6.25,
+      7.6,
+      8.9
+     ],
+     "width": 0.06,
+     "yMin": 0.0,
+     "yMax": 2.7
+    },
+    "bench": {
+     "poly": [
+      [
+       0.0,
+       9.6
+      ],
+      [
+       0.42,
+       9.6
+      ],
+      [
+       0.42,
+       11.2
+      ],
+      [
+       0.0,
+       11.2
+      ]
+     ],
+     "yMin": 0.0,
+     "yMax": 0.47
+    }
+   },
+   "portals": {
+    "P1": {
+     "segment": [
+      [
+       3.3,
+       5.3
+      ],
+      [
+       3.3,
+       6.25
+      ]
+     ],
+     "height": 2.15,
+     "to": "correction.meeting_room",
+     "paired": "P1",
+     "jambs": [
+      [
+       3.3,
+       5.3
+      ],
+      [
+       3.3,
+       6.25
+      ]
+     ],
+     "threshold_inside": [
+      2.9,
+      5.78
+     ],
+     "threshold_outside": [
+      3.7,
+      5.78
+     ]
+    },
+    "P0": {
+     "segment": [
+      [
+       0.0,
+       0.6
+      ],
+      [
+       0.0,
+       1.8
+      ]
+     ],
+     "height": 2.3,
+     "to": "correction.open_plan",
+     "paired": "P0",
+     "jambs": [
+      [
+       0.0,
+       0.6
+      ],
+      [
+       0.0,
+       1.8
+      ]
+     ],
+     "threshold_inside": [
+      0.4,
+      1.2
+     ],
+     "threshold_outside": [
+      -0.4,
+      1.2
+     ]
+    }
+   },
+   "see_through": {
+    "glass": "east wall z 1.5–8.9 shows correction.meeting_room via transform meeting→corridor: x+3.3, z+1.5",
+    "actors_visible": [
+     "mira",
+     "director"
+    ],
+    "note": "same actor identities and poses as the meeting room state, finish 0.25; never proxies"
+   },
+   "hero_anchors": {
+    "from_meeting": {
+     "root": [
+      2.9,
+      5.78
+     ],
+     "yaw": -90,
+     "posture": "stand"
+    },
+    "reading": {
+     "root": [
+      0.75,
+      7.6
+     ],
+     "yaw": 28,
+     "posture": "stand",
+     "note": "window bay; read pose"
+    },
+    "return_threshold": {
+     "root": [
+      2.9,
+      5.78
+     ],
+     "yaw": 90,
+     "posture": "stand"
+    }
+   },
+   "routes": {
+    "exit_to_reading": [
+     [
+      2.9,
+      5.78
+     ],
+     [
+      1.6,
+      6.6
+     ],
+     [
+      0.75,
+      7.6
+     ]
+    ],
+    "reading_to_return": [
+     [
+      0.75,
+      7.6
+     ],
+     [
+      1.8,
+      6.4
+     ],
+     [
+      2.9,
+      5.78
+     ]
+    ]
+   },
+   "objects": {
+    "window_light": {
+     "pos": [
+      0.6,
+      0.0,
+      8.0
+     ],
+     "footprint": [
+      1.4,
+      2.6
+     ]
+    }
+   },
+   "attachments": [
+    "hero.hand_R.summary",
+    "hero.hand_L.summary"
+   ],
+   "cameras": {
+    "desktop": {
+     "position": [
+      1.9,
+      1.55,
+      3.2
+     ],
+     "look": "+z (north)",
+     "focal_px": 1150,
+     "frame": [
+      1920,
+      1080
+     ],
+     "principal": [
+      820,
+      430
+     ]
+    },
+    "portrait": {
+     "position": [
+      1.1,
+      1.55,
+      3.9
+     ],
+     "look": "+z (north)",
+     "focal_px": 1300,
+     "frame": [
+      780,
+      1688
+     ],
+     "principal": [
+      380,
+      760
+     ]
+    }
+   },
+   "camera_safe": {
+    "desktop": {
+     "title_safe": [
+      96,
+      54,
+      1824,
+      1026
+     ],
+     "line_zone": [
+      0,
+      0,
+      1920,
+      130
+     ],
+     "intent_zone": [
+      0,
+      930,
+      1920,
+      1080
+     ]
+    },
+    "portrait": {
+     "title_safe": [
+      40,
+      60,
+      740,
+      1628
+     ],
+     "text_zone": [
+      0,
+      0,
+      780,
+      230
+     ],
+     "thumb_zone": [
+      0,
+      1180,
+      780,
+      1688
+     ]
+    }
+   },
+   "actors": {}
+  },
+  "correction.meeting_room": {
+   "id": "correction.meeting_room",
+   "bounds": {
+    "xMin": 0.0,
+    "xMax": 6.8,
+    "zMin": 0.0,
+    "zMax": 7.4,
+    "ceiling": 2.8
+   },
+   "walls": {
+    "west": {
+     "x": 0.0,
+     "kind": "glass",
+     "mullion_spacing": 1.25
+    },
+    "north": {
+     "z": 7.4,
+     "kind": "plaster"
+    },
+    "east": {
+     "x": 6.8,
+     "kind": "plaster"
+    },
+    "south": {
+     "z": 0.0,
+     "kind": "camera-side (not rendered)"
+    }
+   },
+   "walkable": [
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      6.3,
+      0.25
+     ],
+     [
+      6.3,
+      7.15
+     ],
+     [
+      0.25,
+      7.15
+     ]
+    ]
+   ],
+   "obstacles": {
+    "table": {
+     "poly": [
+      [
+       2.55,
+       3.2
+      ],
+      [
+       4.25,
+       3.2
+      ],
+      [
+       4.25,
+       6.5
+      ],
+      [
+       2.55,
+       6.5
+      ]
+     ],
+     "height": 0.74
+    },
+    "credenza": {
+     "poly": [
+      [
+       6.35,
+       2.8
+      ],
+      [
+       6.8,
+       2.8
+      ],
+      [
+       6.8,
+       5.4
+      ],
+      [
+       6.35,
+       5.4
+      ]
+     ],
+     "height": 0.75
+    },
+    "chair_own_seat": {
+     "poly": [
+      [
+       0.41,
+       2.86
+      ],
+      [
+       0.89,
+       2.86
+      ],
+      [
+       0.89,
+       3.34
+      ],
+      [
+       0.41,
+       3.34
+      ]
+     ],
+     "height": 1.02
+    },
+    "chair_west_1": {
+     "poly": [
+      [
+       1.81,
+       3.86
+      ],
+      [
+       2.29,
+       3.86
+      ],
+      [
+       2.29,
+       4.34
+      ],
+      [
+       1.81,
+       4.34
+      ]
+     ],
+     "height": 1.02
+    },
+    "chair_west_2": {
+     "poly": [
+      [
+       1.81,
+       5.16
+      ],
+      [
+       2.29,
+       5.16
+      ],
+      [
+       2.29,
+       5.64
+      ],
+      [
+       1.81,
+       5.64
+      ]
+     ],
+     "height": 1.02
+    },
+    "chair_east_1": {
+     "poly": [
+      [
+       4.51,
+       4.16
+      ],
+      [
+       4.99,
+       4.16
+      ],
+      [
+       4.99,
+       4.64
+      ],
+      [
+       4.51,
+       4.64
+      ]
+     ],
+     "height": 1.02
+    },
+    "chair_director": {
+     "poly": [
+      [
+       4.59,
+       5.66
+      ],
+      [
+       5.07,
+       5.66
+      ],
+      [
+       5.07,
+       6.14
+      ],
+      [
+       4.59,
+       6.14
+      ]
+     ],
+     "height": 1.02
+    },
+    "chair_south_end": {
+     "poly": [
+      [
+       3.16,
+       2.51
+      ],
+      [
+       3.64,
+       2.51
+      ],
+      [
+       3.64,
+       2.99
+      ],
+      [
+       3.16,
+       2.99
+      ]
+     ],
+     "height": 1.02
+    }
+   },
+   "occluders": {
+    "table": {
+     "poly": [
+      [
+       2.55,
+       3.2
+      ],
+      [
+       4.25,
+       3.2
+      ],
+      [
+       4.25,
+       6.5
+      ],
+      [
+       2.55,
+       6.5
+      ]
+     ],
+     "yMin": 0.0,
+     "yMax": 0.74,
+     "note": "hides legs and laps of anything north of z=3.2 behind it"
+    },
+    "chair_south_end_back": {
+     "segment": [
+      [
+       3.17,
+       2.51
+      ],
+      [
+       3.63,
+       2.51
+      ]
+     ],
+     "yMin": 0.55,
+     "yMax": 1.02,
+     "note": "empty chair, back to camera"
+    },
+    "chair_director_back": {
+     "segment": [
+      [
+       5.07,
+       5.67
+      ],
+      [
+       5.07,
+       6.13
+      ]
+     ],
+     "yMin": 0.55,
+     "yMax": 1.02
+    },
+    "glass_mullions": {
+     "x": 0.0,
+     "z": [
+      0.0,
+      1.25,
+      2.5,
+      3.75,
+      5.0,
+      6.25
+     ],
+     "width": 0.06,
+     "yMin": 0.0,
+     "yMax": 2.8
+    },
+    "door_jambs": {
+     "segments": [
+      [
+       [
+        0.0,
+        3.8
+       ],
+       [
+        0.0,
+        3.8
+       ]
+      ],
+      [
+       [
+        0.0,
+        4.75
+       ],
+       [
+        0.0,
+        4.75
+       ]
+      ]
+     ],
+     "yMin": 0.0,
+     "yMax": 2.15
+    }
+   },
+   "portals": {
+    "P1": {
+     "segment": [
+      [
+       0.0,
+       3.8
+      ],
+      [
+       0.0,
+       4.75
+      ]
+     ],
+     "height": 2.15,
+     "to": "correction.corridor",
+     "paired": "P1",
+     "jambs": [
+      [
+       0.0,
+       3.8
+      ],
+      [
+       0.0,
+       4.75
+      ]
+     ],
+     "threshold_inside": [
+      0.4,
+      4.28
+     ],
+     "threshold_outside": [
+      -0.4,
+      4.28
+     ]
+    }
+   },
+   "display_surfaces": {
+    "screen": {
+     "plane": "z=7.39",
+     "corners": [
+      [
+       2.05,
+       2.3,
+       7.39
+      ],
+      [
+       4.75,
+       2.3,
+       7.39
+      ],
+      [
+       4.75,
+       0.95,
+       7.39
+      ],
+      [
+       2.05,
+       0.95,
+       7.39
+      ]
+     ],
+     "live_text_slots": [
+      "display.title"
+     ],
+     "content": "neutral chart texture, no data"
+    }
+   },
+   "actors": {
+    "mira": {
+     "root": [
+      5.25,
+      6.85
+     ],
+     "yaw": -58,
+     "posture": "stand",
+     "note": "at the screen; never moves in this slice"
+    },
+    "director": {
+     "root": [
+      4.75,
+      5.9
+     ],
+     "yaw": -90,
+     "posture": "seat",
+     "seat": "chair_director",
+     "note": "never moves in this slice"
+    }
+   },
+   "hero_anchors": {
+    "entry": {
+     "root": [
+      0.5,
+      4.3
+     ],
+     "yaw": 90,
+     "posture": "stand",
+     "note": "first step inside P1"
+    },
+    "own_seat": {
+     "root": [
+      0.65,
+      3.1
+     ],
+     "yaw": 90,
+     "posture": "seat",
+     "seat": "chair_own_seat"
+    },
+    "stand_near_entry": {
+     "root": [
+      1.2,
+      3.7
+     ],
+     "yaw": 78,
+     "posture": "stand",
+     "note": "standing preparation"
+    },
+    "near_director": {
+     "root": [
+      5.6,
+      5.4
+     ],
+     "yaw": -120.5,
+     "posture": "stand",
+     "note": "private request; 0.99 m from director root, bending toward the seated director"
+    }
+   },
+   "routes": {
+    "stand_to_near_director": [
+     [
+      1.2,
+      3.7
+     ],
+     [
+      1.5,
+      2.1
+     ],
+     [
+      5.5,
+      2.1
+     ],
+     [
+      5.5,
+      4.4
+     ],
+     [
+      5.6,
+      5.4
+     ]
+    ],
+    "seat_to_near_director": [
+     [
+      0.65,
+      3.1
+     ],
+     [
+      1.0,
+      2.1
+     ],
+     [
+      5.5,
+      2.1
+     ],
+     [
+      5.5,
+      4.4
+     ],
+     [
+      5.6,
+      5.4
+     ]
+    ],
+    "entry_to_seat": [
+     [
+      0.5,
+      4.3
+     ],
+     [
+      0.9,
+      3.6
+     ],
+     [
+      0.65,
+      3.1
+     ]
+    ],
+    "entry_to_stand": [
+     [
+      0.5,
+      4.3
+     ],
+     [
+      1.2,
+      3.7
+     ]
+    ]
+   },
+   "objects": {
+    "laptop_west": {
+     "pos": [
+      3.0,
+      0.74,
+      4.2
+     ],
+     "footprint": [
+      0.34,
+      0.24
+     ]
+    },
+    "laptop_east": {
+     "pos": [
+      3.85,
+      0.74,
+      5.1
+     ],
+     "footprint": [
+      0.34,
+      0.24
+     ]
+    },
+    "cup_1": {
+     "pos": [
+      2.85,
+      0.74,
+      5.4
+     ]
+    },
+    "cup_2": {
+     "pos": [
+      3.9,
+      0.74,
+      3.8
+     ]
+    },
+    "cup_3": {
+     "pos": [
+      3.95,
+      0.74,
+      5.9
+     ]
+    },
+    "papers": {
+     "pos": [
+      3.35,
+      0.745,
+      3.75
+     ],
+     "footprint": [
+      0.3,
+      0.38
+     ]
+    }
+   },
+   "attachments": [
+    "hero.hand_R.summary",
+    "hero.lap.summary",
+    "mira.hand_R.gesture",
+    "director.forearm_L.table"
+   ],
+   "cameras": {
+    "desktop": {
+     "position": [
+      3.4,
+      1.5,
+      -1.2
+     ],
+     "look": "+z (north)",
+     "focal_px": 1240,
+     "frame": [
+      1920,
+      1080
+     ],
+     "principal": [
+      1060,
+      440
+     ]
+    },
+    "portrait": {
+     "position": [
+      1.2,
+      1.5,
+      0.4
+     ],
+     "look": "+z (north)",
+     "focal_px": 1300,
+     "frame": [
+      780,
+      1688
+     ],
+     "principal": [
+      400,
+      760
+     ],
+     "use": "all meeting beats except near_director"
+    },
+    "portrait_room": {
+     "position": [
+      4.0,
+      1.5,
+      1.6
+     ],
+     "look": "+z (north)",
+     "focal_px": 1150,
+     "frame": [
+      780,
+      1688
+     ],
+     "principal": [
+      330,
+      760
+     ],
+     "use": "beat 02 second framing: display, Mira, director (camera move from portrait)"
+    },
+    "portrait_east": {
+     "position": [
+      4.9,
+      1.5,
+      1.4
+     ],
+     "look": "+z (north)",
+     "focal_px": 1300,
+     "frame": [
+      780,
+      1688
+     ],
+     "principal": [
+      390,
+      760
+     ],
+     "use": "private request beat (near_director)"
+    }
+   },
+   "camera_safe": {
+    "desktop": {
+     "title_safe": [
+      96,
+      54,
+      1824,
+      1026
+     ],
+     "line_zone": [
+      0,
+      0,
+      1920,
+      130
+     ],
+     "intent_zone": [
+      0,
+      930,
+      1920,
+      1080
+     ]
+    },
+    "portrait": {
+     "title_safe": [
+      40,
+      60,
+      740,
+      1628
+     ],
+     "text_zone": [
+      0,
+      0,
+      780,
+      230
+     ],
+     "thumb_zone": [
+      0,
+      1180,
+      780,
+      1688
+     ]
+    }
+   }
+  }
+ },
+ "portal_pairs": [
+  {
+   "a": [
+    "correction.open_plan",
+    "P0"
+   ],
+   "b": [
+    "correction.corridor",
+    "P0"
+   ],
+   "transform_a_to_b": "x - 9.6, z - 8.0",
+   "endpoints": [
+    [
+     [
+      9.6,
+      8.6
+     ],
+     [
+      0.0,
+      0.6
+     ]
+    ],
+    [
+     [
+      9.6,
+      9.8
+     ],
+     [
+      0.0,
+      1.8
+     ]
+    ]
+   ]
+  },
+  {
+   "a": [
+    "correction.corridor",
+    "P1"
+   ],
+   "b": [
+    "correction.meeting_room",
+    "P1"
+   ],
+   "transform_a_to_b": "x - 3.3, z - 1.5",
+   "endpoints": [
+    [
+     [
+      3.3,
+      5.3
+     ],
+     [
+      0.0,
+      3.8
+     ]
+    ],
+    [
+     [
+      3.3,
+      6.25
+     ],
+     [
+      0.0,
+      4.75
+     ]
+    ]
+   ]
+  }
+ ],
+ "camera_model": "pinhole, no rotation: screen_x = principal_x + focal_px * (x - cam_x) / (z - cam_z); screen_y = principal_y + focal_px * (cam_y - y) / (z - cam_z)",
+ "resolved_contradictions": [
+  "Meeting room bounds: earlier boards used camera-space x −3.4…3.4, z 1.2…8.6. Authoritative: x 0…6.8, z 0…7.4 (camera-space + (3.4, −1.2)).",
+  "Meeting P1: earlier variants put the door at camera-space z 2.55…3.45 and 5.0…5.95. Authoritative: x 0, z 3.8…4.75.",
+  "Corridor glass span: earlier hallway render showed camera-space z 6…13 (loc 5…12), which did not pair with P1. Authoritative: z 1.5…8.9, P1 z 5.3…6.25.",
+  "Corridor window bay: moved from loc z 3.4…5.8 to z 6.8…9.2 so it does not share the wall with P0 / the open plan.",
+  "Open plan: the meeting-room glass box drawn at its right rear contradicted the building plan. Replaced by the east wall with P0 to the corridor.",
+  "Plans on C13/C14 previously drew the meeting room with the camera at z=0 inside the plan; plans now use location coordinates with the camera as an external recipe.",
+  "r4 · open_plan.hero_anchors.at_desk: r3 root [5.55, 2.25] (stand) lay inside hero_desk (x 4.05–5.75, z 1.95–2.65). Authoritative: [5.97, 2.30], yaw −80, head_yaw −14: standing at the desk's east end, 0.22 m clear of hero_desk, 0.42 m from the r3 root, same depth so desktop scale/composition holds; desk_to_P0 starts there.",
+  "r4 · open_plan.cameras.portrait: position x 5.10 → 5.30 (y, z, focal, principal unchanged) so the corrected at_desk stays fully inside the 390 frame. Composition preservation only; desktop recipe and all other locations' cameras unchanged.",
+  "r4 · meeting_room routes stand_to_near_director / seat_to_near_director: r3 south aisle at z 2.5 / 2.45 grazed chair_south_end (z 2.51–2.99, clearance 0.01–0.06 m). Authoritative aisle z = 2.10 (0.41 m clear). Anchors, actors and cameras unchanged.",
+  "r4 · seated anchors keep posture=seat + seat=<obstacle id> (own_seat → chair_own_seat): overlap with the named seat is intentional seated staging, not a collision.",
+  "Colleague anchors C1–C4 and their chairs as actors are removed. Their chairs remain as empty obstacles."
+ ],
+ "collision": {
+  "hero_footprint_radius": 0.2,
+  "actor_footprint_radius": 0.25,
+  "rule": "standing anchors and route samples (0.05 m) inside walkable and >= hero radius from every obstacle and actor footprint; posture=seat anchors exempt only from their named seat"
+ },
+ "runtime_normalisation": "not provided here; Foundation derives normalised 0–100 output",
+ "beats": [
+  {
+   "beat": "01_desk",
+   "location": "correction.open_plan",
+   "hero_anchor": "at_desk",
+   "route_out": "desk_to_P0",
+   "attention": [
+    [
+     5.97,
+     1.0,
+     2.3,
+     0.75,
+     1.15
+    ],
+    [
+     4.65,
+     1.05,
+     2.45,
+     0.6,
+     0.45
+    ]
+   ],
+   "note": "desk island from monitor + hero; no other people in open plan"
+  },
+  {
+   "beat": "02_meeting",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat",
+   "attention": [
+    [
+     0.71,
+     1.0,
+     3.1,
+     0.95,
+     1.2
+    ],
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ]
+   ]
+  },
+  {
+   "beat": "02_meeting_room_portrait",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat",
+   "camera": "portrait_room",
+   "attention": [
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ],
+    [
+     5.25,
+     1.0,
+     6.85,
+     0.7,
+     1.2
+    ],
+    [
+     4.75,
+     1.0,
+     5.9,
+     0.8,
+     1.0
+    ]
+   ]
+  },
+  {
+   "beat": "03_hallway",
+   "location": "correction.corridor",
+   "hero_anchor": "reading",
+   "attention": [],
+   "note": "Mira and director seen through glass via see_through transform; same identities"
+  },
+  {
+   "beat": "04a_return_seated",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat",
+   "attention": [
+    [
+     0.71,
+     1.0,
+     3.1,
+     0.95,
+     1.2
+    ],
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ],
+    [
+     3.4,
+     0.8,
+     4.85,
+     1.1,
+     0.6
+    ]
+   ]
+  },
+  {
+   "beat": "04b_return_standing",
+   "location": "correction.meeting_room",
+   "hero_anchor": "stand_near_entry",
+   "attention": [
+    [
+     1.2,
+     1.0,
+     3.7,
+     0.9,
+     1.25
+    ],
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ],
+    [
+     3.4,
+     0.8,
+     4.85,
+     1.1,
+     0.6
+    ]
+   ]
+  },
+  {
+   "beat": "05a_decision_seated",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat",
+   "attention": [
+    [
+     0.71,
+     1.0,
+     3.1,
+     0.95,
+     1.2
+    ],
+    [
+     3.4,
+     0.8,
+     4.85,
+     1.1,
+     0.6
+    ],
+    [
+     4.75,
+     1.0,
+     5.9,
+     0.8,
+     1.0
+    ],
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ]
+   ]
+  },
+  {
+   "beat": "05b_decision_standing",
+   "location": "correction.meeting_room",
+   "hero_anchor": "stand_near_entry",
+   "attention": [
+    [
+     1.2,
+     1.0,
+     3.7,
+     0.9,
+     1.25
+    ],
+    [
+     3.4,
+     0.8,
+     4.85,
+     1.1,
+     0.6
+    ],
+    [
+     4.75,
+     1.0,
+     5.9,
+     0.8,
+     1.0
+    ],
+    [
+     3.4,
+     1.6,
+     7.35,
+     1.7,
+     0.9
+    ]
+   ]
+  },
+  {
+   "beat": "06a_speak",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat | stand_near_entry",
+   "attention": [
+    "<hero anchor>",
+    [
+     3.4,
+     0.8,
+     4.85,
+     1.1,
+     0.6
+    ]
+   ],
+   "stop": "hero begins speaking; stop before any reaction"
+  },
+  {
+   "beat": "06b_private",
+   "location": "correction.meeting_room",
+   "hero_anchor": "near_director",
+   "route": "seat_to_near_director | stand_to_near_director",
+   "camera_portrait": "portrait_east",
+   "attention": [
+    [
+     5.6,
+     1.0,
+     5.4,
+     0.95,
+     1.25
+    ],
+    [
+     4.75,
+     1.0,
+     5.9,
+     0.8,
+     1.0
+    ]
+   ],
+   "stop": "hero bends toward seated director and begins the request; stop before any response. Mira does not move."
+  },
+  {
+   "beat": "06c_pass",
+   "location": "correction.meeting_room",
+   "hero_anchor": "own_seat | stand_near_entry",
+   "attention": [
+    "<hero anchor>"
+   ],
+   "stop": "hero holds silence in the prepared posture; no agreement cue"
+  },
+  {
+   "beat": "07_boundary",
+   "location": "correction.meeting_room",
+   "attention": [],
+   "note": "NPC finishes fade to 0, room paint to 0, hero ink only; identical for all acts"
+  }
+ ],
+ "attention_target_format": "[x, y, z, rx, ry] metres, location coordinates; projected with the active camera recipe"
+}

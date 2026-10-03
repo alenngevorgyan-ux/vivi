@@ -1,0 +1,339 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Apartment.dc.html": {
+      "h": 2060,
+      "page": "characters",
+      "title": "09 · Apartment scene",
+      "w": 2400,
+      "x": 7128,
+      "y": 4380
+    },
+    "Blocking.dc.html": {
+      "h": 1720,
+      "page": "characters",
+      "title": "07 · Human distance",
+      "w": 2400,
+      "x": 2168,
+      "y": 4380
+    },
+    "Families.dc.html": {
+      "h": 2760,
+      "page": "characters",
+      "title": "06 · Character families",
+      "w": 2400,
+      "x": -312,
+      "y": 4380
+    },
+    "Final.dc.html": {
+      "h": 1760,
+      "page": "characters",
+      "title": "02 · Chosen direction",
+      "w": 2400,
+      "x": 2168,
+      "y": 1800
+    },
+    "Hands.dc.html": {
+      "h": 1990,
+      "page": "characters",
+      "title": "05 · Hands and gesture",
+      "w": 2400,
+      "x": 9608,
+      "y": 1800
+    },
+    "Main.dc.html": {
+      "h": 2460,
+      "page": "characters",
+      "title": "01 · Four directions",
+      "w": 2400,
+      "x": -312,
+      "y": 1800
+    },
+    "Office.dc.html": {
+      "h": 2060,
+      "page": "characters",
+      "title": "10 · Office scene",
+      "w": 2400,
+      "x": 9608,
+      "y": 4380
+    },
+    "Poses.dc.html": {
+      "h": 2080,
+      "page": "characters",
+      "title": "03 · 21-pose vocabulary",
+      "w": 2400,
+      "x": 4648,
+      "y": 1800
+    },
+    "Silhouettes.dc.html": {
+      "h": 2060,
+      "page": "characters",
+      "title": "04 · Silhouette test",
+      "w": 2400,
+      "x": 7128,
+      "y": 1800
+    },
+    "Continuity.dc.html": {
+      "h": 1900,
+      "title": "08 · Multi-scene continuity",
+      "w": 2400,
+      "x": 4648,
+      "y": 4380,
+      "page": "characters"
+    },
+    "C01_Storyboard.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 2400,
+      "h": 2038,
+      "title": "C01 · Storyboard",
+      "page": "correction"
+    },
+    "C02_Desk.dc.html": {
+      "x": 2480,
+      "y": 0,
+      "w": 2400,
+      "h": 2749,
+      "title": "C02 · Desk",
+      "page": "correction"
+    },
+    "C03_Meeting.dc.html": {
+      "x": 4960,
+      "y": 0,
+      "w": 2400,
+      "h": 2720,
+      "title": "C03 · Meeting",
+      "page": "correction"
+    },
+    "C04_Hallway.dc.html": {
+      "x": 7440,
+      "y": 0,
+      "w": 2400,
+      "h": 2700,
+      "title": "C04 · Corridor",
+      "page": "correction"
+    },
+    "C05_Return.dc.html": {
+      "x": 9920,
+      "y": 0,
+      "w": 2400,
+      "h": 2708,
+      "title": "C05 · Return",
+      "page": "correction"
+    },
+    "C06_Decision.dc.html": {
+      "x": 12400,
+      "y": 0,
+      "w": 2400,
+      "h": 3263,
+      "title": "C06 · Decision",
+      "page": "correction"
+    },
+    "C08_Boundary.dc.html": {
+      "x": 2480,
+      "y": 3463,
+      "w": 2400,
+      "h": 2203,
+      "title": "C08 · Truth boundary",
+      "page": "correction"
+    },
+    "C09_Reveal.dc.html": {
+      "x": 4960,
+      "y": 3463,
+      "w": 2400,
+      "h": 2642,
+      "title": "C09 · Author reveal",
+      "page": "correction"
+    },
+    "C10_Mobile.dc.html": {
+      "x": 7440,
+      "y": 3463,
+      "w": 2400,
+      "h": 4094,
+      "title": "C10 · Mobile 390",
+      "page": "correction"
+    },
+    "C11_Desktop.dc.html": {
+      "x": 9920,
+      "y": 3463,
+      "w": 2400,
+      "h": 1692,
+      "title": "C11 · Desktop",
+      "page": "correction"
+    },
+    "C12_Layers.dc.html": {
+      "x": 12400,
+      "y": 3463,
+      "w": 2400,
+      "h": 1630,
+      "title": "C12 · Layer stack",
+      "page": "correction"
+    },
+    "C13_Staging.dc.html": {
+      "x": 0,
+      "y": 7757,
+      "w": 2400,
+      "h": 1792,
+      "title": "C13 · Staging & portals",
+      "page": "correction"
+    },
+    "C14_Blocking.dc.html": {
+      "x": 2480,
+      "y": 7757,
+      "w": 2400,
+      "h": 1800,
+      "title": "C14 · Blocking",
+      "page": "correction"
+    },
+    "C15_Attention.dc.html": {
+      "x": 4960,
+      "y": 7757,
+      "w": 2400,
+      "h": 1692,
+      "title": "C15 · Attention",
+      "page": "correction"
+    },
+    "C16_Handshake.dc.html": {
+      "x": 7440,
+      "y": 7757,
+      "w": 2400,
+      "h": 1032,
+      "title": "C16 · Handshake",
+      "page": "correction"
+    },
+    "C17_Frozen.dc.html": {
+      "x": 9920,
+      "y": 7757,
+      "w": 2400,
+      "h": 829,
+      "title": "C17 · Frozen vs illustrator",
+      "page": "correction"
+    },
+    "C07_Acts.dc.html": {
+      "x": 0,
+      "y": 3463,
+      "w": 2400,
+      "h": 2600,
+      "title": "C07 · Acts",
+      "page": "correction"
+    },
+    "C18_Audit.dc.html": {
+      "x": 12400,
+      "y": 7757,
+      "w": 2400,
+      "h": 1749,
+      "title": "C18 · Self-audit",
+      "page": "correction"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-03T13:41:34.316Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "correction-title": {
+      "kind": "title1",
+      "maxW": 8000,
+      "page": "correction",
+      "text": "The Correction · source-safe production handoff (r4)",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "image-183sxx": {
+      "alt": "board-04-office",
+      "h": 620,
+      "kind": "image",
+      "page": "characters",
+      "src": "/_blob/6e86076dab7ac603554187a01feeeac4",
+      "w": 1200,
+      "x": 968,
+      "y": 52
+    },
+    "image-axmue6": {
+      "alt": "board-07-characters",
+      "h": 1175,
+      "kind": "image",
+      "page": "characters",
+      "src": "/_blob/d5bc4e0cb2e28f821cc79fdae3b06074",
+      "w": 1200,
+      "x": 2248,
+      "y": 52
+    },
+    "image-ke7472": {
+      "alt": "board-03-apartment",
+      "h": 620,
+      "kind": "image",
+      "page": "characters",
+      "src": "/_blob/ed4d419eb80bcfdb9c5863bdb2296a06",
+      "w": 1200,
+      "x": -312,
+      "y": 52
+    },
+    "image-wz9fag": {
+      "alt": "board-09-reveal",
+      "h": 610,
+      "kind": "image",
+      "page": "characters",
+      "src": "/_blob/922c187212b15bf2c04612934fcfac41",
+      "w": 1200,
+      "x": 3528,
+      "y": 52
+    },
+    "vivi-title": {
+      "kind": "title1",
+      "maxW": 8000,
+      "page": "characters",
+      "text": "Vivi V3 · Character language — The Remembered Room",
+      "w": 240,
+      "x": -312,
+      "y": 1480
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Final.dc.html",
+    "Poses.dc.html",
+    "Silhouettes.dc.html",
+    "Hands.dc.html",
+    "Families.dc.html",
+    "Blocking.dc.html",
+    "Apartment.dc.html",
+    "Office.dc.html",
+    "Continuity.dc.html",
+    "C01_Storyboard.dc.html",
+    "C02_Desk.dc.html",
+    "C03_Meeting.dc.html",
+    "C04_Hallway.dc.html",
+    "C05_Return.dc.html",
+    "C06_Decision.dc.html",
+    "C08_Boundary.dc.html",
+    "C09_Reveal.dc.html",
+    "C10_Mobile.dc.html",
+    "C11_Desktop.dc.html",
+    "C12_Layers.dc.html",
+    "C13_Staging.dc.html",
+    "C14_Blocking.dc.html",
+    "C15_Attention.dc.html",
+    "C16_Handshake.dc.html",
+    "C17_Frozen.dc.html",
+    "C07_Acts.dc.html",
+    "C18_Audit.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "characters",
+      "name": "Characters v2"
+    },
+    {
+      "id": "correction",
+      "name": "The Correction"
+    }
+  ],
+  "title": "Vivi V3 · Character language"
+}
