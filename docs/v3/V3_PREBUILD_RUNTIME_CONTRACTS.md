@@ -2,7 +2,7 @@
 
 Status: implemented on `implementation/vivi-v3-prebuild-contracts`, on top of the Foundation and The Correction slice. Closes the Foundation-owned blockers of `reports/v3-final-integration-review.md` (B02 runtime half, B03, B04, B05, B06, B07). B01 and B08 are Design/Editorial and are **not** closed here. The visual player is **not** implemented.
 
-Evidence: `reports/v3-prebuild-runtime-blockers.md`. Tests: `scripts/test-v3-prebuild.ts`, `scripts/test-v3-host.ts`, plus the updated Foundation, Correction and browser suites.
+Evidence: `reports/v3-prebuild-runtime-blockers.md` (B02 reconciliation: `reports/v3-b02-geometry-reconciliation.md`). Tests: `scripts/test-v3-prebuild.ts`, `scripts/test-v3-host.ts`, plus the updated Foundation, Correction and browser suites.
 
 ## 1. Shape
 
@@ -89,9 +89,38 @@ runtime.x = 100 · (x − xMin) / (xMax − xMin)      runtime.y = 100 · (z −
 runtime.h = y / heightScale
 ```
 
-`adaptDesignGeometry` is deterministic and **never clamps**: a point outside its declared bounds, an unapproved yaw, a degenerate bounds/height/focal length, a camera not entirely in front of the floor, or an unknown location throws `GeometryAdapterError`. Output precision is a declared rounding of the serialized value only. Cameras compile to normalized coefficients (`cx, hy, fx, fy, camX, camY, eye`) that reproduce Design's perspective; portrait is a separate recipe over the same marks.
+`adaptDesignGeometry` is deterministic and **never clamps**: a point outside its declared bounds, an unapproved yaw, a degenerate bounds/height/focal length, **non-finite camera coefficients**, a seated mark that is not on its declared seat, or an unknown location throws `GeometryAdapterError`. Output precision is a declared rounding of the serialized value only. Cameras compile to normalized coefficients (`cx, hy, fx, fy, camX, camY, eye`) that reproduce Design's perspective. Named routes are normalized by the same mapping (`AdaptedGeometry.routes`) and go into compiled scenes beside the marks.
 
-`validateRuntimeGeometry` checks the resource on its own (closed keys, versions, SHA-256 provenance, ranges, polygons, uniqueness, finite non-degenerate projections, safe regions inside the viewport). `validateGeometryForManifest` proves it agrees with the manifest: every mark standable (walkable, outside holes and obstacles) and inside every camera's safe region; kit revisions and camera recipes match and belong to the scene's location; both sides of every reversible door have an anchor; anchors, attachments and routes name real entities and floor. `projectPoint` / `unprojectFloor` give the renderer the maths; geometry never gates a causal act by distance.
+`validateRuntimeGeometry` checks the resource on its own (closed keys, versions, SHA-256 provenance, ranges, polygons, uniqueness, finite non-degenerate projections, safe regions inside the viewport, seat declarations).
+
+### 6.1 Cameras (B02 reconciliation, `fix/vivi-v3-b02-geometry-contract`)
+
+- **Interior cameras are valid.** There is no requirement that the whole floor lies in front of a camera: Design r3 puts five recipes inside their location's bounds (corridor desktop/portrait, meeting portrait/portrait_room/portrait_east).
+- **Projection stays strict.** `projectPoint` has no result at or behind the camera plane; nothing is clamped into view. Camera coefficients must be finite.
+- **A scene is validated against the recipe it selects**, never against every camera of its location (portrait, second framing and private-request framing are per-scene choices). The recipe must exist and belong to the scene's location. Every mark the scene carries (entry and named) must project through that camera and lie in its safe region; a scene using a framing that does not show a mark does not carry that mark. Cameras no scene selects stay in the resource, structurally validated.
+- **Anchors** (staging roots) must be visible in at least one camera some scene of their location selects.
+
+### 6.2 Seated hero marks (collision)
+
+Collision is never waived by a mark's name or position. The only exception is explicit Design source semantics:
+
+```
+Design:   hero_anchors.<role> = { posture: "seat", seat: "<obstacle id>" }     (a mark with no posture, or "stand", is standing)
+Adapter:  DesignLocationSource.marks.<role>.{posture, seat}  ──▶  LocationGeometry.seats = [{ role, obstacle }]   (absent when none)
+Validator: scene.marks.<role> with a declaration must lie ON that obstacle (seatedStandable: walkable floor,
+           inside the declared obstacle, clear of every OTHER obstacle). Anything else is a collision.
+```
+
+- `standable()` is unchanged: the seat footprint remains an obstacle for everyone else. The entry mark is never seated. A standing mark, an undeclared role, or a seated role off its seat is refused.
+- **Routes** remain collision-safe in their interior. A route's first or last point may lie in a seat obstacle only if it is exactly a seated mark's point (a valid seated mark of any scene of the same location).
+- A seat declaration a manifest variant does not use is harmless. Seated roles are `role` identifiers taken from Design; the runtime hard-codes none.
+- The adapter refuses: an unknown posture, a seat on a standing/undeclared mark, a seated mark naming no obstacle of its location, a seated mark outside its seat polygon.
+
+### 6.3 Real Design source
+
+`scripts/test-v3-geometry-compat.ts` runs Design's PUBLISHED schema (`src/data/experienceV3Fixtures/design/correction-geo-r3.source.json`, byte copy of `design/vivi-v3-correction-slice` @ `5e05495`, SHA-256 `992340663d8cc7f384d8ccacd6dbe5d3ea687e8e803d6dc55cf3aa166f558273`) through `scripts/lib/designGeometryR3.ts` (test-support structural reader, not the production build script), the real adapter and the real validators. Known source defects are keyed by source hash: r3's standing `at_desk` anchor inside `hero_desk` is the one expected failure and is **not waived**. A source with any other hash must validate with zero issues, so Design's corrected geometry is checked by the same test unchanged (`VIVI_DESIGN_GEOMETRY_SOURCE=/path/to/source.json npm run test:v3-geometry-compat`, or replace the fixture).
+
+`validateGeometryForManifest` also proves: kit revisions match; both sides of every reversible door have an anchor; anchors, attachments and routes name real entities and floor. `projectPoint` / `unprojectFloor` give the renderer the maths; geometry never gates a causal act by distance.
 
 **Design owns the numbers and the build script that calls the adapter.** No story values are in this module. The Correction still uses dev-named placeholder geometry (`placeholderGeometry.ts`) until Design publishes a source-checked export.
 

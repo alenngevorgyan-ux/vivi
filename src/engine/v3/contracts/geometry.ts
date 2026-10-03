@@ -18,6 +18,16 @@
  * by the location's declared height scale). Nothing here is clamped: a value
  * out of range is a validation error, never silently moved.
  *
+ * Cameras may stand inside a location's bounds (an interior camera). Nothing
+ * requires the whole floor to be in front of a camera: projection is strict
+ * per point (`projectPoint` has no result at or behind the camera plane) and a
+ * scene is validated only against the camera recipe it actually selects.
+ *
+ * Collision is never waived by a mark's name. The one exception is explicit
+ * Design source semantics: a mark whose posture is `seat` declares the obstacle
+ * that supports it (`LocationGeometry.seats`), and only that mark, on only that
+ * obstacle, may overlap it.
+ *
  * Geometry never gates a causal act by distance: it is presentation, movement
  * and hit testing only.
  */
@@ -79,9 +89,22 @@ export interface Attachment {
   offset: Point3;
 }
 
+/**
+ * Design's explicit statement that a named hero mark is a seated position supported by one obstacle.
+ * It is a relationship, not a coordinate: the mark itself lives only in the manifest's compiled scenes.
+ */
+export interface SeatDeclaration {
+  /** The mark role (a key of a compiled scene's `marks`). */
+  role: string;
+  /** The obstacle (in this location) the seated hero rests on. */
+  obstacle: string;
+}
+
 export interface LocationGeometry {
   location: string;
   kitRevision: string;
+  /** Seated marks and their supporting obstacles; absent when the location has none. */
+  seats?: SeatDeclaration[];
   walkable: FloorPolygon[];
   obstacles: Obstacle[];
   occluders: Occluder[];
@@ -155,6 +178,17 @@ export function standable(g: LocationGeometry, pt: FloorPoint): boolean {
   return onFloor && !g.obstacles.some(o => pointInPolygon(pt, o.polygon));
 }
 
+/**
+ * A seated mark's footprint: on walkable floor and inside the declared supporting obstacle, and clear of every
+ * OTHER obstacle. This is the only way a point may lie inside an obstacle; it never waives a different one.
+ */
+export function seatedStandable(g: LocationGeometry, pt: FloorPoint, obstacle: string): boolean {
+  const seat = g.obstacles.find(o => o.id === obstacle);
+  if (!seat || !pointInPolygon(pt, seat.polygon)) return false;
+  const onFloor = g.walkable.some(w => pointInPolygon(pt, w.outer) && !(w.holes ?? []).some(h => pointInPolygon(pt, h)));
+  return onFloor && !g.obstacles.some(o => o.id !== obstacle && pointInPolygon(pt, o.polygon));
+}
+
 const area = (poly: readonly FloorPoint[]) => Math.abs(poly.reduce((a, [x, y], i) => a + x * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * y, 0)) / 2;
 
 /* --------------------------------------------------------- validation --- */
@@ -212,7 +246,7 @@ export function validateRuntimeGeometry(raw: unknown): ValidationResult<RuntimeG
   const seenLoc = new Set<string>();
   locs.forEach((l, i) => {
     const p = `locations[${i}]`;
-    if (!closed(c, l, p, ['location', 'kitRevision', 'walkable', 'obstacles', 'occluders', 'portals', 'anchors', 'attachments'])) return;
+    if (!closed(c, l, p, ['location', 'kitRevision', 'walkable', 'obstacles', 'occluders', 'portals', 'anchors', 'attachments'], ['seats'])) return;
     const loc = id(c, l.location, `${p}.location`);
     if (loc && seenLoc.has(loc)) c.add(`${p}.location`, 'duplicate_id', 'location geometry listed twice');
     if (loc) seenLoc.add(loc);
@@ -224,6 +258,18 @@ export function validateRuntimeGeometry(raw: unknown): ValidationResult<RuntimeG
         polygon(c, w.outer, `${p}.walkable[${j}].outer`);
         if (w.holes !== undefined) (Array.isArray(w.holes) ? w.holes : (c.add(`${p}.walkable[${j}].holes`, 'type', 'expected a list'), [])).forEach((h, k) => polygon(c, h, `${p}.walkable[${j}].holes[${k}]`));
       });
+    const obstacleIds = new Set<string>(Array.isArray(l.obstacles) ? l.obstacles.flatMap(o => (isRec(o) && typeof o.id === 'string' ? [o.id] : [])) : []);
+    if (l.seats !== undefined) {
+      const roles = new Set<string>();
+      (Array.isArray(l.seats) ? l.seats : (c.add(`${p}.seats`, 'type', 'expected a list'), [])).forEach((q, j) => {
+        if (!closed(c, q, `${p}.seats[${j}]`, ['role', 'obstacle'])) return;
+        const role = id(c, q.role, `${p}.seats[${j}].role`);
+        if (role && roles.has(role)) c.add(`${p}.seats[${j}].role`, 'duplicate_id', 'a seated role is declared once');
+        if (role) roles.add(role);
+        const ob = id(c, q.obstacle, `${p}.seats[${j}].obstacle`);
+        if (ob && !obstacleIds.has(ob)) c.add(`${p}.seats[${j}].obstacle`, 'unknown_ref', 'a seat rests on an obstacle this location does not have');
+      });
+    }
     const ids = new Set<string>();
     const unique = (v: string | undefined, path: string) => {
       if (v && ids.has(v)) c.add(path, 'duplicate_id', 'id used twice in this location');
@@ -299,19 +345,45 @@ export function validateRuntimeGeometry(raw: unknown): ValidationResult<RuntimeG
 
 /**
  * Cross-check a structurally valid geometry resource against the manifest it serves. This is what keeps one
- * coordinate authority: every manifest mark must be standable floor in its location's geometry and visible
- * inside every camera's safe region; every compiled recipe/kit must exist; every reversible door needs its
- * anchors on both sides; every anchor and attachment names a real entity.
+ * coordinate authority.
+ *
+ * Each compiled scene is validated against the camera recipe IT selects, never against every camera of its
+ * location (portrait, second framings and private-request framings are per-scene choices):
+ *   - the recipe exists and belongs to the scene's location;
+ *   - every mark the scene carries must project through that camera (not at or behind its plane) and lie in its
+ *     safe region. A mark a framing does not show is therefore not carried by the scene that uses that framing;
+ *   - every mark is standable, except a named seated mark, which may rest on its declared supporting obstacle;
+ *   - every route point is standable, except that a route may begin or end on a seated mark's seat.
+ * Cameras no scene selects stay in the resource and are checked structurally only. Anchors are staging roots:
+ * each must be visible in at least one camera some scene of its location selects. Every kit/recipe must exist,
+ * every reversible door needs its anchors on both sides and every anchor and attachment names a real entity.
  */
 export function validateGeometryForManifest(geo: RuntimeGeometryV3, m: PlaybackManifestV3): ValidationResult<RuntimeGeometryV3> {
   const c = new Issues();
   const byLoc = new Map(geo.locations.map(l => [l.location, l] as const));
+  const byCam = new Map(geo.cameras.map(k => [k.id, k] as const));
   const entityIds = new Set(m.initialEntities.map(e => e.id));
   const inSafe = (k: CameraGeometry, x: number, y: number, h: number) => {
     const s = projectPoint(k, x, y, h);
     return !!s && s.sx >= k.safe.x && s.sx <= k.safe.x + k.safe.width && s.sy >= k.safe.y && s.sy <= k.safe.y + k.safe.height;
   };
+  const SAME = 1e-6;
+  const same = (a: readonly number[], b: readonly number[]) => Math.abs(a[0] - b[0]) <= SAME && Math.abs(a[1] - b[1]) <= SAME;
 
+  /** The supporting obstacle of a seated role in a location, if Design declared one. */
+  const seatOf = (g: LocationGeometry, role: string) => g.seats?.find(q => q.role === role)?.obstacle;
+  // Seated points that actually rest on their seat, by location: the only points a route may start from or end on inside an obstacle.
+  const seated = new Map<string, Array<{ at: FloorPoint; obstacle: string }>>();
+  for (const cs of m.compiledScenes) {
+    const g = byLoc.get(cs.location);
+    if (!g) continue;
+    for (const [role, mk] of Object.entries(cs.marks ?? {})) {
+      const obstacle = seatOf(g, role);
+      if (obstacle && seatedStandable(g, [mk.x, mk.y], obstacle)) seated.set(cs.location, [...(seated.get(cs.location) ?? []), { at: [mk.x, mk.y], obstacle }]);
+    }
+  }
+
+  const selected = new Map<string, Map<string, CameraGeometry>>();
   for (const cs of m.compiledScenes) {
     const p = `compiledScenes.${cs.id}`;
     const g = byLoc.get(cs.location);
@@ -320,24 +392,45 @@ export function validateGeometryForManifest(geo: RuntimeGeometryV3, m: PlaybackM
       continue;
     }
     if (g.kitRevision !== cs.kitRevision) c.add(`${p}.kitRevision`, 'version', 'scene and geometry kit revisions differ');
-    const cam = geo.cameras.find(k => k.id === cs.cameraRecipe);
+    const cam = byCam.get(cs.cameraRecipe);
+    let framing: CameraGeometry | undefined;
     if (!cam) c.add(`${p}.cameraRecipe`, 'unknown_ref', 'no compiled camera for this recipe');
     else if (cam.location !== cs.location) c.add(`${p}.cameraRecipe`, 'graph', 'camera belongs to another location');
-    const marks: Array<[string, SpatialMark]> = [...(cs.entryMark ? [['entryMark', cs.entryMark] as [string, SpatialMark]] : []), ...Object.entries(cs.marks ?? {})];
-    for (const [name, mk] of marks) {
-      if (!standable(g, [mk.x, mk.y])) c.add(`${p}.marks.${name}`, 'unreachable', 'mark is not on walkable floor clear of obstacles');
-      for (const k of geo.cameras.filter(k => k.location === cs.location)) if (!inSafe(k, mk.x, mk.y, 0)) c.add(`${p}.marks.${name}`, 'graph', `mark falls outside the safe region of camera ${k.id}`);
+    else {
+      framing = cam;
+      selected.set(cs.location, (selected.get(cs.location) ?? new Map()).set(cam.id, cam));
     }
-    for (const [route, pts] of Object.entries(cs.routes ?? {})) pts.forEach((q, i) => !standable(g, q as FloorPoint) && c.add(`${p}.routes.${route}[${i}]`, 'unreachable', 'route point is not on walkable floor'));
+    const marks: Array<[string, SpatialMark, string | undefined]> = [
+      ...(cs.entryMark ? [['entryMark', cs.entryMark, undefined] as [string, SpatialMark, undefined]] : []),
+      ...Object.entries(cs.marks ?? {}).map(([name, mk]) => [`marks.${name}`, mk, seatOf(g, name)] as [string, SpatialMark, string | undefined]),
+    ];
+    for (const [name, mk, seat] of marks) {
+      const where = name === 'entryMark' ? `${p}.entryMark` : `${p}.${name}`;
+      if (seat) {
+        if (!seatedStandable(g, [mk.x, mk.y], seat)) c.add(where, 'unreachable', `seated mark is not on its declared seat ${seat} (on walkable floor, clear of every other obstacle)`);
+      } else if (!standable(g, [mk.x, mk.y])) c.add(where, 'unreachable', 'mark is not on walkable floor clear of obstacles');
+      if (!framing) continue;
+      if (!projectPoint(framing, mk.x, mk.y, 0)) c.add(where, 'graph', `mark is at or behind the plane of camera ${framing.id}`);
+      else if (!inSafe(framing, mk.x, mk.y, 0)) c.add(where, 'graph', `mark falls outside the safe region of camera ${framing.id}`);
+    }
+    for (const [route, pts] of Object.entries(cs.routes ?? {}))
+      pts.forEach((q, i) => {
+        const pt = q as FloorPoint;
+        if (standable(g, pt)) return;
+        // A route may begin or end on the seat of a declared seated mark; its interior never leaves walkable floor.
+        const onSeat = (i === 0 || i === pts.length - 1) && (seated.get(cs.location) ?? []).some(s => same(s.at, pt));
+        if (!onSeat) c.add(`${p}.routes.${route}[${i}]`, 'unreachable', 'route point is not on walkable floor');
+      });
   }
   for (const port of m.portals) {
     if (port.kind !== 'excursion') continue; // a spine cut has no door; a reversible door needs both sides
     for (const side of [port.from, port.to]) if (!byLoc.get(side)?.portals.some(a => a.portal === port.id)) c.add(`portals.${port.id}`, 'unreachable', `no door anchor in ${side}`);
   }
   for (const g of geo.locations) {
+    const cams = [...(selected.get(g.location)?.values() ?? [])];
     for (const a of g.anchors) {
       if (!entityIds.has(a.entity)) c.add(`locations.${g.location}.anchors.${a.entity}`, 'unknown_ref', 'anchor for an entity the manifest does not have');
-      for (const k of geo.cameras.filter(k => k.location === g.location)) if (!inSafe(k, a.root[0], a.root[1], a.height)) c.add(`locations.${g.location}.anchors.${a.entity}`, 'graph', `anchor falls outside the safe region of camera ${k.id}`);
+      if (cams.length && !cams.some(k => inSafe(k, a.root[0], a.root[1], a.height))) c.add(`locations.${g.location}.anchors.${a.entity}`, 'graph', 'anchor is outside the safe region of every camera a scene of this location selects');
     }
     for (const a of g.attachments) if (!entityIds.has(a.entity)) c.add(`locations.${g.location}.attachments.${a.id}`, 'unknown_ref', 'attachment on an unknown entity');
     for (const d of g.portals) if (!m.portals.some(p => p.id === d.portal && (p.from === g.location || p.to === g.location))) c.add(`locations.${g.location}.portals.${d.portal}`, 'unknown_ref', 'door anchor for a portal that does not touch this location');

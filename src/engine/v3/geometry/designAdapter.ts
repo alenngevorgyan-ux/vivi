@@ -12,17 +12,22 @@
  *
  * and compiles each source perspective camera into normalized coefficients.
  * It never clamps: a source point outside its declared bounds, an unapproved
- * yaw, a behind-camera point or a degenerate camera is an error. It contains no
- * story values; Design owns the numbers and the build script that calls this.
+ * yaw, a seated mark that is not on its declared seat, or a degenerate or
+ * non-finite camera is an error. A camera may stand inside the location's
+ * bounds (an interior camera): nothing here requires the whole floor to be in
+ * front of it. Whether a given point is in front of the camera a scene selects is
+ * decided per point at projection time (`projectPoint`) and per scene by
+ * `validateGeometryForManifest`. It contains no story values; Design owns the
+ * numbers and the build script that calls this.
  *
  * Outputs are the runtime geometry resource and, separately, each location's
- * named marks. The marks go into the manifest's compiled scenes (the one
- * runtime mark authority) through the deterministic compile step; they are not
- * duplicated in the resource.
+ * named marks and routes. They go into the manifest's compiled scenes (the one
+ * runtime coordinate authority) through the deterministic compile step; they
+ * are not duplicated in the resource.
  */
 
 import type { SpatialMark } from '../contracts/manifest.ts';
-import { GEOMETRY_SCHEMA_VERSION, type CameraGeometry, type FloorPoint, type LocationGeometry, type Point3, type RuntimeGeometryV3 } from '../contracts/geometry.ts';
+import { GEOMETRY_SCHEMA_VERSION, pointInPolygon, type CameraGeometry, type FloorPoint, type LocationGeometry, type Point3, type RuntimeGeometryV3, type SeatDeclaration } from '../contracts/geometry.ts';
 
 /** [x, z] on the floor, metres. */
 export type SourceFloor = [number, number];
@@ -35,7 +40,13 @@ export interface DesignLocationSource {
   bounds: { xMin: number; xMax: number; zMin: number; zMax: number };
   /** Metres per normalized height unit. */
   heightScale: number;
-  marks: Record<string, { at: SourceFloor; yaw: number }>;
+  /**
+   * Named hero marks. `posture: 'seat'` is Design's explicit statement that the mark is a seated position and
+   * `seat` names the obstacle (of this location) that supports it; a mark without a posture is standing.
+   */
+  marks: Record<string, { at: SourceFloor; yaw: number; posture?: 'stand' | 'seat'; seat?: string }>;
+  /** Named hero routes (floor polylines). Normalized by the same mapping as every other point; they go into the compiled scenes beside the marks. */
+  routes?: Record<string, SourceFloor[]>;
   walkable: Array<{ outer: SourceFloor[]; holes?: SourceFloor[][] }>;
   /** Collision footprints, already inflated by the approved hero radius. */
   obstacles: Array<{ id: string; polygon: SourceFloor[] }>;
@@ -71,6 +82,8 @@ export interface AdaptedGeometry {
   geometry: RuntimeGeometryV3;
   /** Named marks per location, for the manifest's compiled scenes. */
   marks: Record<string, Record<string, SpatialMark>>;
+  /** Named routes per location (normalized floor polylines), for the manifest's compiled scenes. */
+  routes: Record<string, Record<string, Array<[number, number]>>>;
 }
 
 export class GeometryAdapterError extends Error {}
@@ -87,6 +100,7 @@ export function adaptDesignGeometry(src: DesignGeometrySource, o: { geometryRevi
 
   const frames = new Map(src.locations.map(l => [l.location, l] as const));
   const marks: AdaptedGeometry['marks'] = {};
+  const routes: AdaptedGeometry['routes'] = {};
 
   const locations: LocationGeometry[] = src.locations.map(l => {
     const { xMin, xMax, zMin, zMax } = l.bounds;
@@ -105,9 +119,23 @@ export function adaptDesignGeometry(src: DesignGeometrySource, o: { geometryRevi
       const [x, y] = floor(mk.at, `mark ${role}`);
       return [role, { x, y, facing: facing(mk.yaw) }];
     }));
+    routes[l.location] = Object.fromEntries(Object.entries(l.routes ?? {}).map(([name, pts]) => [name, pts.map((q, i) => floor(q, `route ${name}[${i}]`))]));
+    // Seated marks: an explicit posture and supporting obstacle, never inferred from a mark's name or position.
+    const seats: SeatDeclaration[] = [];
+    for (const [role, mk] of Object.entries(l.marks)) {
+      if (mk.posture !== undefined && mk.posture !== 'stand' && mk.posture !== 'seat') fail(`${l.location}: mark ${role} has an unknown posture`);
+      if (mk.posture !== 'seat') {
+        if (mk.seat !== undefined) fail(`${l.location}: mark ${role} names a seat but is not seated`);
+        continue;
+      }
+      const seat = l.obstacles.find(ob => ob.id === mk.seat) ?? fail(`${l.location}: seated mark ${role} names no obstacle of this location as its seat`);
+      if (!pointInPolygon(mk.at, seat.polygon)) fail(`${l.location}: seated mark ${role} is not on its declared seat ${seat.id}`);
+      seats.push({ role, obstacle: seat.id });
+    }
     return {
       location: l.location,
       kitRevision: l.kitRevision,
+      ...(seats.length ? { seats } : {}),
       walkable: l.walkable.map((wk, i) => ({ outer: poly(wk.outer, `walkable[${i}]`), ...(wk.holes ? { holes: wk.holes.map((h, j) => poly(h, `walkable[${i}].holes[${j}]`)) } : {}) })),
       obstacles: l.obstacles.map(ob => ({ id: ob.id, polygon: poly(ob.polygon, `obstacle ${ob.id}`) })),
       occluders: l.occluders.map(oc => ({ id: oc.id, polygon: poly(oc.polygon, `occluder ${oc.id}`), height: height(oc.height, `occluder ${oc.id}`), priority: oc.priority })),
@@ -130,8 +158,10 @@ export function adaptDesignGeometry(src: DesignGeometrySource, o: { geometryRevi
     const w = xMax - xMin;
     const d = zMax - zMin;
     if (!Number.isFinite(k.f) || k.f === 0) fail(`camera ${k.id}: degenerate focal length`);
-    // The camera stands in front of the floor it frames: every floor depth must be in front of it.
-    if (!(k.cam[2] < zMin)) fail(`camera ${k.id}: the floor is not entirely in front of the camera`);
+    // Finite coefficients only. The camera may stand anywhere, including inside the floor bounds: a point at or
+    // behind its plane simply has no projection, and scenes are validated against the camera they select.
+    const finiteAll = (...ns: number[]) => ns.every(Number.isFinite);
+    if (!Array.isArray(k.cam) || k.cam.length !== 3 || !finiteAll(...k.cam) || !finiteAll(k.cx, k.hy, k.viewport.width, k.viewport.height, k.safe.x, k.safe.y, k.safe.width, k.safe.height)) fail(`camera ${k.id}: non-finite camera coefficients`);
     return {
       id: k.id,
       location: k.location,
@@ -159,5 +189,6 @@ export function adaptDesignGeometry(src: DesignGeometrySource, o: { geometryRevi
       cameras,
     },
     marks,
+    routes,
   };
 }

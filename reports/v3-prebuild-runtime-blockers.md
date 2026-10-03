@@ -6,7 +6,7 @@ Branch `implementation/vivi-v3-prebuild-contracts`. Contracts: `docs/v3/V3_PREBU
 
 | ID | Blocker | Status |
 |---|---|---|
-| B02 | Authoritative geometry, location-specific hero marks | **Runtime half closed.** Contract, deterministic Design→runtime adapter, validators, manifest agreement, per-location hero marks. Design still has to publish a source-checked export; the Correction runs on dev-named placeholder geometry. |
+| B02 | Authoritative geometry, location-specific hero marks | **Runtime half closed.** Contract, deterministic Design→runtime adapter, validators, manifest agreement, per-location hero marks. Design still has to publish a source-checked export; the Correction runs on dev-named placeholder geometry. **Superseded in part:** the closure review (`a8a4a7a`) reproduced three incompatibilities with Design r3 (interior cameras, recipe coverage, seated marks); see `reports/v3-b02-geometry-reconciliation.md`. |
 | B03 | `useExperience` resolved preload at once and collapsed three presentation phases | **Closed.** Async `ExperienceHost`, explicit headless mode, three receipts, stale/unmount/revision guards. |
 | B04 | Persistence failure swallowed; missing callback = fake success; unacknowledged save | **Closed.** Journal + idempotent repository, exact-ack, visible failure, retry with the identical key, reload recovery. |
 | B05 | Restore hardening incomplete | **Closed.** Ordered shape-first validation, snapshot v2, adversarial witnesses, fuzz. |
@@ -120,7 +120,7 @@ The first pass left 6 survivors and 2 invalid mutations. Each exposed a weak tes
 | G04 | B02 | heights are not normalized | prebuild |
 | G05 | B02 | the compiled horizontal focal length is wrong | prebuild |
 | G06 | B02 | the compiled camera depth is wrong | prebuild |
-| G07 | B02 | a camera inside the floor is accepted | prebuild |
+| G07 | B02 | a camera with non-finite coefficients is accepted *(was: a camera inside the floor is accepted — that invariant was removed by the B02 reconciliation, see `reports/v3-b02-geometry-reconciliation.md`)* | prebuild |
 | G08 | B02 | marks need not be standable | prebuild |
 | G09 | B02 | marks need not be in the safe region | prebuild |
 | G10 | B02 | kit revisions need not agree | prebuild |

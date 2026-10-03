@@ -160,7 +160,22 @@ ok('Compiled cameras reproduce the Design perspective, floor unprojection round-
   reject('a negative height', s => (s.locations[0].anchors[0].height = -1), /invalid height/);
   reject('a camera over an unknown location', s => (s.cameras[0].location = 'room_z'), /unknown location/);
   reject('a zero focal length', s => (s.cameras[0].f = 0), /degenerate focal length/);
-  reject('a camera inside the floor (floor not entirely in front)', s => (s.cameras[0].cam = [5, 1.6, 5]), /not entirely in front of the camera/);
+  reject('a non-finite camera position', s => (s.cameras[0].cam = [5, Number.NaN, -4]), /non-finite camera coefficients/);
+  reject('an infinite principal point', s => (s.cameras[0].cx = Number.POSITIVE_INFINITY), /non-finite camera coefficients/);
+  reject('a non-finite safe region', s => (s.cameras[0].safe.width = Number.NaN), /non-finite camera coefficients/);
+  reject('a malformed camera position', s => ((s.cameras[0] as { cam: unknown }).cam = [5, 1.6]), /non-finite camera coefficients/);
+  reject('a seated mark naming no obstacle', s => (s.locations[0].marks.entry = { at: [5, 7], yaw: 0, posture: 'seat', seat: 'nope' }), /seated mark entry names no obstacle/);
+  reject('a seated mark with no seat', s => (s.locations[0].marks.entry = { at: [5, 7], yaw: 0, posture: 'seat' }), /seated mark entry names no obstacle/);
+  reject('a seated mark that is not on its seat', s => (s.locations[0].marks.entry = { at: [2, 3], yaw: 0, posture: 'seat', seat: 'desk' }), /seated mark entry is not on its declared seat desk/);
+  reject('a seat named by a standing mark', s => (s.locations[0].marks.entry = { at: [5, 7], yaw: 0, posture: 'stand', seat: 'desk' }), /names a seat but is not seated/);
+  reject('a seat named with no posture', s => (s.locations[0].marks.entry = { at: [5, 7], yaw: 0, seat: 'desk' }), /names a seat but is not seated/);
+  // Posture comes from Design, never from a mark's name: a standing mark called own_seat is standing.
+  const named = clone(SOURCE);
+  named.locations[0].marks.own_seat = { at: [7, 4], yaw: 90, posture: 'stand' };
+  named.locations[0].marks.seat_plain = { at: [8, 4], yaw: 90 };
+  const namedOut = adaptDesignGeometry(named, OPTS);
+  assert.equal(namedOut.geometry.locations[0].seats, undefined, 'a mark named like a seat is not seated unless Design says posture: seat');
+  reject('an unknown posture', s => (s.locations[0].marks.entry = { at: [5, 7], yaw: 0, posture: 'lie' as 'seat', seat: 'desk' }), /unknown posture/);
   reject('an unsupported Design schema', s => ((s as { designSchemaVersion: number }).designSchemaVersion = 2), /unsupported Design geometry schema/);
   // Nothing is ever clamped: a point exactly ON a bound is accepted, one epsilon past it is not.
   const edge = clone(SOURCE);
@@ -252,6 +267,208 @@ function markedManifest(): { m: PlaybackManifestV3; geo: RuntimeGeometryV3 } {
   assert.equal(validateGeometryForManifest(geo, { ...m, compiledScenes: m.compiledScenes.map(c => ({ ...c, routes: { ok: [[10, 10], [35, 20]] } })) } as PlaybackManifestV3).ok, true, 'a route over walkable floor is accepted');
 }
 ok('Geometry and manifest agree: every mark is standable and in every camera safe region; kits, cameras, doors, anchors and routes must exist and match');
+
+/* ===================================================================== */
+/* B02 — interior cameras, per-scene recipes, explicit seated marks        */
+/* ===================================================================== */
+
+/** The foundation manifest compiled against an arbitrary Design source: each scene gets its location's marks and a chosen recipe. */
+function markedManifestFor(src: DesignGeometrySource, recipes: Record<string, string>): { m: PlaybackManifestV3; geo: RuntimeGeometryV3 } {
+  const { geometry, marks } = adaptDesignGeometry(src, OPTS);
+  const m = foundationManifest();
+  for (const cs of m.compiledScenes) {
+    cs.kitRevision = 'dev-kit-1';
+    cs.cameraRecipe = recipes[cs.location];
+    cs.entryMark = clone(marks[cs.location].entry);
+    cs.marks = clone(marks[cs.location]);
+  }
+  return { m, geo: geometry };
+}
+/** Every scene of room_a (scene_a and scene_c): a location's scenes share its marks and, here, its recipe. */
+const roomA = (m: PlaybackManifestV3) => m.compiledScenes.filter(c => c.location === 'room_a');
+const issuePaths = (r: { issues: Array<{ path: string }> }) => r.issues.map(i => i.path).join(', ');
+
+{
+  // An interior camera: it stands INSIDE the declared floor bounds, with part of the floor behind it.
+  const interior = clone(SOURCE);
+  interior.cameras[0] = { ...camera('room_a', 'cam_a'), cam: [5, 1.6, 5] }; // floor z 2..12: z 2..5 is behind it
+  interior.locations[0].anchors[0].root = [5, 9]; // staging in front of the interior camera
+  const { geometry: g, marks } = adaptDesignGeometry(interior, OPTS);
+  assert.equal(validateRuntimeGeometry(g).ok, true, 'an interior camera is a valid camera');
+  const cam = g.cameras[0];
+  assert.deepEqual([cam.projection.camX, cam.projection.camY], [25, 30], 'the camera is where Design put it, inside the floor');
+  // Strict projection is unchanged: no clamping, nothing at or behind the plane.
+  const front = projectPoint(cam, 25, 60, 0)!;
+  assert.ok(front && Number.isFinite(front.sx) && Number.isFinite(front.sy), 'in front of the camera → a projection');
+  assert.equal(projectPoint(cam, 25, 30, 0), undefined, 'exactly on the camera plane');
+  assert.equal(projectPoint(cam, 25, 10, 0), undefined, 'behind the camera plane');
+  assert.equal(unprojectFloor(cam, 960, 1000) === undefined ? 'none' : 'some', 'some', 'pointer input below the horizon still lands on the floor in front');
+  // The same Design formula as every other camera.
+  const want = { sx: 960 + (900 * (7 - 5)) / (9 - 5), sy: 380 + (900 * (1.6 - 1.2)) / (9 - 5) };
+  const [nx, nz] = [(100 * 7) / 20, (100 * (9 - 2)) / 10];
+  const got = projectPoint(cam, nx, nz, 1.2 / 3)!;
+  assert.ok(Math.abs(got.sx - want.sx) < 1e-3 && Math.abs(got.sy - want.sy) < 1e-3, 'interior camera reproduces the Design perspective');
+
+  // A scene whose required content is in front of the interior camera is valid.
+  const front_ = markedManifestFor(interior, { room_a: 'cam_a', room_b: 'cam_b' });
+  for (const cs of roomA(front_.m)) {
+    cs.entryMark = { x: 25, y: 70, facing: 'right' };
+    cs.marks = { entry: { x: 25, y: 70, facing: 'right' } };
+  }
+  assert.equal(validateGeometryForManifest(front_.geo, front_.m).ok, true, issuePaths(validateGeometryForManifest(front_.geo, front_.m)));
+  // Required content at or behind the active camera plane fails, with its own reason, never clamped into view.
+  for (const [label, y] of [['on the plane', 30], ['behind the plane', 15]] as const) {
+    const bad_ = markedManifestFor(interior, { room_a: 'cam_a', room_b: 'cam_b' });
+    for (const cs of roomA(bad_.m)) {
+      cs.marks = { entry: { x: 25, y, facing: 'right' } };
+      cs.entryMark = { x: 25, y, facing: 'right' };
+    }
+    const r = validateGeometryForManifest(bad_.geo, bad_.m);
+    assert.equal(r.ok, false, `a mark ${label} must be rejected`);
+    assert.ok(r.issues.some(i => /compiledScenes\.scene_a\.(entryMark|marks\.entry)/.test(i.path) && /at or behind the plane of camera cam_a/.test(i.message)), `${label}: ${JSON.stringify(r.issues)}`);
+  }
+  assert.ok(marks.room_a.entry, 'marks are independent of the camera');
+}
+ok('Interior cameras: no global in-front invariant; projection stays strict (nothing on or behind the plane, no clamping); scene content behind the active camera fails');
+
+{
+  // Per-scene recipes: a scene is validated against the recipe it selects, not every camera of its location.
+  const two = clone(SOURCE);
+  two.cameras.push({ ...camera('room_a', 'cam_a_tight'), safe: { x: 1500, y: 54, width: 300, height: 972 } }); // a framing that does not show the room_a marks
+  const both = markedManifestFor(two, { room_a: 'cam_a', room_b: 'cam_b' });
+  assert.equal(both.geo.cameras.length, 3, 'no camera is discarded');
+  assert.equal(validateGeometryForManifest(both.geo, both.m).ok, true, 'scene_a selects cam_a: marks the tight framing excludes are not required in it');
+  assert.equal(validateRuntimeGeometry(both.geo).ok, true);
+  const tight = markedManifestFor(two, { room_a: 'cam_a_tight', room_b: 'cam_b' });
+  const r = validateGeometryForManifest(tight.geo, tight.m);
+  assert.equal(r.ok, false, 'a scene that selects the tight framing must carry only what that framing shows');
+  assert.ok(r.issues.some(i => /compiledScenes\.scene_a\.(entryMark|marks\.)/.test(i.path) && /safe region of camera cam_a_tight/.test(i.message)), issuePaths(r));
+  assert.ok(!r.issues.some(i => /scene_b/.test(i.path)), 'scene_b is unaffected by another location\'s recipe');
+  // Mixed: a scene using the tight framing carries only content it shows (its sibling scene keeps the full framing, which shows the anchors).
+  for (const cs of roomA(tight.m)) {
+    delete cs.entryMark;
+    cs.marks = {};
+  }
+  tight.m.compiledScenes[2].cameraRecipe = 'cam_a';
+  assert.equal(validateGeometryForManifest(tight.geo, tight.m).ok, true, 'carrying no mark the framing excludes is valid');
+  // The structural checks on a recipe still hold: a missing recipe, another location\'s recipe.
+  const wrong = markedManifestFor(two, { room_a: 'cam_b', room_b: 'cam_b' });
+  assert.ok(validateGeometryForManifest(wrong.geo, wrong.m).issues.some(i => /cameraRecipe/.test(i.path)), 'a recipe from another location is rejected');
+  // Anchors: visible in at least one camera some scene of the location selects.
+  const anchorTight = markedManifestFor(two, { room_a: 'cam_a_tight', room_b: 'cam_b' });
+  for (const cs of roomA(anchorTight.m)) {
+    cs.marks = {};
+    delete cs.entryMark;
+  }
+  const ar = validateGeometryForManifest(anchorTight.geo, anchorTight.m);
+  assert.ok(ar.issues.some(i => /anchors\.hero/.test(i.path) && /every camera a scene of this location selects/.test(i.message)), issuePaths(ar));
+  assert.ok(!ar.issues.some(i => /marks/.test(i.path)));
+}
+ok('Per-scene recipes: marks are checked against the camera the scene selects only; unselected cameras are kept; anchors need one selected camera that shows them');
+
+{
+  // Seated marks: an explicit posture + seat from Design source, never a name or a coordinate.
+  const withChair = (mutate?: (s: DesignGeometrySource) => void): DesignGeometrySource => {
+    const s = clone(SOURCE);
+    s.locations[0].obstacles.push({ id: 'chair', polygon: [[2.8, 6.5], [3.8, 6.5], [3.8, 7.5], [2.8, 7.5]] });
+    s.locations[0].marks.sit = { at: [3.3, 7], yaw: 90, posture: 'seat', seat: 'chair' };
+    mutate?.(s);
+    return s;
+  };
+  const rec = { room_a: 'cam_a', room_b: 'cam_b' };
+  const src = withChair();
+  const { geometry: g } = adaptDesignGeometry(src, OPTS);
+  assert.deepEqual(g.locations[0].seats, [{ role: 'sit', obstacle: 'chair' }], 'the seat relationship is carried');
+  assert.equal(g.locations[1].seats, undefined, 'a location with no seated mark has no seat list');
+  assert.equal(validateRuntimeGeometry(g).ok, true, issuePaths(validateRuntimeGeometry(g)));
+  assert.equal(JSON.stringify(adaptDesignGeometry(src, OPTS)), JSON.stringify(adaptDesignGeometry(clone(src), OPTS)), 'deterministic');
+  assert.equal(adaptDesignGeometry(SOURCE, OPTS).geometry.locations[0].seats, undefined, 'sources without seats serialize exactly as before');
+
+  const good = markedManifestFor(src, rec);
+  const seatedOnly = (m: PlaybackManifestV3) => {
+    const mm: PlaybackManifestV3 = clone(m);
+    mm.compiledScenes[0].marks = { ...mm.compiledScenes[0].marks, sit: { x: 16.5, y: 50, facing: 'right' } };
+    return mm;
+  };
+  const ok0 = validateGeometryForManifest(good.geo, seatedOnly(good.m));
+  assert.equal(ok0.ok, true, `a seated mark rests on its declared seat: ${issuePaths(ok0)}`);
+  // standable() itself never waives anything: the seat footprint is still an obstacle for everyone else.
+  assert.equal(standable(good.geo.locations[0], [16.5, 50]), false);
+
+  const bad = (label: string, mutate: (g: any, m: any) => void, path: RegExp, message?: RegExp) => {
+    const g: any = clone(good.geo);
+    const m: any = seatedOnly(good.m);
+    mutate(g, m);
+    const r = validateGeometryForManifest(g, m);
+    assert.equal(r.ok, false, `${label}: must be rejected`);
+    assert.ok(r.issues.some(i => path.test(i.path) && (!message || message.test(i.message))), `${label}: expected ${path}, got ${JSON.stringify(r.issues)}`);
+  };
+  // The waiver is narrow: it needs the declaration, the right obstacle and the right mark.
+  bad('the same point under an undeclared role', (g, _m) => (g.locations[0].seats = undefined), /marks\.sit/, /not on walkable floor/);
+  bad('a standing mark placed on the seat footprint', (_g, m) => (m.compiledScenes[0].marks.stand = { x: 16.5, y: 50, facing: 'right' }), /marks\.stand/, /not on walkable floor/);
+  bad('the entry mark placed on the seat', (_g, m) => (m.compiledScenes[0].entryMark = { x: 16.5, y: 50, facing: 'right' }), /entryMark/, /not on walkable floor/);
+  bad('a seated role placed off its seat, on open floor', (_g, m) => (m.compiledScenes[0].marks.sit = { x: 10, y: 10, facing: 'right' }), /marks\.sit/, /not on its declared seat chair/);
+  bad('a seated role placed inside a different obstacle', (_g, m) => (m.compiledScenes[0].marks.sit = { x: 25, y: 50, facing: 'right' }), /marks\.sit/, /not on its declared seat chair/);
+  bad('a seated role off the walkable floor', (_g, m) => (m.compiledScenes[0].marks.sit = { x: 1, y: 1, facing: 'right' }), /marks\.sit/, /not on its declared seat chair/);
+  bad('a seat overlapping a different obstacle', (g, _m) => g.locations[0].obstacles.push({ id: 'rug', polygon: [[10, 40], [20, 40], [20, 60], [10, 60]] }), /marks\.sit/, /not on its declared seat chair/);
+  bad('a seated role whose seat names a different obstacle', (g, _m) => (g.locations[0].seats = [{ role: 'sit', obstacle: 'desk' }]), /marks\.sit/, /not on its declared seat desk/);
+  // Geometry may declare a seat the manifest variant never carries (a compressed topology): that is not an error.
+  assert.equal(validateGeometryForManifest({ ...good.geo, locations: good.geo.locations.map(l => (l.location === 'room_a' ? { ...l, seats: [{ role: 'sit', obstacle: 'chair' }, { role: 'unused', obstacle: 'chair' }] } : l)) }, seatedOnly(good.m)).ok, true, 'an unused seat declaration is harmless');
+  // A seat that extends past the walkable floor: the part outside it is not standable even for the seated mark.
+  const benched = clone(src);
+  benched.locations[0].obstacles.push({ id: 'bench', polygon: [[0, 4], [1, 4], [1, 5], [0, 5]] }); // x 0..1 m: walkable starts at x 0.5
+  benched.locations[0].marks.perch = { at: [0.3, 4.5], yaw: 90, posture: 'seat', seat: 'bench' };
+  benched.locations[0].marks.sit_ok = { at: [0.8, 4.5], yaw: 90, posture: 'seat', seat: 'bench' };
+  const bg = markedManifestFor(benched, rec);
+  const onBench = (key: string) => {
+    const m: PlaybackManifestV3 = clone(bg.m);
+    for (const cs of roomA(m)) cs.marks = { [key]: bg.m.compiledScenes[0].marks![key] };
+    return validateGeometryForManifest(bg.geo, m);
+  };
+  assert.equal(onBench('sit_ok').ok, true, `the seated mark on the walkable part of its seat: ${issuePaths(onBench('sit_ok'))}`);
+  const offFloor = onBench('perch');
+  assert.ok(offFloor.issues.some(i => /marks\.perch/.test(i.path) && /not on its declared seat bench/.test(i.message)), `a seated mark off the walkable floor is refused: ${issuePaths(offFloor)}`);
+  // Routes stay collision-safe; only a start or end that IS a declared seated point may rest on the seat.
+  const route = (pts: Array<[number, number]>) => (_g: any, m: any) => (m.compiledScenes[0].routes = { r: pts });
+  const okRoute = (pts: Array<[number, number]>) => {
+    const m = seatedOnly(good.m);
+    m.compiledScenes[0].routes = { r: pts };
+    return validateGeometryForManifest(good.geo, m);
+  };
+  assert.equal(okRoute([[16.5, 50], [10, 20], [30, 20]]).ok, true, 'a route may start on the seated point');
+  assert.equal(okRoute([[30, 20], [10, 20], [16.5, 50]]).ok, true, 'a route may end on the seated point');
+  assert.equal(okRoute([[16.5, 50]]).ok, true, 'a single-point route on the seated point');
+  bad('a route that crosses the seat in its interior', route([[10, 20], [16.5, 50], [30, 20]]), /routes\.r\[1\]/);
+  bad('a route that starts inside the seat away from the seated point', route([[17, 52], [10, 20]]), /routes\.r\[0\]/);
+  bad('a route that starts at a seated role that is not on its seat', (_g, m) => ((m.compiledScenes[0].marks.sit = { x: 25, y: 50, facing: 'right' }), (m.compiledScenes[0].routes = { r: [[25, 50], [10, 20]] })), /routes\.r\[0\]/);
+  bad('a route that starts inside an ordinary obstacle', route([[25, 50], [10, 20]]), /routes\.r\[0\]/);
+  bad('a route that ends inside an ordinary obstacle', route([[10, 20], [25, 50]]), /routes\.r\[1\]/);
+  const noSeatedMark = (m: PlaybackManifestV3) => {
+    for (const cs of roomA(m)) cs.marks = Object.fromEntries(Object.entries(cs.marks ?? {}).filter(([k]) => k !== 'sit'));
+    roomA(m)[0].routes = { r: [[16.5, 50], [10, 20]] };
+    return m;
+  };
+  const orphan = validateGeometryForManifest(good.geo, noSeatedMark(clone(good.m)));
+  assert.ok(orphan.issues.some(i => /routes\.r\[0\]/.test(i.path)), `a route start on a seat no scene of the location carries as a seated mark is a collision: ${issuePaths(orphan)}`);
+  // Another scene of the same location may carry the seated mark that anchors the route.
+  const sibling = noSeatedMark(clone(good.m));
+  roomA(sibling)[1].marks = { ...roomA(sibling)[1].marks, sit: { x: 16.5, y: 50, facing: 'right' } };
+  assert.equal(validateGeometryForManifest(good.geo, sibling).ok, true, issuePaths(validateGeometryForManifest(good.geo, sibling)));
+  // Structural: the seat list is part of the closed geometry contract.
+  const struct = (label: string, mutate: (x: any) => void, path: RegExp) => {
+    const x: any = clone(good.geo);
+    mutate(x);
+    const r = validateRuntimeGeometry(x);
+    assert.equal(r.ok, false, `${label}: must be rejected`);
+    assert.ok(r.issues.some(i => path.test(i.path)), `${label}: ${issuePaths(r)}`);
+  };
+  struct('a seat on an obstacle the location lacks', x => (x.locations[0].seats[0].obstacle = 'nowhere'), /seats\[0\]\.obstacle/);
+  struct('a role seated twice', x => x.locations[0].seats.push({ role: 'sit', obstacle: 'chair' }), /seats\[1\]\.role/);
+  struct('an unknown seat key', x => (x.locations[0].seats[0].posture = 'seat'), /seats\[0\]\.posture/);
+  struct('a seat list that is not a list', x => (x.locations[0].seats = {}), /seats/);
+  struct('a non-identifier role', x => (x.locations[0].seats[0].role = 'Own Seat'), /seats\[0\]\.role/);
+}
+ok('Seated marks: only a declared seated mark may rest on its declared seat; ordinary marks, entry marks and route interiors stay collision-safe; other obstacles are never waived');
 
 /* ===================================================================== */
 /* B02 — location-specific hero marks                                      */
