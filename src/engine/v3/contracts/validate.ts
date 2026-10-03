@@ -580,7 +580,12 @@ function validateGraph(c: Ctx, refs: Refs, g: GraphInput, opts: ValidationOption
     need(c, refs.locations, to, `${p}.to`, 'location');
     need(c, refs.scenes, fromScene, `${p}.fromScene`, 'scene');
     need(c, refs.scenes, toScene, `${p}.toScene`, 'scene');
-    if (from && to && from === to) c.add(`${p}.to`, 'graph', 'a portal connects two different locations');
+    // A walkable door (excursion) joins two different locations. A spine portal may also be a CUT to another
+    // scene of the same location ("a second view of the same room"), never a door to nowhere.
+    if (from && to && from === to) {
+      if (kind !== 'spine') c.add(`${p}.to`, 'graph', 'an excursion connects two different locations');
+      else if (fromScene && toScene && fromScene === toScene) c.add(`${p}.toScene`, 'graph', 'a cut must lead to a different scene');
+    }
     if (fromScene && from && sceneLocation.get(fromScene) !== from) c.add(`${p}.fromScene`, 'graph', 'fromScene is not in the portal\'s source location');
     if (toScene && to && sceneLocation.get(toScene) !== to) c.add(`${p}.toScene`, 'graph', 'toScene is not in the portal\'s destination location');
     gate(c, refs, po.available, `${p}.available`);

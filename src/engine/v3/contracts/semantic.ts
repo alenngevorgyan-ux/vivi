@@ -107,7 +107,9 @@ export interface ScenePlan {
 
 export const PORTAL_AUTHORITIES = ['source', 'author_approved_staging'] as const;
 /**
- * A portal is an edge between scenes of two different locations.
+ * A portal is an edge between scenes. An `excursion` is a walkable door between
+ * two different locations; a `spine` portal may also be a cut to another scene
+ * of the same location.
  *
  * Amendment to the master plan (see docs/VIVI_V3_FOUNDATION.md): a location can
  * host several scenes ("a second view of the same room is another scene"), so

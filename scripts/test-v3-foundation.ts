@@ -124,7 +124,18 @@ ok('The neutral fixture validates as manifest, semantic plan and stored post');
   reject('spine portal with a return', x => (x.portals[0].returnPortal = 'p_b_peek_a'), 'graph', 'returnPortal');
   reject('excursion without a return', x => delete x.portals[2].returnPortal, 'missing_key', 'returnPortal');
   reject('return that is not the reverse edge', x => (x.portals[3].toScene = 'scene_c'), 'graph');
-  reject('portal within one location', x => (x.portals[0].to = 'room_a'), 'graph');
+  reject('portal destination disagrees with its scene', x => (x.portals[0].to = 'room_a'), 'graph');
+  reject('an excursion must be a real door between two locations', x => {
+    x.portals[2].to = 'room_b';
+    x.portals[2].from = 'room_b';
+    x.portals[2].fromScene = 'scene_b';
+    x.portals[3].from = 'room_b';
+    x.portals[3].to = 'room_b';
+  }, 'graph', 'excursion');
+  reject('a cut must lead to a different scene', x => {
+    x.portals[0].to = 'room_a';
+    x.portals[0].toScene = 'scene_a';
+  }, 'graph', 'cut');
   reject('portal scene outside its location', x => (x.portals[0].fromScene = 'scene_b'), 'graph', 'fromScene');
   reject('spine scene nobody can reach', x => (x.portals = x.portals.filter((p: any) => p.id !== 'p_b_to_c')), 'unreachable');
   reject('observation no scene offers', x => (x.scenePlans[0].observationIds = []), 'unreachable', 'observations');
@@ -733,6 +744,90 @@ ok('Portal transaction: request → freeze → preload → atomic swap → hando
   assert.equal(buildReadableModel(r.m, r.s).portals.find(p => p.id === 'p_b_peek_a')?.blockedBy, 'closed');
 }
 ok('Portal state set by a sourced event closes a portal, and the readable model says why');
+
+{
+  // A spine portal may be a cut to another scene of the same location ("a second view of the same room").
+  const m = foundationManifest();
+  m.scenePlans[2].location = 'room_b';
+  m.compiledScenes[2].location = 'room_b';
+  m.portals[1].to = 'room_b';
+  m.portals[1].from = 'room_b';
+  assert.deepEqual(validateManifest(m).issues, [], 'a same-location cut validates');
+  const r = start(m);
+  send(r, { type: 'OPEN_OBSERVATION', id: 'o_a1', activationId: aid() });
+  send(r, { type: 'CLOSE_OBSERVATION' });
+  travel(r, 'p_a_to_b');
+  send(r, { type: 'ADVANCE' });
+  send(r, { type: 'ADVANCE' });
+  travel(r, 'p_b_to_c');
+  assert.equal(r.s.scene, 'scene_c');
+  assert.equal(r.s.location, 'room_b', 'the cut stays in the same location');
+  assert.equal(entityLocation(r.s, 'hero'), 'room_b');
+  assert.equal(r.s.arcIndex, 2);
+}
+ok('A spine portal can be a cut between two scenes of one location; an excursion must be a real door');
+
+{
+  // The master plan's richest example has this SHAPE: desk → meeting → hallway ⇄ meeting(break) → meeting(question),
+  // three locations, four scenes, a reversible hallway excursion and one decision. Neutral ids; no story content.
+  const base = foundationManifest();
+  const scene = (id: string, location: string, purpose: any, extra: object = {}) => ({ id, location, kind: 'inhabited', viewpoint: 'hero', purpose, requiredFacts: [], beats: [], observationIds: [], opportunityIds: [], composition: 'comp_neutral', ...extra });
+  const m: any = clone(base);
+  m.spine = ['sc_1', 'sc_2', 'sc_3', 'sc_4'];
+  m.scenePlans = [
+    scene('sc_1', 'loc_desk', 'orient', { requiredFacts: ['f0', 'f1'], observationIds: ['o_a1'], beats: base.scenePlans[0].beats }),
+    scene('sc_2', 'loc_meeting', 'discover', { requiredFacts: ['f2'], beats: [{ id: 'b_m1', after: [], events: [{ kind: 'deliver', facts: ['f2'] }], emphasis: 'evidence', delivery: 'reader' }] }),
+    scene('sc_3', 'loc_hall', 'reframe'),
+    scene('sc_4', 'loc_meeting', 'decide', { requiredFacts: ['f3'], beats: base.scenePlans[2].beats, opportunityIds: ['act_speak', 'act_wait', 'act_ask'] }),
+  ];
+  m.compiledScenes = m.scenePlans.map((p: any) => ({ ...clone(base.compiledScenes[0]), id: p.id, location: p.location, accessibleText: p.requiredFacts.map((f: string) => ({ fact: f, text: `Text for ${f}.` })) }));
+  const portal = (id: string, kind: string, from: string, to: string, fromScene: string, toScene: string, extra: object = {}) => ({ id, label: id, kind, from, to, fromScene, toScene, available: { kind: 'always' }, supportFacts: [], authority: 'source', ...extra });
+  m.portals = [
+    portal('pt_1', 'spine', 'loc_desk', 'loc_meeting', 'sc_1', 'sc_2', { available: { kind: 'fact_received', id: 'f1' } }),
+    portal('pt_2', 'spine', 'loc_meeting', 'loc_hall', 'sc_2', 'sc_3', { available: { kind: 'fact_received', id: 'f2' } }),
+    portal('pt_back', 'excursion', 'loc_hall', 'loc_meeting', 'sc_3', 'sc_2', { returnPortal: 'pt_fwd', authority: 'author_approved_staging' }),
+    portal('pt_fwd', 'excursion', 'loc_meeting', 'loc_hall', 'sc_2', 'sc_3', { returnPortal: 'pt_back', authority: 'author_approved_staging' }),
+    portal('pt_resume', 'spine', 'loc_hall', 'loc_meeting', 'sc_3', 'sc_4'),
+  ];
+  m.initialEntities = [
+    { id: 'hero', kind: 'actor', owner: { kind: 'location', id: 'loc_desk' }, state: {} },
+    { id: 'other', kind: 'actor', owner: { kind: 'location', id: 'loc_meeting' }, state: {} },
+    { id: 'lamp', kind: 'object', owner: { kind: 'location', id: 'loc_desk' }, state: {} },
+    { id: 'note', kind: 'object', owner: { kind: 'actor', id: 'hero' }, state: {} },
+  ];
+  m.scenePlans[3].beats = m.scenePlans[3].beats.map((b: any) => ({ ...b, events: b.events.map((e: any) => (e.kind === 'transfer' ? { kind: 'hold' } : e)) }));
+  m.observations = [base.observations[0]];
+  m.preparations = [{ ...base.preparations[0] }, { id: 'prep_put_back_note', target: { kind: 'object', id: 'note' }, label: 'Put the note down', available: { kind: 'always' }, supportFacts: [], action: { kind: 'put_back_own_object', object: 'note' } }];
+  m.primaryDecision = { id: 'd_main', scene: 'sc_4', minimumKnowledge: ['f1', 'f2', 'f3'], options: ['act_speak', 'act_wait', 'act_ask'] };
+  m.truthBoundary = { scene: 'sc_4', after: 'primary_act' };
+  assert.deepEqual(validateManifest(m, { profile: 'launch' }).issues, [], 'four scenes and three locations fit the launch caps');
+
+  const r = start(m);
+  send(r, { type: 'OPEN_OBSERVATION', id: 'o_a1', activationId: aid() });
+  send(r, { type: 'CLOSE_OBSERVATION' });
+  travel(r, 'pt_1');
+  send(r, { type: 'ADVANCE' });
+  travel(r, 'pt_2');
+  assert.equal(r.s.arcIndex, 2);
+  assert.equal(entityLocation(r.s, 'note'), 'loc_hall', 'the summary travels with the hero');
+  travel(r, 'pt_back'); // step back into the meeting room during the break
+  assert.equal(r.s.scene, 'sc_2');
+  assert.equal(r.s.arcIndex, 2, 'reversible: the arc did not move');
+  expectRejected(send(r, { type: 'REQUEST_PORTAL', id: 'pt_resume', activationId: aid() }), 'wrong_scene', 'resume is offered from the hallway, not the meeting room');
+  travel(r, 'pt_fwd');
+  assert.equal(r.s.scene, 'sc_3');
+  travel(r, 'pt_resume');
+  assert.equal(r.s.scene, 'sc_4');
+  assert.equal(r.s.arcIndex, 3);
+  assert.equal(entityLocation(r.s, 'other'), 'loc_meeting', 'the meeting did not reset or duplicate');
+  send(r, { type: 'ADVANCE' });
+  assert.deepEqual(buildReadableModel(r.m, r.s).actions.map(a => a.available), [true, true, true]);
+  assert.equal(buildReadableModel(r.m, r.s).portals.length, 0, 'no way back to a historical beat once the question is asked');
+  expectOk(send(r, { type: 'REQUEST_INTENT', id: 'act_speak', activationId: aid() }), 'choose');
+  expectOk(send(r, { type: 'CONFIRM', id: 'act_speak', activationId: aid() }), 'confirm');
+  assert.equal(r.s.phase, 'enacting');
+}
+ok('The shape of the master plan\'s rich example (desk → meeting → hallway ⇄ meeting → meeting, three locations) is expressible, valid and playable');
 
 {
   // Preparations: reversible, closed recipes that touch only the hero's own reach.
