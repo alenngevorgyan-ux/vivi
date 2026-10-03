@@ -177,7 +177,7 @@ export async function compileViviStory(
     try {
       const validated = validateDSL(stripModelOnlyFields(wireToDsl(parseModelJson(text))));
       if (!validated.ok) return { structural: false, errors: validated.errors, semantic: [], notes: [] };
-      const review = reviewDsl(validated.dsl, hints, { enforce });
+      const review = reviewDsl(validated.dsl, hints, { enforce, requireMoment: true });
       return { structural: true, dsl: review.dsl, errors: [], semantic: review.errors, notes: review.notes };
     } catch (err) {
       return { structural: false, errors: [err instanceof Error ? err.message : 'Unparseable reply'], semantic: [], notes: [] };

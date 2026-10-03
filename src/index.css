@@ -479,6 +479,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid #b85f49; outline-
   .vivi-dock-intents { flex-direction:column; align-items:stretch; }
   .vivi-intent { width:100%; }
   .vivi-play-header { padding:10px 12px; height:56px; }
+  .vivi-play-header .vivi-eyebrow { display:none !important; }
+  .vivi-play-header .vivi-back { white-space:nowrap; padding:8px 4px; }
+  .vivi-prop-phone-text { white-space:nowrap; font-size:11px; }
   .vivi-play-header h1 { font-size:17px; }
   .vivi-menu-backdrop { place-items:end center; padding:0; }
   .vivi-menu { width:100%; border-radius:20px 20px 0 0; max-height:82vh; padding:20px 18px 28px; }

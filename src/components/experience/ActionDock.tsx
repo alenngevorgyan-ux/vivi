@@ -37,9 +37,13 @@ export function ActionDock(props: ActionDockProps) {
   const t = (k: Parameters<typeof ui>[1]) => ui(lang, k);
   const firstButton = useRef<HTMLButtonElement>(null);
 
+  // Focus follows what the player opened — a target, a pending deed, a look — never a change of input device.
+  const focusOnOpen = useRef(props.focusOnOpen);
+  focusOnOpen.current = props.focusOnOpen;
+  const opened = !!hotspot || !!state.pendingId || state.phase === 'observing' || state.phase === 'enacting';
   useEffect(() => {
-    if (props.focusOnOpen) firstButton.current?.focus();
-  }, [props.focusOnOpen, hotspot?.key, state.pendingId, state.phase]);
+    if (focusOnOpen.current && opened) firstButton.current?.focus();
+  }, [hotspot?.key, state.pendingId, state.phase, opened]);
 
   const pending = state.pendingId ? experience.commitments.find(c => c.id === state.pendingId) : undefined;
   const observation = state.observationId ? experience.observations.find(o => o.id === state.observationId) : undefined;

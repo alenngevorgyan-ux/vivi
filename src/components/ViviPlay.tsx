@@ -200,10 +200,18 @@ export function ViviPlay({ story, gameSpec, scenario: directScenario, post, rela
     typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 'touch' : 'mouse'
   );
   const [keyboardOpened, setKeyboardOpened] = useState(false);
+  const modalityRef = useRef(modality);
+  modalityRef.current = modality;
   useEffect(() => {
-    const onPointer = (e: PointerEvent) => setModality(e.pointerType === 'touch' ? 'touch' : 'mouse');
+    const onPointer = (e: PointerEvent) => {
+      modalityRef.current = e.pointerType === 'touch' ? 'touch' : 'mouse';
+      setModality(modalityRef.current);
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Tab' || e.key === 'Enter') setModality('keyboard');
+      if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ') {
+        modalityRef.current = 'keyboard';
+        setModality('keyboard');
+      }
     };
     window.addEventListener('pointerdown', onPointer, true);
     window.addEventListener('keydown', onKey, true);
@@ -253,7 +261,7 @@ export function ViviPlay({ story, gameSpec, scenario: directScenario, post, rela
   };
 
   const onSelectHotspot = (k: string) => {
-    setKeyboardOpened(modality === 'keyboard');
+    setKeyboardOpened(modalityRef.current === 'keyboard');
     setSelectedKey(k);
     if (stateRef.current.pendingId || stateRef.current.phase === 'observing') dispatch({ type: 'CANCEL' });
     // A single look on its own hotspot needs no menu: go and look.

@@ -339,14 +339,21 @@ const scripted = (first: object, second?: object) => {
   const calls: string[][] = [];
   const provider: ExperienceSemanticProvider = {
     id: 'scripted',
-    compileStory: async () => ({ text: JSON.stringify(first), model: 'scripted-model', usage: { inputTokens: 100, outputTokens: 50 } }),
+    // Programs written for these checks predate Experience V2; they name a moment so the
+    // checks below stay about what they test (variety, grounding), not the moment rule.
+    compileStory: async () => ({ text: JSON.stringify(withMoment(first)), model: 'scripted-model', usage: { inputTokens: 100, outputTokens: 50 } }),
     repair: async (_r, _json, errors) => {
       calls.push(errors);
-      return { text: JSON.stringify(second ?? first), model: 'scripted-model', usage: { inputTokens: 40, outputTokens: 50 } };
+      return { text: JSON.stringify(withMoment(second ?? first)), model: 'scripted-model', usage: { inputTokens: 40, outputTokens: 50 } };
     },
   };
   return { provider, calls };
 };
+
+function withMoment(input: object): object {
+  const dsl = input as ViviExperienceDSL;
+  return dsl.m ? dsl : { ...dsl, m: { d: 'The moment the narrator has to decide.', h: 'Why it is hard.' } };
+}
 
 const allObjects: ViviExperienceDSL = {
   v: 1, w: 'apt', g: 'betrayal', c: [['partner', 'on']], o: ['phone', 'letter'],

@@ -263,7 +263,8 @@ export const CanonicalViviEngine: React.FC<CanonicalViviEngineProps> = ({
       point: attention?.point ?? pointForSlot(directed.slot),
       progress: 1,
       reducedMotion: reducedMotion || !!frozen,
-      zoomScale: stageWidth < 560 ? 0.82 : 1,
+      // A phone shows the room small; the lens comes a little closer instead of shrinking people further.
+      zoomScale: stageWidth < 560 ? 1.12 : 1,
     }
   );
 

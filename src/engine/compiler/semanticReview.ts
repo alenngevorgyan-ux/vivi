@@ -17,6 +17,12 @@ import { groundCast, referencedRoles } from './castGrounding.ts';
 
 export interface ReviewOptions {
   /**
+   * Experience V2: a model's program must name the decision moment, or say
+   * plainly that nothing had to be decided (m.f = memory). Not applied to the
+   * deterministic fallback, which cannot read a story.
+   */
+  requireMoment?: boolean;
+  /**
    * Last resort, after the model's one repair turn has had its chance: take
    * the invented person out of the scene rather than play a story that now
    * has a character in it the author never had. Only ever applied when what
@@ -167,6 +173,12 @@ export function reviewDsl(dsl: ViviExperienceDSL, hints: StoryHints, options: Re
       ? `All ${current.a.length} choices reach for the same kind of thing (${CLASS_WORD[variety.classes[0]] ?? 'thing'}).`
       : `All ${current.a.length} choices happen in one spot.`;
     errors.push(`${complaint} Point at least one somewhere else: ${alternatives(current)}. Invent nothing new.`);
+  }
+
+  /* --------------------------------------------- decision moment (V2) --- */
+
+  if (options.requireMoment && !current.m?.d && current.m?.f !== 'memory') {
+    errors.push('m is missing: give m.d, the moment the narrator must decide, with m.h why it is hard — from the story only. If nothing had to be decided, set m.f to memory.');
   }
 
   return { dsl: current, errors, notes };

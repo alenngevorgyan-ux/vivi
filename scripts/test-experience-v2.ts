@@ -331,6 +331,33 @@ ok('Pre-reveal bundle: the playable scene carries no outcome; the reveal is seal
 }
 ok('The decision boundary cuts written-in endings (RU/EN/HY) and the author can move it');
 
+{
+  // A model that forgets the decision moment is asked once, through the existing single repair turn.
+  const f = experienceFixtureById['v2-apartment-ru'];
+  const { m: _m, ...withoutMoment } = f.dsl as Record<string, unknown>;
+  const repairs: string[][] = [];
+  const forgetful: ExperienceSemanticProvider = {
+    id: 'forgetful',
+    async compileStory() {
+      return { text: JSON.stringify(withoutMoment), model: 'forgetful' };
+    },
+    async repair(_r: SemanticRequest, _json: string, errors: string[]) {
+      repairs.push(errors);
+      return { text: JSON.stringify(f.dsl), model: 'forgetful' };
+    },
+  };
+  const r = await compileViviStory({ story: f.source, actualOutcome: 'x'.repeat(10) }, { provider: forgetful });
+  assert.equal(repairs.length, 1);
+  assert.ok(repairs[0].some(e => /^m is missing/.test(e)), 'the repair names the missing moment');
+  assert.equal(r.post.scenario.experience?.format, 'playable', 'the repaired scene, with its moment, is the one played');
+  // Saying plainly that nothing had to be decided is an answer, not an omission.
+  const memory = experienceFixtureById['v2-hallway-memory-ru'];
+  const quiet: string[][] = [];
+  await compileViviStory({ story: memory.source }, { provider: { id: 'q', compileStory: async () => ({ text: JSON.stringify(memory.dsl), model: 'q' }), repair: async (_r, _j, e) => (quiet.push(e), { text: JSON.stringify(memory.dsl), model: 'q' }) } });
+  assert.equal(quiet.length, 0, 'm.f = memory costs no repair turn');
+}
+ok('A program without a decision moment costs one repair turn; "memory" is an answer');
+
 /* ----------------------------------------------------- format routing --- */
 
 {

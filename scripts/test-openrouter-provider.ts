@@ -36,11 +36,14 @@ const WIRE = {
     { k: 'light', m: 'flicker' },
     { k: 'handle', p: 'front_door' },
   ],
+  // Experience V2 wire shape: deeds carry no observation/outcome; looks and the moment are their own fields.
   a: [
-    { v: 'look', t: 'elevator', l: 'Look into the lift', ob: 'The cabin is lit and empty.', out: 'The doors start to close on nothing.' },
-    { v: 'lock', t: 'front_door', l: 'Lock your door', ob: 'Your keys are still in your hand.', out: 'The lock turns. The corridor goes quiet.' },
-    { v: 'call', t: 'neighbor', l: 'Call your neighbour', ob: 'Their light is off.', out: 'It rings and rings behind their door.' },
+    { v: 'look', t: 'elevator', l: 'Look into the lift' },
+    { v: 'lock', t: 'front_door', l: 'Lock your door' },
+    { v: 'call', t: 'neighbor', l: 'Call your neighbour' },
   ],
+  ob: [{ t: 'elevator', s: 'The cabin is lit and empty.', l: 'Look into the lift' }],
+  m: { d: 'The empty lift is open on my floor at 3 AM.', h: 'Nobody called it, and my door is the closest one.', k: ['Nobody is inside.'], f: 'play' },
   cg: 'suspense', st: 'isolated_subject',
   x: { ti: 'Third Floor', op: 'The elevator chimes at 3 AM.', q: 'Would you look inside?' },
 };

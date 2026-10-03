@@ -94,6 +94,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={toggleMute}
             title={isAudioMuted ? 'Включить атмосферный звук' : 'Выключить звук'}
+            aria-label={isAudioMuted ? 'Включить звук' : 'Выключить звук'}
+            aria-pressed={!isAudioMuted}
             className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/70 rounded-lg transition-colors"
           >
             {isAudioMuted ? (
