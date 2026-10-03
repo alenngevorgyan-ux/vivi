@@ -30,6 +30,10 @@ export interface SceneState {
   clockText?: string;
   /** Extra darkness for a held, quiet moment. */
   dim?: number;
+  /** Story objects present in this scene; art only draws a story-bearing object when the story has it. */
+  objects?: string[];
+  /** The intercom is ringing (an event the story gave), not merely "the scene is active". */
+  intercomRinging?: boolean;
   /**
    * Draw set-dressing people into the art. Only the flat composite used for
    * feed cards does this; on stage, people are actors in the runtime.
@@ -205,13 +209,15 @@ function ApartmentLighting({ uid, state }: { uid: string; state: SceneState }) {
   return (
     <g>
       {/* Darkness is the base coat; every lit area below is carved back out of it. */}
-      <rect width="1000" height="600" fill="#080a12" opacity={0.3 + (state.dim ?? 0) * 0.22} />
+      <rect width="1000" height="600" fill="#080a12" opacity={0.17 + (state.dim ?? 0) * 0.22} />
 
       <g style={{ mixBlendMode: 'screen' }}>
         {/* Warm practical, left: a hot core inside a soft falloff. */}
         <ellipse cx="118" cy="252" rx="200" ry="200" fill={`url(#${uid}-pool)`} opacity="0.95" />
         <ellipse cx="118" cy="248" rx="62" ry="54" fill={`url(#${uid}-pool)`} opacity="0.9" />
-        <ellipse cx="150" cy="430" rx="250" ry="120" fill={`url(#${uid}-pool)`} opacity="0.5" />
+        <ellipse cx="150" cy="430" rx="250" ry="120" fill={`url(#${uid}-pool)`} opacity="0.62" />
+        {/* A low warm bounce across the rug, so people in the middle of the room read as people. */}
+        <ellipse cx="460" cy="470" rx="360" ry="110" fill={`url(#${uid}-pool)`} opacity="0.28" />
 
         {/* Cold bathroom light, right. Closed, it is only a seam on the floor. */}
         <ellipse
@@ -283,7 +289,7 @@ function HallwayBackdrop({ p, uid, state }: { p: Palette; uid: string; state: Sc
       <circle cx="226" cy="352" r="6" fill={p.practical} opacity="0.85" />
       {/* Intercom beside it. */}
       <rect x="258" y="268" width="30" height="46" rx="3" fill="#1d2a33" stroke="#71868d" strokeWidth="2" />
-      <circle cx="273" cy="282" r="4" fill={state.active ? '#e2705a' : '#44555d'} />
+      <circle cx="273" cy="282" r="4" fill={state.intercomRinging ? '#e2705a' : '#44555d'} />
       <rect x="264" y="292" width="18" height="14" rx="2" fill="#0f181e" />
 
       {/* Neighbour doors receding on the right. */}
@@ -329,13 +335,15 @@ function HallwayLighting({ uid, state }: { uid: string; state: SceneState }) {
   return (
     <g>
       {/* The corridor is black by default; the two practicals only dent it. */}
-      <rect width="1000" height="600" fill="#04070c" opacity={0.56 + (state.dim ?? 0) * 0.2} />
+      <rect width="1000" height="600" fill="#04070c" opacity={0.38 + (state.dim ?? 0) * 0.2} />
 
       <g style={{ mixBlendMode: 'screen' }}>
         <ellipse cx="300" cy="226" rx="150" ry="132" fill={`url(#${uid}-pool)`} opacity="0.42" />
         <ellipse cx="300" cy="222" rx="46" ry="40" fill={`url(#${uid}-pool)`} opacity="0.5" />
         <ellipse cx="800" cy="236" rx="130" ry="120" fill={`url(#${uid}-pool)`} opacity="0.26" />
 
+        {/* A soft overhead pool where the player stands: enough to read a face, not enough to feel safe. */}
+        <ellipse cx="560" cy="500" rx="300" ry="120" fill={`url(#${uid}-cold)`} opacity="0.32" />
         {/* The elevator seam is the only cold light, and the only thing to watch. */}
         <ellipse
           cx="529"
@@ -411,7 +419,7 @@ function OfficeBackdrop({ p, uid, state }: { p: Palette; uid: string; state: Sce
         fontFamily="IBM Plex Mono, monospace"
         fontSize="25"
       >
-        {state.clockText || '10:42'}
+        {state.clockText ?? ''}
       </text>
 
       <rect x="40" y="110" width="150" height="174" fill="#223843" opacity="0.65" />
@@ -456,10 +464,16 @@ function OfficeMidground({ p, uid, state }: { p: Palette; uid: string; state: Sc
       <path d="M190 494 L176 584 M852 494 L868 584" stroke="#22323a" strokeWidth="16" />
       <ellipse cx="520" cy="560" rx="360" ry="34" fill="#0d171d" opacity="0.4" />
 
-      {/* The player's own laptop, closed, with their drafts still inside it. */}
-      <path d="M268 430 H356 L364 462 H258Z" fill="#2b3b44" />
-      <rect x="276" y="402" width="74" height="32" rx="3" fill="#1b2932" />
-      <rect x="281" y="406" width="64" height="24" rx="2" fill="#7fa7b2" opacity="0.75" />
+      {/* A laptop is a story object (evidence, drafts): drawn only when the story has one, or on a feed card. */}
+      {(state.populated || state.objects?.includes('laptop')) && (
+        <>
+          <path d="M268 430 H356 L364 462 H258Z" fill="#2b3b44" />
+          <rect x="276" y="402" width="74" height="32" rx="3" fill="#1b2932" />
+          <rect x="281" y="406" width="64" height="24" rx="2" fill="#7fa7b2" opacity="0.75" />
+        </>
+      )}
+      {/* Paper and a pen: a meeting, nothing more. */}
+      {!(state.populated || state.objects?.includes('laptop')) && <path d="M282 432 L338 428 L344 452 L286 456Z" fill="#c9d2d0" opacity="0.5" />}
       <rect x="600" y="420" width="54" height="36" rx="3" fill="#2a3a43" />
       <ellipse cx="700" cy="430" rx="13" ry="7" fill="#33444d" />
     </g>
@@ -486,8 +500,8 @@ function OfficeLighting({ uid, state }: { uid: string; state: SceneState }) {
         <ellipse cx="540" cy="250" rx="300" ry="220" fill={`url(#${uid}-cold)`} opacity={state.active ? 0.5 : 0.32} />
         <ellipse cx="886" cy="200" rx="190" ry="180" fill={`url(#${uid}-pool)`} opacity="0.3" />
       </g>
-      <rect width="1000" height="600" fill={`url(#${uid}-corner)`} opacity="0.8" />
-      <rect width="1000" height="600" fill="#0a141b" opacity={0.12 + (state.dim ?? 0) * 0.3} />
+      <rect width="1000" height="600" fill={`url(#${uid}-corner)`} opacity="0.62" />
+      <rect width="1000" height="600" fill="#0a141b" opacity={0.06 + (state.dim ?? 0) * 0.3} />
     </g>
   );
 }

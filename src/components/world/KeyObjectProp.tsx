@@ -65,10 +65,13 @@ function Glyph({ kind }: { kind: string }) {
         </g>
       );
     case 'bag':
+      // A soft backpack lying on its side: rounded body, flap, one strap.
       return (
         <g>
-          <path d="M3 9 H21 L19.5 21 H4.5Z" fill="#5d4b3d" stroke="#2f261f" strokeWidth="0.8" />
-          <path d="M8 9 Q8 3.5 12 3.5 Q16 3.5 16 9" fill="none" stroke="#2f261f" strokeWidth="1.3" />
+          <path d="M3.5 21 Q2.5 12 7 10.5 H17 Q21.5 12 20.5 21Z" fill="#4f5a52" stroke="#262c28" strokeWidth="0.8" />
+          <path d="M5 13.5 Q12 11 19 13.5 L18.6 16.5 Q12 14.5 5.4 16.5Z" fill="#3f4842" />
+          <path d="M8.5 10.6 Q9 6.5 12 6.5 Q15 6.5 15.5 10.6" fill="none" stroke="#262c28" strokeWidth="1.3" />
+          <circle cx="16.4" cy="18.4" r="1.1" fill="#4c8fbf" />
         </g>
       );
     case 'laptop':

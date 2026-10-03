@@ -10,7 +10,22 @@ export type ProductBehaviorEventName =
   | 'decision_committed'
   | 'reveal_seen'
   | 'response_cta_clicked'
-  | 'story_completed';
+  | 'story_completed'
+  // Experience V2 — ids and modes only, never story text or the author's outcome.
+  | 'experience_started'
+  | 'experience_oriented'
+  | 'orientation_skipped'
+  | 'observation_opened'
+  | 'intent_selected'
+  | 'auto_approach_started'
+  | 'auto_approach_completed'
+  | 'auto_approach_recovered'
+  | 'commitment_locked'
+  | 'enactment_completed'
+  | 'enactment_skipped'
+  | 'reveal_viewed'
+  | 'related_story_opened'
+  | 'author_detail_corrected';
 
 export interface ProductBehaviorEvent {
   name: ProductBehaviorEventName;
@@ -61,6 +76,7 @@ class TelemetryManager {
     details?: { objectId?: string; choiceId?: string; decisionLatencyMs?: number; pathSequence?: string[] }
   ): void {
     if (!this.activeSession) return;
+    if (this.activeSession.events.length > 500) this.activeSession.events.shift();
     this.activeSession.events.push({
       name,
       scenarioId: this.activeSession.scenarioId,
@@ -103,3 +119,8 @@ class TelemetryManager {
 }
 
 export const telemetry = new TelemetryManager();
+
+// Local diagnostic interface for QA: `window.__viviTelemetry.getSession()` in development builds.
+if (typeof window !== 'undefined' && (import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+  (window as unknown as { __viviTelemetry: TelemetryManager }).__viviTelemetry = telemetry;
+}

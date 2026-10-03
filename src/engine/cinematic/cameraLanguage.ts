@@ -238,6 +238,8 @@ export function resolveCameraTarget(
 }
 
 export interface CameraFrame {
+  /** Stage-percent offset of the world layer, so a tap can be mapped back into the world. */
+  translate: [number, number];
   /** CSS transform for the camera layer, with transform-origin at 0 0. */
   transform: string;
   transition: string;
@@ -281,6 +283,7 @@ export function buildCameraFrame(
   const translateY = (framingY - (clampedY / 100) * zoom) * 100;
 
   return {
+    translate: [translateX, translateY],
     transform: `translate(${translateX.toFixed(3)}%, ${translateY.toFixed(3)}%) scale(${zoom.toFixed(4)})`,
     transition: options.reducedMotion
       ? 'none'

@@ -302,10 +302,7 @@ export function DirectorLab({ onPlay }: { onPlay: (scenario: CanonicalScenario) 
               key={`${scenario.id}-${phase}`}
               scenario={scenario}
               elapsedMs={t}
-              beatRunner={runner}
-              selectedAction={selected}
-              onActionInspected={() => undefined}
-              committed={phase !== 'live'}
+              phase={phase === 'reveal' ? 'revealed' : phase !== 'live' ? 'enacting' : 'exploring'}
               revealed={phase === 'reveal'}
               isMuted
               frozen={{ atMs: t, playerPos }}
