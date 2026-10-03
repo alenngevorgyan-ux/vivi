@@ -78,6 +78,7 @@ export class InputManager {
     this.attached = true;
     this.win.addEventListener('keydown', this.onKeyDown, true);
     this.win.addEventListener('keyup', this.onKeyUp, true);
+    // Attach early (the player does it in a layout effect) so ownership loss is processed before other listeners hear the same event.
     this.win.addEventListener('blur', this.onWindowBlur);
     this.win.addEventListener('pagehide', this.onWindowBlur);
     this.doc.addEventListener('visibilitychange', this.onVisibility);

@@ -14,11 +14,16 @@ import {
 import type { CanonicalScenario } from './engine/runtime/RuntimeCompiler';
 import { experienceFixtureById } from './data/experienceFixtures';
 import { compileFixture } from './data/experienceFixtures/replay';
+import { loadPlayable } from './engine/v3/compat/loadPlayable';
 
 const STORAGE_KEY = 'vivi_community_stories_v1';
 
 /** Development-only Director Lab; compiled out of production builds. */
 const DirectorLab = import.meta.env.DEV ? lazy(() => import('./components/dev/DirectorLab')) : null;
+
+/** Development-only V3 foundation harness (`?v3=foundation`); compiled out of production builds. */
+const V3Harness = import.meta.env.DEV ? lazy(() => import('./components/experience/v3/V3Harness')) : null;
+const v3HarnessRequested = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('v3') === 'foundation';
 
 export default function App() {
   const [games, setGames] = useState<(StoredPlayablePost | GameSpec)[]>(() => {
@@ -84,15 +89,23 @@ export default function App() {
   };
 
   const handleEnterPost = (post: StoredPlayablePost | GameSpec) => {
+    // One discriminated loader decides the player. V1/V2 posts and legacy GameSpecs take exactly the path
+    // they always did; a V3 post or an unknown/future schema is never handed to the legacy player.
+    const loaded = loadPlayable(post);
+    if (loaded.kind === 'v3' || loaded.kind === 'invalid_v3' || loaded.kind === 'unsupported') {
+      // The V3 player is mounted by a later integration; until then refuse safely rather than misread it.
+      console.warn(`Vivi: cannot open this post here (${loaded.kind}).`);
+      return;
+    }
     setActiveHero(null);
-    if (isStoredPlayablePost(post)) {
+    if (loaded.kind === 'legacy_stored_post') {
       setActiveLegacyGame(null);
-      setActiveScenario(post.scenario);
-      setActivePost(post);
+      setActiveScenario(loaded.post.scenario);
+      setActivePost(loaded.post);
     } else {
       setActiveScenario(null);
       setActivePost(null);
-      setActiveLegacyGame(post);
+      setActiveLegacyGame(loaded.game);
     }
     setActiveTab('play');
   };
@@ -165,6 +178,14 @@ export default function App() {
   const legacyGamesForStudio: GameSpec[] = useMemo(() => {
     return games.map((g) => (isStoredPlayablePost(g) ? g.legacyGameSpec : g));
   }, [games]);
+
+  if (V3Harness && v3HarnessRequested) {
+    return (
+      <Suspense fallback={null}>
+        <V3Harness />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col font-sans vivi-app bg-[#f4efe7] text-[#202629]">
