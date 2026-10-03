@@ -49,7 +49,11 @@ export default function V3Harness() {
   const onReady = useCallback((a: PlayerApi) => { api.current = a; }, []);
   const onIntent = useCallback((i: InputIntent) => { log.current.intents.push(i); }, []);
   const onEvent = useCallback((e: ExperienceEvent, r: StepResult) => { log.current.events.push({ type: e.type, rejected: r.rejected?.code }); }, []);
-  const persistDecision = useCallback((decision: string, option: string) => { log.current.decisions.push({ decision, option }); }, []);
+  // `&persist=reject` (dev only) makes the host's write fail, to reproduce how the hook treats a rejected persistDecision.
+  const persistDecision = useCallback((decision: string, option: string): void | Promise<void> => {
+    log.current.decisions.push({ decision, option });
+    if (new URLSearchParams(window.location.search).get('persist') === 'reject') return Promise.reject(new Error('persist failed'));
+  }, []);
   // The reveal record is a separate fixture, fetched only after the boundary.
   const loadReveal = useCallback(() => Promise.resolve(foundationReveal()), []);
 

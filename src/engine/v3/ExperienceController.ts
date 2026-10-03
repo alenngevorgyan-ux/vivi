@@ -526,6 +526,8 @@ export function restoreSnapshot(m: PlaybackManifestV3, raw: unknown): RuntimeSna
     consumedActivations: [],
   };
   if (s.decision) return { ...clean, phase: s.phase === 'revealed' || s.phase === 'ended' ? s.phase : 'boundary', boundaryLocked: true, reveal: s.phase === 'revealed' || s.phase === 'ended' ? 'ready' : 'idle' };
+  // The memory form has no decision: a completed reveal is still completed. It must not regress to the boundary.
+  if (s.boundaryLocked && (s.phase === 'revealed' || s.phase === 'ended')) return { ...clean, phase: s.phase, reveal: 'ready' };
   if (s.boundaryLocked) return { ...clean, phase: 'boundary' };
   return { ...clean, phase: s.phase === 'loading' ? 'loading' : 'playing' };
 }

@@ -43,6 +43,11 @@ const NON_TEXT_INPUT = new Set(['button', 'submit', 'reset', 'image', 'checkbox'
 const EDITABLE_ROLES = new Set(['textbox', 'combobox', 'searchbox', 'spinbutton']);
 const NATIVE_ROLES = new Set(['button', 'link', 'menuitem', 'tab', 'option', 'checkbox', 'radio', 'switch', 'slider']);
 
+/** Enter/Space by logical key OR physical code: virtual keyboards often send `key` with an empty `code`. */
+function isActivationKey(e: Pick<KeyboardEvent, 'key' | 'code'>): boolean {
+  return e.key === 'Enter' || e.key === ' ' || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space';
+}
+
 export class InputManager {
   private readonly doc: Document;
   private readonly win: Window;
@@ -60,6 +65,10 @@ export class InputManager {
   private blockedHinted = false;
 
   private pressSeq = 0;
+  /** True while a physical Enter/Space press can still own the click(s) it generates. */
+  private pressOpen = false;
+  private syntheticSeq = 0;
+  private closePress: ReturnType<typeof setTimeout> | null = null;
   private pointerSeq = 0;
   private lastPointerActivation = '';
   private tap: { id: number; x: number; y: number; moved: boolean } | null = null;
@@ -97,6 +106,9 @@ export class InputManager {
     this.doc.removeEventListener('focusout', this.onFocusOut);
     this.doc.removeEventListener('pointerdown', this.onAnyPointerDown, true);
     this.attached = false;
+    if (this.closePress) clearTimeout(this.closePress);
+    this.closePress = null;
+    this.pressOpen = false;
     this.scopes = [];
     this.tap = null;
     this.blockedHinted = false;
@@ -148,10 +160,15 @@ export class InputManager {
    * the id of the physical key press that caused it (so a held Enter, which
    * repeats `click`, is one activation); the second click of a double click
    * reuses the first's id; every other pointer click is a new activation.
+   *
+   * A `detail === 0` click with NO owning key press (screen-reader or switch
+   * activation, programmatic `click()`, some virtual keyboards) is a genuine
+   * separate activation and gets its own unique `s<n>` id.
    */
   activationIdFor(e: Event): string {
-    const detail = e instanceof MouseEvent ? e.detail : 1;
-    if (detail === 0) return `k${this.pressSeq}`;
+    const d = (e as { detail?: unknown }).detail;
+    const detail = typeof d === 'number' ? d : 1;
+    if (detail === 0) return this.pressOpen ? `k${this.pressSeq}` : `s${++this.syntheticSeq}`;
     if (detail > 1 && this.lastPointerActivation) return this.lastPointerActivation;
     this.lastPointerActivation = `p${++this.pointerSeq}`;
     return this.lastPointerActivation;
@@ -216,7 +233,12 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.isTrusted) this.onTrustedGesture?.(e);
-    if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && !e.repeat) this.pressSeq++;
+    if (isActivationKey(e)) {
+      if (this.closePress) clearTimeout(this.closePress);
+      this.closePress = null;
+      if (!e.repeat) this.pressSeq++;
+      this.pressOpen = true;
+    }
 
     const r = routeKeydown(this.factsOf(e), { target: this.classify(e), scopes: this.scopes, movementEligible: this.eligible });
     // Synchronously, and only for keys the table says we own.
@@ -244,6 +266,12 @@ export class InputManager {
 
   private onKeyUp = (e: KeyboardEvent): void => {
     // Release is honoured wherever focus has gone, so a key can never stay stuck down.
+    if (isActivationKey(e)) {
+      // Enter clicks on keydown, so the press is over. Space clicks right AFTER keyup, in the same task.
+      if (e.key === ' ' || e.code === 'Space') {
+        this.closePress = setTimeout(() => { this.pressOpen = false; this.closePress = null; }, 0);
+      } else this.pressOpen = false;
+    }
     const code = movementCode({ key: e.key, code: e.code });
     if (code && this.held.delete(code)) this.emitMove();
   };

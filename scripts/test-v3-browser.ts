@@ -476,6 +476,67 @@ async function main() {
     }
   });
 
+  /* --------------------------------------------------------- 10b --- */
+  await test('Assistive-technology (synthetic, detail 0) activations: act then confirm both succeed with distinct ids; virtual Enter with an empty code is an Enter', async p => {
+    await reachDecision(p);
+    // A screen reader / switch / programmatic click is a click with detail 0 and NO key press. Two of them in a row must both count.
+    await p.evaluate(() => (document.querySelector('[data-testid="readable-act-act_speak"]') as HTMLButtonElement).click());
+    await p.waitForSelector(T('confirm-button'));
+    assert.equal((await state(p)).phase, 'confirming', 'synthetic action 1 (choose the act) succeeded');
+    await p.evaluate(() => (document.querySelector('[data-testid="confirm-button"]') as HTMLButtonElement).click());
+    await settle(p);
+    assert.equal((await state(p)).decision?.option, 'act_speak', 'synthetic action 2 (confirm) succeeded');
+    assert.equal((await decisions(p)).length, 1);
+    const ev = await events(p);
+    assert.ok(!ev.some(e => e.type === 'CONFIRM' && e.rejected === 'duplicate_activation'), 'the two synthetic actions had different activation ids');
+  });
+
+  await test('Virtual keyboard Enter (key "Enter", empty code) in the focused world is an activation', async p => {
+    await enterWorld(p);
+    await p.evaluate(() => {
+      const el = document.activeElement as HTMLElement;
+      for (const type of ['keydown', 'keyup']) el.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: '', bubbles: true, cancelable: true, composed: true }));
+    });
+    const acts = (await intents(p)).filter(i => i.type === 'activate' && i.source === 'key');
+    assert.equal(acts.length, 1, 'the virtual Enter reached the controls');
+    assert.match(acts[0].activationId!, /^k[1-9]/, 'and carries a real press id, not k0');
+    assert.equal((await state(p)).sheet?.kind, 'actions', 'it opened the action list like a physical Enter');
+    // physical-layout movement semantics are untouched: a letter key with no code does not walk the player
+    await p.evaluate(() => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'w', code: '', bubbles: true, cancelable: true })));
+    assert.equal((await moves(p)).length, 0, 'KeyW semantics stay physical: key "w" without a code does not move');
+  });
+
+  /* --------------------------------------------------------- 10c --- */
+  // KNOWN GAP (QA BUG-04, deferred to Integration Review): a rejected persistDecision is swallowed by useExperience.
+  // This test pins the CURRENT behaviour so it is visible and cannot change silently; it is not an endorsement.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await ctx.newPage();
+    const errors: string[] = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    try {
+      await page.goto(`${base}/?v3=foundation&persist=reject`);
+      await page.waitForFunction(() => document.querySelector('[data-testid="phase"]')?.textContent === 'playing');
+      await reachDecision(page);
+      await page.evaluate(() => (document.querySelector('[data-testid="readable-act-act_speak"]') as HTMLButtonElement).click());
+      await page.waitForSelector(T('confirm-button'));
+      await page.evaluate(() => (document.querySelector('[data-testid="confirm-button"]') as HTMLButtonElement).click());
+      await settle(page, 300);
+      const s = await state(page);
+      assert.equal(s.decision.status, 'accepted', 'a failed write leaves the decision unrecorded (never "recorded")');
+      assert.equal((await decisions(page)).length, 1, 'the write was attempted exactly once: nothing retries it');
+      assert.equal((await events(page)).filter(e => e.type === 'DECISION_RECORDED').length, 0, 'no DECISION_RECORDED and no failure event is ever dispatched');
+      assert.deepEqual(errors, [], 'the rejection is swallowed silently (no page error, no diagnostic)');
+      results.push(['KNOWN GAP BUG-04: a rejected persistDecision is swallowed (decision stays accepted, unrecorded, no retry, no error surface)', null]);
+      console.log(`✓ ${results.length}. KNOWN GAP BUG-04: a rejected persistDecision is swallowed (pinned, deferred to Integration Review)`);
+    } catch (e) {
+      results.push(['BUG-04 repro', String((e as Error).stack ?? e)]);
+      console.log(`✗ ${results.length}. BUG-04 repro\n   ${String((e as Error).message).split('\n').join('\n   ')}`);
+    } finally {
+      await ctx.close();
+    }
+  }
+
   /* --------------------------------------------------------------- 10 --- */
   await test('Tab leaves the scene controls normally; the world never traps focus', async p => {
     await enterWorld(p);

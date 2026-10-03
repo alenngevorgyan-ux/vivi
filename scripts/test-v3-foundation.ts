@@ -14,6 +14,7 @@ import { buildReadableModel, readableEvents } from '../src/engine/v3/readable.ts
 import { entityLocation } from '../src/engine/v3/queries.ts';
 import { loadPlayable } from '../src/engine/v3/compat/loadPlayable.ts';
 import { FOUNDATION_REVEAL_CANARIES, foundationManifest, foundationPost, foundationReveal, foundationSemanticPlan } from '../src/engine/v3/testing/foundationFixture.ts';
+import { InputManager, type InputIntent } from '../src/engine/input/InputManager.ts';
 import { movementCode, movementVector, routeKeydown, type KeyFacts, type RouteContext } from '../src/engine/input/routing.ts';
 
 /**
@@ -956,6 +957,84 @@ ok('Clock: pauses are keyed reason:owner, so reading/modal/hidden/transition can
 }
 ok('Snapshots restore only when valid for this manifest revision; in-flight state is normalised and an accepted act stays accepted');
 
+/* ====== 5b. QA reconciliation: malformed restore never throws; memory-format completed phases survive === */
+
+{
+  const r = start();
+  send(r, { type: 'OPEN_OBSERVATION', id: 'o_a1', activationId: aid() });
+  send(r, { type: 'CLOSE_OBSERVATION' });
+  expectOk(send(r, { type: 'APPLY_PREPARATION', id: 'prep_stand', activationId: aid() }), 'prep for a real undo record');
+  const saved = JSON.parse(JSON.stringify(r.s));
+  assert.ok(restoreSnapshot(r.m, clone(saved)), 'control: the unmodified snapshot restores');
+  const mut = (f: (x: any) => void) => { const x = clone(saved); f(x); return x; };
+  const malformed: Array<[string, unknown]> = [
+    ['preparations not array', mut(x => { x.preparations = 'x'; })],
+    ['preparations null', mut(x => { x.preparations = null; })],
+    ['preparation unknown id', mut(x => { x.preparations = [{ id: 'ghost', undo: [] }]; })],
+    ['preparation undo not array', mut(x => { x.preparations = [{ id: 'prep_stand', undo: 5 }]; })],
+    ['preparation undo entity unknown', mut(x => { x.preparations = [{ id: 'prep_stand', undo: [{ entity: 'ghost' }] }]; })],
+    ['preparation null entry', mut(x => { x.preparations = [null]; })],
+    ['variables array', mut(x => { x.variables = []; })],
+    ['variables non-string', mut(x => { x.variables = { a: 5 }; })],
+    ['variables null', mut(x => { x.variables = null; })],
+    ['time missing', mut(x => { delete x.time; })],
+    ['time NaN field', mut(x => { x.time.presentationMs = 'x'; })],
+    ['time bad policy', mut(x => { x.time.policy = 'nope'; })],
+    ['entities with junk', mut(x => { x.entities = [null]; })],
+    ['entity owner missing', mut(x => { delete x.entities[0].owner; })],
+    ['entity owner unknown location', mut(x => { x.entities[0].owner = { kind: 'location', id: 'ghost' }; })],
+    ['entity owner unknown kind', mut(x => { x.entities[0].owner = { kind: 'moon', id: 'x' }; })],
+    ['entity state missing', mut(x => { delete x.entities[0].state; })],
+    ['unknown fact', mut(x => { x.receivedFacts = ['ghost']; })],
+    ['unknown scene', mut(x => { x.scene = 'ghost'; })],
+    ['unknown visited scene', mut(x => { x.visitedScenes = ['ghost']; })],
+    ['unknown observation', mut(x => { x.seenObservations = ['ghost']; })],
+    ['unknown beat', mut(x => { x.deliveredBeats = ['ghost']; })],
+    ['attemptId not string', mut(x => { x.attemptId = 5; })],
+    ['txCounter negative', mut(x => { x.txCounter = -1; })],
+  ];
+  for (const [label, bad] of malformed) {
+    let out: unknown = 'threw';
+    assert.doesNotThrow(() => { out = restoreSnapshot(r.m, bad); }, `${label} must not throw`);
+    assert.equal(out, undefined, `${label} must be refused`);
+  }
+  for (const raw of [undefined, null, 0, '', [], () => 1, Symbol('x')]) assert.doesNotThrow(() => restoreSnapshot(r.m, raw), 'junk root must not throw');
+
+  // Memory form (no decision, truthBoundary.after === 'memory_end'): a completed reveal restores to that same phase.
+  const m = foundationManifest();
+  const mem: any = m;
+  mem.format = 'memory';
+  mem.tension = null;
+  mem.primaryDecision = null;
+  mem.opportunities = [];
+  mem.scenePlans[2].opportunityIds = [];
+  mem.truthBoundary = { scene: 'scene_c', after: 'memory_end' };
+  assert.deepEqual(validateManifest(mem).issues, [], 'a memory manifest is valid');
+  const mr = start(m);
+  expectOk(send(mr, { type: 'REACH_BOUNDARY' }), 'memory boundary');
+  const atBoundary = restoreSnapshot(m, JSON.parse(JSON.stringify(mr.s)))!;
+  assert.equal(atBoundary.phase, 'boundary', 'a boundary snapshot still resumes at the boundary');
+  expectOk(send(mr, { type: 'BOUNDARY_DONE' }), 'boundary done');
+  const loading = restoreSnapshot(m, JSON.parse(JSON.stringify(mr.s)))!;
+  assert.equal(loading.phase, 'boundary', 'an unfinished reveal reloads from the boundary');
+  expectOk(send(mr, { type: 'REVEAL_LOADED' }), 'reveal loaded');
+  assert.equal(mr.s.decision, undefined);
+  const revealed = restoreSnapshot(m, JSON.parse(JSON.stringify(mr.s)))!;
+  assert.equal(revealed.phase, 'revealed', 'a revealed memory restores to revealed, not the boundary');
+  assert.equal(revealed.reveal, 'ready');
+  expectOk(send(mr, { type: 'END' }), 'end');
+  const ended = restoreSnapshot(m, JSON.parse(JSON.stringify(mr.s)))!;
+  assert.equal(ended.phase, 'ended', 'an ended memory restores to ended');
+  assert.equal(ended.reveal, 'ready');
+  // A decision-format story keeps its behaviour: an accepted act mid-flight resumes at the boundary.
+  const d = start();
+  toDecision(d);
+  send(d, { type: 'REQUEST_INTENT', id: 'act_speak', activationId: aid() });
+  send(d, { type: 'CONFIRM', id: 'act_speak', activationId: aid() });
+  assert.equal(restoreSnapshot(d.m, JSON.parse(JSON.stringify(d.s)))!.phase, 'boundary');
+}
+ok('QA: malformed restores are refused without throwing; a completed memory-format reveal resumes completed; decision stories unchanged');
+
 /* ================================================ 6. readable path ======= */
 
 {
@@ -1170,6 +1249,95 @@ ok('Legacy compatibility: V1/V2 posts and GameSpecs route as before, by referenc
   assert.ok(Math.abs(Math.hypot(dx, dy) - 1) < 0.01, 'diagonals are normalised');
 }
 ok('Input ownership table: movement, Enter, Escape, Tab, editors, modifiers, IME and scope priority');
+
+/* ====== 8b. activation identity (assistive tech, virtual keyboards, held keys) === */
+
+{
+  type H = (e: unknown) => void;
+  const mk = () => {
+    const l = new Map<string, H[]>();
+    const tgt = { addEventListener: (t: string, h: H) => l.set(t, [...(l.get(t) ?? []), h]), removeEventListener: () => undefined };
+    const intents: InputIntent[] = [];
+    const m = new InputManager({ onIntent: i => intents.push(i), window: tgt as never, document: tgt as never });
+    m.attach();
+    const fire = (t: string, e: object) => (l.get(t) ?? []).forEach(h => h({ type: t, isTrusted: false, repeat: false, isComposing: false, keyCode: 0, preventDefault() {}, ...e }));
+    return { m, intents, fire };
+  };
+  const g = globalThis as { Element?: unknown };
+  const hadElement = g.Element;
+  g.Element ??= class {};
+  const click = (detail: number) => ({ type: 'click', detail });
+  try {
+    // Synthetic / assistive-technology clicks (detail 0, no key press): every one is its own activation.
+    {
+      const { m } = mk();
+      const a = m.activationIdFor(click(0) as never);
+      const b = m.activationIdFor(click(0) as never);
+      const c = m.activationIdFor(click(0) as never);
+      assert.equal(new Set([a, b, c]).size, 3, `three separate synthetic activations need three ids (${a},${b},${c})`);
+      assert.notEqual(a, 'k0');
+    }
+    // A keyboard-generated click reuses its press; a held Enter (repeating clicks) is ONE activation; the next press is new.
+    {
+      const { m, fire } = mk();
+      fire('keydown', { key: 'Enter', code: 'Enter' });
+      const first = m.activationIdFor(click(0) as never);
+      fire('keydown', { key: 'Enter', code: 'Enter', repeat: true });
+      const again = m.activationIdFor(click(0) as never);
+      fire('keydown', { key: 'Enter', code: 'Enter', repeat: true });
+      assert.equal(m.activationIdFor(click(0) as never), first, 'held Enter keeps one id');
+      assert.equal(again, first);
+      fire('keyup', { key: 'Enter', code: 'Enter' });
+      const synthetic = m.activationIdFor(click(0) as never);
+      assert.notEqual(synthetic, first, 'a click after the key was released is a separate activation');
+      fire('keydown', { key: 'Enter', code: 'Enter' });
+      const second = m.activationIdFor(click(0) as never);
+      assert.notEqual(second, first, 'the next physical press is a new activation');
+    }
+    // Virtual Enter: key === "Enter" with an EMPTY code is still an Enter press.
+    {
+      const { m, intents, fire } = mk();
+      fire('keydown', { key: 'Enter', code: '', target: undefined });
+      const v1 = m.activationIdFor(click(0) as never);
+      fire('keyup', { key: 'Enter', code: '' });
+      fire('keydown', { key: 'Enter', code: '' });
+      const v2 = m.activationIdFor(click(0) as never);
+      assert.notEqual(v1, v2, 'two virtual Enter presses are two activations');
+      assert.equal(v1, 'k1');
+      assert.equal(v2, 'k2');
+      void intents;
+    }
+    // Pointer: a double click is one activation; two separate clicks are two.
+    {
+      const { m } = mk();
+      const p1 = m.activationIdFor(click(1) as never);
+      assert.equal(m.activationIdFor(click(2) as never), p1, 'second click of a double click reuses the first');
+      assert.notEqual(m.activationIdFor(click(1) as never), p1);
+    }
+    // WASD stays physical-layout: a Cyrillic key on KeyW still has KeyW semantics, and an empty code on a letter does not move.
+    assert.equal(movementCode({ key: 'ц', code: 'KeyW' }), 'KeyW');
+    assert.equal(movementCode({ key: 'w', code: '' }), undefined);
+  } finally {
+    if (hadElement === undefined) delete g.Element;
+  }
+}
+ok('Activation identity: separate synthetic/AT clicks get unique ids; key-generated clicks reuse their press; held and virtual (empty-code) Enter behave');
+
+/* ====== 8c. QA: private-leak matching (escaping, short canaries) === */
+
+{
+  // Quotes, backslashes and newlines serialize with escapes; the needle must be compared as it serializes.
+  assert.deepEqual(findPrivateLeaks({ line: 'she said "never again"' }, ['She said "never again"']), [0], 'a quoted canary is found');
+  assert.deepEqual(findPrivateLeaks({ line: 'first\nsecond' }, ['first\nsecond']), [0], 'a multi-line canary is found');
+  assert.deepEqual(findPrivateLeaks({ line: 'C:\\keys\\spare' }, ['C:\\keys\\spare']), [0], 'a backslash canary is found');
+  assert.deepEqual(findPrivateLeaks({ line: 'nothing here' }, ['She said "never again"']), []);
+  assert.deepEqual(findPrivateLeaks({ line: 'x' }, ['  ']), [], 'blank canaries never match');
+  // Documented behaviour (left for Integration Review): a canary shorter than 4 characters is NOT checked at all.
+  // A naive substring check would flag ordinary words ("no", "key") everywhere, so it was deliberately not loosened here.
+  assert.deepEqual(findPrivateLeaks({ line: 'the key is under the mat' }, ['key']), [], 'a 3-character canary is ignored by design');
+  assert.deepEqual(findPrivateLeaks({ line: 'the keys are under the mat' }, ['keys']), [0], 'a 4-character canary is checked');
+}
+ok('Leak check: quote, backslash and newline canaries match as serialized; canaries under 4 characters are documented as unchecked');
 
 /* ============================== 9. runtime stays model-free and generic === */
 
