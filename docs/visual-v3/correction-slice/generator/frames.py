@@ -59,7 +59,7 @@ def summary_prop(c, hu, ang=-6, scale=1.0, open_=False, face_down=False):
     return f'<g filter="url(#rough)" transform="translate({fmt(x)},{fmt(y)}) rotate({ang})">{inner}</g>'
 
 
-def slide(x0, y0, w, h, title='Q4 Forecast', sub='Mira Hale · Planning', kink_loop=False, dim=0.0):
+def slide(x0, y0, w, h, title='', sub='', kink_loop=False, dim=0.0):
     """the deck slide as a prop plate (real text, never baked art)."""
     cw, ch = w * 0.72, h * 0.45
     cx0, cy0 = x0 + w * 0.12, y0 + h * 0.42
@@ -311,7 +311,7 @@ def desk_scene(state='observe', camcfg=None, blob=None, loops=True, text_top=Non
     d.base.append(f'<rect x="{fmt(m0[0] - 6)}" y="{fmt(m0[1] - 6)}" width="{fmt(m1[0] - m0[0] + 12)}" height="{fmt(m1[1] - m0[1] + 12)}"/>')
     d.paint.append(f'<rect x="{fmt(m0[0] - 6)}" y="{fmt(m0[1] - 6)}" width="{fmt(m1[0] - m0[0] + 12)}" height="{fmt(m1[1] - m0[1] + 12)}" fill="#24262B"/>')
     mon = (f'<rect x="{fmt(m0[0])}" y="{fmt(m0[1])}" width="{fmt(m1[0] - m0[0])}" height="{fmt(m1[1] - m0[1])}" fill="#E6ECEE"/>'
-           f'<text x="{fmt(m0[0] + 10)}" y="{fmt(m0[1] + 18)}" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#6b7a82">Planning › Q4 › Final deck</text>')
+           f'<text x="{fmt(m0[0] + 10)}" y="{fmt(m0[1] + 18)}" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#6b7a82">ck</text>')
     mon += slide(m0[0] + 10, m0[1] + 28, (m1[0] - m0[0]) - 20, (m1[1] - m0[1]) - 38, kink_loop=False)
     d.lines.append(gline([(m0[0] - 6, m0[1] - 6), (m1[0] + 6, m0[1] - 6), (m1[0] + 6, m1[1] + 6), (m0[0] - 6, m1[1] + 6), (m0[0] - 6, m0[1] - 6)], w=1.1, op=0.8, double=False))
     S.glow(d, (m0[0] + m1[0]) / 2, (m0[1] + m1[1]) / 2, 320, '#DCEEF1', 0.25, sy=0.7)
@@ -464,14 +464,14 @@ def big_page(cx, cy, w, ang=-2.5, loop=True, note=True, op=1.0):
          f'<rect x="{fmt(x0 + 5)}" y="{fmt(y0 + 5)}" width="{fmt(w)}" height="{fmt(h)}" fill="#E3DACA"/>'
          f'<rect x="{fmt(x0)}" y="{fmt(y0)}" width="{fmt(w)}" height="{fmt(h)}" fill="#F4EFE5"/>'
          f'<rect x="{fmt(x0 + w * 0.06)}" y="{fmt(y0 + h * 0.012)}" width="{fmt(w * 0.12)}" height="{fmt(h * 0.006)}" fill="#7d7a76" transform="rotate(-28 {fmt(x0 + w * 0.06)} {fmt(y0 + h * 0.012)})"/>'
-         f'<text x="{fmt(-w * 0.38)}" y="{fmt(-h * 0.40)}" font-family="IBM Plex Mono, monospace" font-size="{fmt(w * 0.032)}" letter-spacing="2" fill="#3a3633">Q4 FORECAST · DRAFT 6</text>'
-         f'<text x="{fmt(-w * 0.38)}" y="{fmt(-h * 0.365)}" font-family="IBM Plex Sans, sans-serif" font-size="{fmt(w * 0.026)}" fill="#7d7468">Planning · summary for review</text>'
+         f'<text x="{fmt(-w * 0.38)}" y="{fmt(-h * 0.40)}" font-family="IBM Plex Mono, monospace" font-size="{fmt(w * 0.032)}" letter-spacing="2" fill="#3a3633"></text>'
+         f'<text x="{fmt(-w * 0.38)}" y="{fmt(-h * 0.365)}" font-family="IBM Plex Sans, sans-serif" font-size="{fmt(w * 0.026)}" fill="#7d7468">ew</text>'
          f'{bars}<path d="M{lp}" fill="none" stroke="{RED}" stroke-width="{fmt(w * 0.008)}" stroke-linejoin="round"/>{rows}')
     if loop:
         kx, ky = cx0 + 0.66 * cw, cy0 + ch - 0.55 * ch
         s += f'<ellipse cx="{fmt(kx)}" cy="{fmt(ky)}" rx="{fmt(w * 0.085)}" ry="{fmt(w * 0.06)}" fill="none" stroke="#4E4A45" stroke-width="{fmt(w * 0.005)}" transform="rotate(-14 {fmt(kx)} {fmt(ky)})" filter="url(#pencil)"/>'
     if note:
-        s += (f'<text x="{fmt(w * 0.06)}" y="{fmt(-h * 0.06)}" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="{fmt(w * 0.04)}" fill="#5a544c" transform="rotate(-4 {fmt(w * 0.06)} {fmt(-h * 0.06)})">this dip took two nights</text>'
+        s += (f'<text x="{fmt(w * 0.06)}" y="{fmt(-h * 0.06)}" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="{fmt(w * 0.04)}" fill="#5a544c" transform="rotate(-4 {fmt(w * 0.06)} {fmt(-h * 0.06)})"></text>'
               + pencil(f'<path d="M{fmt(w * 0.05)},{fmt(-h * 0.07)} Q{fmt(w * 0.0)},{fmt(-h * 0.05)} {fmt(cx0 + 0.70 * cw)},{fmt(cy0 + ch * 0.32)}" fill="none" stroke="#5a544c" stroke-width="{fmt(w * 0.003)}"/>'))
     return s + '</g>'
 
