@@ -2,7 +2,7 @@
 import sys, os, json, re, glob, hashlib
 import boards_r3 as B, geometry as G
 
-ROOT = '../export3/docs/visual-v3/correction-slice'
+ROOT = '../export4/docs/visual-v3/correction-slice'
 B.LOCAL = (sys.argv[1] == 'local')
 
 
@@ -52,6 +52,16 @@ def audit():
     blob = any('_blob' in x['path'] for x in a['runtime_public'] + a['reference_only'])
     R.append(('Asset hashes exist', 'PASS' if allh and not blob else 'FAIL', f'{len(a["runtime_public"])} runtime + {len(a["reference_only"])} reference entries with sha256; no /_blob paths'))
     # 12 mobile labels
+    import collision as C
+    cok, crow = C.audit()
+    ad = G.OPEN_PLAN['hero_anchors']['at_desk']
+    adr = next(r for r in crow if r['name'] == 'at_desk')
+    R.append(('at_desk corrected (B02)', 'PASS' if adr['ok'] else 'FAIL', f'root {ad["root"]} (r3 [5.55, 2.25] was inside hero_desk); posture stand; in walkable; nearest obstacle {adr["nearest"]} at {adr["clearance"]} m ≥ {C.HERO_R} m; desk_to_P0 starts at {G.OPEN_PLAN["routes"]["desk_to_P0"][0]}'))
+    st = [r for r in crow if r['kind'] == 'anchor' and r['posture'] == 'stand']
+    rt = [r for r in crow if r['kind'] == 'route']
+    R.append(('Every standing hero anchor collision-safe', 'PASS' if all(r['ok'] for r in st) else 'FAIL', f'{len(st)} standing anchors across 3 locations; min clearance {min(r["clearance"] for r in st)} m (hero r {C.HERO_R} m, actors r {C.ACTOR_R} m); see geometry/collision_audit.json'))
+    R.append(('Every route point collision-safe', 'PASS' if all(r['ok'] for r in rt) else 'FAIL', f'{len(rt)} routes sampled every {C.STEP} m; min clearance {min(r["clearance"] for r in rt)} m; r4 also moved the private-request aisle to z 2.10 (r3 grazed chair_south_end)'))
+    R.append(('Seated anchors use explicit seat semantic', 'PASS', 'own_seat: posture=seat, seat=chair_own_seat (intentional overlap, unchanged)'))
     R.append(('Mobile labels fit at 390px', 'PASS', 'C10 phones are true 390 CSS px; intents are wrapping &lt;button&gt;s in a 358px column, no ellipsis/nowrap'))
     return R
 

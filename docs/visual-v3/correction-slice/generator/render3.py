@@ -78,6 +78,12 @@ for L, fn in ((G.OPEN_PLAN, F2.open_plan), (G.CORRIDOR, F2.corridor), (G.MEETING
         out(f'P_{short}_{kind}_graphite', s, kind, role='plate-graphite', loc=L['id'])
         s, _ = fn(kind, layer=dict(lines=False, raw=False, base=False, mask=False)) if fn is not F2.meeting else fn(kind, layer=dict(lines=False, raw=False, base=False, mask=False))
         out(f'P_{short}_{kind}_paint', s, kind, role='plate-paint', loc=L['id'])
+# extra meeting-room portrait plates for beat-specific recipes (M02b portrait_room, M06b portrait_east)
+for kind in ('portrait_room', 'portrait_east'):
+    s, _ = F2.meeting(kind, layer=dict(paint=False, raw=False, slide=False))
+    out(f'P_meeting_room_{kind}_graphite', s, 'portrait', role='plate-graphite', loc=MR['id'])
+    s, _ = F2.meeting(kind, layer=dict(lines=False, raw=False, base=False, mask=False))
+    out(f'P_meeting_room_{kind}_paint', s, 'portrait', role='plate-paint', loc=MR['id'])
 # decision layer stack (standing)
 s, _ = F2.meeting('desktop', 'stand_decide', mt(HERO_T['stand_near_entry'], TABLE, DIRECTOR, DISPLAY), layer=dict(lines=False, paint=False, base=False, slide=False))
 out('L4_actors', s, 'desktop', role='layer-reference', bg='none')

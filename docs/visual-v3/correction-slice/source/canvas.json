@@ -174,7 +174,7 @@
       "x": 0,
       "y": 7757,
       "w": 2400,
-      "h": 1598,
+      "h": 1792,
       "title": "C13 · Staging & portals",
       "page": "correction"
     },
@@ -222,7 +222,7 @@
       "x": 12400,
       "y": 7757,
       "w": 2400,
-      "h": 1593,
+      "h": 1749,
       "title": "C18 · Self-audit",
       "page": "correction"
     }
@@ -240,7 +240,7 @@
       "kind": "title1",
       "maxW": 8000,
       "page": "correction",
-      "text": "The Correction · source-safe production handoff (r3)",
+      "text": "The Correction · source-safe production handoff (r4)",
       "w": 240,
       "x": 0,
       "y": -320

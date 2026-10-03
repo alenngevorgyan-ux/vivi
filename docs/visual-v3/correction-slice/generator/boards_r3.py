@@ -7,7 +7,7 @@ from render import fmt
 
 URL = json.load(open('urls3.json'))
 LOCAL = False
-EB = 'The Correction · source-safe handoff r3'
+EB = 'The Correction · source-safe handoff r4'
 FOOT = f'VIVI V3 · THE CORRECTION · SOURCE-SAFE HANDOFF · {G.GEOMETRY_REVISION}'
 
 

@@ -3,8 +3,8 @@ import json, os, hashlib, glob
 from PIL import Image
 import geometry as G
 
-ROOT = '../export3/docs/visual-v3/correction-slice'
-ASSET_REVISION = 'correction-assets-r3'
+ROOT = '../export4/docs/visual-v3/correction-slice'
+ASSET_REVISION = 'correction-assets-r4'
 os.makedirs(f'{ROOT}/geometry', exist_ok=True)
 
 # attention targets per beat, in location metres: (x, y, z, rx, ry) ellipsoid half-extents
@@ -15,7 +15,7 @@ DIRECTOR = [4.75, 1.0, 5.9, 0.8, 1.0]
 MIRA = [5.25, 1.0, 6.85, 0.7, 1.2]
 M = G.MEETING['id']
 BEATS = [
-    dict(beat='01_desk', location=G.OPEN_PLAN['id'], hero_anchor='at_desk', attention=[], note='desk island from monitor + hero; no other people in open plan'),
+    dict(beat='01_desk', location=G.OPEN_PLAN['id'], hero_anchor='at_desk', route_out='desk_to_P0', attention=[[*G.OPEN_PLAN['hero_anchors']['at_desk']['root'][:1], 1.0, G.OPEN_PLAN['hero_anchors']['at_desk']['root'][1], 0.75, 1.15], [4.65, 1.05, 2.45, 0.6, 0.45]], note='desk island from monitor + hero; no other people in open plan'),
     dict(beat='02_meeting', location=M, hero_anchor='own_seat', attention=[HERO_T['own_seat'], DISPLAY]),
     dict(beat='02_meeting_room_portrait', location=M, hero_anchor='own_seat', camera='portrait_room', attention=[DISPLAY, MIRA, DIRECTOR]),
     dict(beat='03_hallway', location=G.CORRIDOR['id'], hero_anchor='reading', attention=[], note='Mira and director seen through glass via see_through transform; same identities'),
@@ -39,6 +39,11 @@ src = G.to_json()
 src['beats'] = BEATS
 src['attention_target_format'] = '[x, y, z, rx, ry] metres, location coordinates; projected with the active camera recipe'
 json.dump(src, open(f'{ROOT}/geometry/source.json', 'w'), indent=1, ensure_ascii=False)
+import collision as C
+ok, rows = C.audit()
+json.dump(dict(geometry_revision=G.GEOMETRY_REVISION, hero_footprint_radius=C.HERO_R, actor_footprint_radius=C.ACTOR_R, sample_step=C.STEP,
+               all_ok=ok, checks=rows), open(f'{ROOT}/geometry/collision_audit.json', 'w'), indent=1)
+assert ok, 'collision audit failed'
 
 MAN = {m['name']: m for m in json.load(open('fr3/manifest.json'))}
 assets, refs = [], []
@@ -80,6 +85,6 @@ out = dict(revision=ASSET_REVISION, geometry_revision=G.GEOMETRY_REVISION, hash=
            rules=['No raster contains story text, names, numbers or the author account.', 'Runtime paths are repo-relative; no /_blob URLs.',
                   'Private reveal items are classified separately and never preloaded.'],
            runtime_public=assets, reference_only=refs, private_reveal=PRIVATE,
-           superseded='All files from the previous correction-slice export (r1/r2 frames, layers L1–L4, baked-label boards) are superseded; delete them.')
+           superseded='Replaces correction-assets-r3 entirely. r4 changed pixels: D01_desk, M01_desk, P_open_plan_{desktop,portrait}_{graphite,paint}; every other file is byte-identical to r3 and keeps its hash.')
 json.dump(out, open(f'{ROOT}/assets.json', 'w'), indent=1, ensure_ascii=False)
 print(len(assets), len(refs))

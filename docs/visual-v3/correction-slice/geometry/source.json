@@ -1,5 +1,5 @@
 {
- "revision": "correction-geo-r3",
+ "revision": "correction-geo-r4",
  "units": "metres",
  "convention": {
   "origin": "south-west inner floor corner of each location",
@@ -293,11 +293,13 @@
    "hero_anchors": {
     "at_desk": {
      "root": [
-      5.55,
-      2.25
+      5.97,
+      2.3
      ],
-     "yaw": -62,
-     "posture": "stand"
+     "yaw": -80,
+     "head_yaw": -14,
+     "posture": "stand",
+     "note": "standing at the east end of hero_desk, turned toward the monitor; monitor unoccluded from both recipes"
     },
     "to_corridor": {
      "root": [
@@ -311,8 +313,8 @@
    "routes": {
     "desk_to_P0": [
      [
-      5.55,
-      2.25
+      5.97,
+      2.3
      ],
      [
       6.4,
@@ -374,7 +376,7 @@
     },
     "portrait": {
      "position": [
-      5.1,
+      5.3,
       1.55,
       -0.8
      ],
@@ -1243,12 +1245,12 @@
       3.7
      ],
      [
-      1.6,
-      2.5
+      1.5,
+      2.1
      ],
      [
       5.5,
-      2.5
+      2.1
      ],
      [
       5.5,
@@ -1266,11 +1268,11 @@
      ],
      [
       1.0,
-      2.45
+      2.1
      ],
      [
       5.5,
-      2.45
+      2.1
      ],
      [
       5.5,
@@ -1561,15 +1563,40 @@
   "Corridor window bay: moved from loc z 3.4…5.8 to z 6.8…9.2 so it does not share the wall with P0 / the open plan.",
   "Open plan: the meeting-room glass box drawn at its right rear contradicted the building plan. Replaced by the east wall with P0 to the corridor.",
   "Plans on C13/C14 previously drew the meeting room with the camera at z=0 inside the plan; plans now use location coordinates with the camera as an external recipe.",
+  "r4 · open_plan.hero_anchors.at_desk: r3 root [5.55, 2.25] (stand) lay inside hero_desk (x 4.05–5.75, z 1.95–2.65). Authoritative: [5.97, 2.30], yaw −80, head_yaw −14: standing at the desk's east end, 0.22 m clear of hero_desk, 0.42 m from the r3 root, same depth so desktop scale/composition holds; desk_to_P0 starts there.",
+  "r4 · open_plan.cameras.portrait: position x 5.10 → 5.30 (y, z, focal, principal unchanged) so the corrected at_desk stays fully inside the 390 frame. Composition preservation only; desktop recipe and all other locations' cameras unchanged.",
+  "r4 · meeting_room routes stand_to_near_director / seat_to_near_director: r3 south aisle at z 2.5 / 2.45 grazed chair_south_end (z 2.51–2.99, clearance 0.01–0.06 m). Authoritative aisle z = 2.10 (0.41 m clear). Anchors, actors and cameras unchanged.",
+  "r4 · seated anchors keep posture=seat + seat=<obstacle id> (own_seat → chair_own_seat): overlap with the named seat is intentional seated staging, not a collision.",
   "Colleague anchors C1–C4 and their chairs as actors are removed. Their chairs remain as empty obstacles."
  ],
+ "collision": {
+  "hero_footprint_radius": 0.2,
+  "actor_footprint_radius": 0.25,
+  "rule": "standing anchors and route samples (0.05 m) inside walkable and >= hero radius from every obstacle and actor footprint; posture=seat anchors exempt only from their named seat"
+ },
  "runtime_normalisation": "not provided here; Foundation derives normalised 0–100 output",
  "beats": [
   {
    "beat": "01_desk",
    "location": "correction.open_plan",
    "hero_anchor": "at_desk",
-   "attention": [],
+   "route_out": "desk_to_P0",
+   "attention": [
+    [
+     5.97,
+     1.0,
+     2.3,
+     0.75,
+     1.15
+    ],
+    [
+     4.65,
+     1.05,
+     2.45,
+     0.6,
+     0.45
+    ]
+   ],
    "note": "desk island from monitor + hero; no other people in open plan"
   },
   {

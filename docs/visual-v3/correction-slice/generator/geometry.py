@@ -8,7 +8,9 @@ hard-code geometry.
 """
 import json, math
 
-GEOMETRY_REVISION = 'correction-geo-r3'
+GEOMETRY_REVISION = 'correction-geo-r4'
+HERO_FOOTPRINT_R = 0.20  # metres; standing anchors and route samples keep this clearance from obstacles
+ACTOR_FOOTPRINT_R = 0.25
 
 
 def rect(x0, z0, x1, z1):
@@ -66,8 +68,8 @@ MEETING = dict(
         near_director=dict(root=MR_NEAR_DIRECTOR, yaw=facing_yaw(MR_NEAR_DIRECTOR, MR_DIRECTOR), posture='stand',
                            note='private request; 0.99 m from director root, bending toward the seated director'),
     ),
-    routes=dict(stand_to_near_director=[[1.2, 3.7], [1.6, 2.5], [5.5, 2.5], [5.5, 4.4], MR_NEAR_DIRECTOR],
-                seat_to_near_director=[[0.65, 3.1], [1.0, 2.45], [5.5, 2.45], [5.5, 4.4], MR_NEAR_DIRECTOR],
+    routes=dict(stand_to_near_director=[[1.2, 3.7], [1.5, 2.1], [5.5, 2.1], [5.5, 4.4], MR_NEAR_DIRECTOR],
+                seat_to_near_director=[[0.65, 3.1], [1.0, 2.1], [5.5, 2.1], [5.5, 4.4], MR_NEAR_DIRECTOR],
                 entry_to_seat=[[0.5, 4.3], [0.9, 3.6], [0.65, 3.1]],
                 entry_to_stand=[[0.5, 4.3], [1.2, 3.7]]),
     objects=dict(
@@ -132,12 +134,12 @@ OPEN_PLAN = dict(
     display_surfaces=dict(monitor=dict(plane='z=2.45', corners=[[4.29, 1.27, 2.45], [5.01, 1.27, 2.45], [5.01, 0.86, 2.45], [4.29, 0.86, 2.45]],
                                         live_text_slots=['display.title'], content='deck thumbnail, neutral chart texture, no data')),
     actors=dict(),
-    hero_anchors=dict(at_desk=dict(root=[5.55, 2.25], yaw=-62, posture='stand'), to_corridor=dict(root=[9.2, 9.2], yaw=90, posture='stand')),
-    routes=dict(desk_to_P0=[[5.55, 2.25], [6.4, 3.4], [8.6, 8.6], [9.2, 9.2]]),
+    hero_anchors=dict(at_desk=dict(root=[5.97, 2.3], yaw=-80, head_yaw=-14, posture='stand', note='standing at the east end of hero_desk, turned toward the monitor; monitor unoccluded from both recipes'), to_corridor=dict(root=[9.2, 9.2], yaw=90, posture='stand')),
+    routes=dict(desk_to_P0=[[5.97, 2.3], [6.4, 3.4], [8.6, 8.6], [9.2, 9.2]]),
     objects=dict(summary=dict(attached='hero.hand_R.summary'), mug=dict(pos=[4.28, 0.74, 2.1]), sheet=dict(pos=[4.92, 0.745, 2.18], footprint=[0.4, 0.28])),
     attachments=['hero.hand_R.summary'],
     cameras=dict(desktop=dict(position=[5.0, 1.55, -1.0], look='+z (north)', focal_px=1220, frame=[1920, 1080], principal=[900, 400]),
-                 portrait=dict(position=[5.1, 1.55, -0.8], look='+z (north)', focal_px=1150, frame=[780, 1688], principal=[390, 760])),
+                 portrait=dict(position=[5.3, 1.55, -0.8], look='+z (north)', focal_px=1150, frame=[780, 1688], principal=[390, 760])),
     camera_safe=MEETING['camera_safe'],
 )
 
@@ -158,6 +160,10 @@ RESOLVED = [
     'Corridor window bay: moved from loc z 3.4…5.8 to z 6.8…9.2 so it does not share the wall with P0 / the open plan.',
     'Open plan: the meeting-room glass box drawn at its right rear contradicted the building plan. Replaced by the east wall with P0 to the corridor.',
     'Plans on C13/C14 previously drew the meeting room with the camera at z=0 inside the plan; plans now use location coordinates with the camera as an external recipe.',
+    'r4 · open_plan.hero_anchors.at_desk: r3 root [5.55, 2.25] (stand) lay inside hero_desk (x 4.05–5.75, z 1.95–2.65). Authoritative: [5.97, 2.30], yaw −80, head_yaw −14: standing at the desk\'s east end, 0.22 m clear of hero_desk, 0.42 m from the r3 root, same depth so desktop scale/composition holds; desk_to_P0 starts there.',
+    'r4 · open_plan.cameras.portrait: position x 5.10 → 5.30 (y, z, focal, principal unchanged) so the corrected at_desk stays fully inside the 390 frame. Composition preservation only; desktop recipe and all other locations\' cameras unchanged.',
+    'r4 · meeting_room routes stand_to_near_director / seat_to_near_director: r3 south aisle at z 2.5 / 2.45 grazed chair_south_end (z 2.51–2.99, clearance 0.01–0.06 m). Authoritative aisle z = 2.10 (0.41 m clear). Anchors, actors and cameras unchanged.',
+    'r4 · seated anchors keep posture=seat + seat=<obstacle id> (own_seat → chair_own_seat): overlap with the named seat is intentional seated staging, not a collision.',
     'Colleague anchors C1–C4 and their chairs as actors are removed. Their chairs remain as empty obstacles.',
 ]
 
@@ -168,7 +174,7 @@ def to_json():
                 cast=dict(hero='protagonist (player)', mira='Mira, team lead', director='director'),
                 locations=LOCATIONS, portal_pairs=PORTAL_PAIRS,
                 camera_model='pinhole, no rotation: screen_x = principal_x + focal_px * (x - cam_x) / (z - cam_z); screen_y = principal_y + focal_px * (cam_y - y) / (z - cam_z)',
-                resolved_contradictions=RESOLVED, runtime_normalisation='not provided here; Foundation derives normalised 0–100 output')
+                resolved_contradictions=RESOLVED, collision=dict(hero_footprint_radius=HERO_FOOTPRINT_R, actor_footprint_radius=ACTOR_FOOTPRINT_R, rule='standing anchors and route samples (0.05 m) inside walkable and >= hero radius from every obstacle and actor footprint; posture=seat anchors exempt only from their named seat'), runtime_normalisation='not provided here; Foundation derives normalised 0–100 output')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 {
- "revision": "correction-assets-r3",
- "geometry_revision": "correction-geo-r3",
+ "revision": "correction-assets-r4",
+ "geometry_revision": "correction-geo-r4",
  "hash": "sha256",
  "units": "px",
  "rules": [
@@ -12,7 +12,7 @@
   {
    "id": "P_corridor_desktop_graphite",
    "path": "runtime/plates/P_corridor_desktop_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L1_plate_graphite",
@@ -27,7 +27,7 @@
   {
    "id": "P_corridor_desktop_paint",
    "path": "runtime/plates/P_corridor_desktop_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L2_plate_paint",
@@ -42,7 +42,7 @@
   {
    "id": "P_corridor_portrait_graphite",
    "path": "runtime/plates/P_corridor_portrait_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L1_plate_graphite",
@@ -57,7 +57,7 @@
   {
    "id": "P_corridor_portrait_paint",
    "path": "runtime/plates/P_corridor_portrait_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L2_plate_paint",
@@ -72,7 +72,7 @@
   {
    "id": "P_meeting_room_desktop_graphite",
    "path": "runtime/plates/P_meeting_room_desktop_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L1_plate_graphite",
@@ -87,7 +87,7 @@
   {
    "id": "P_meeting_room_desktop_paint",
    "path": "runtime/plates/P_meeting_room_desktop_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L2_plate_paint",
@@ -102,7 +102,7 @@
   {
    "id": "P_meeting_room_portrait_east_graphite",
    "path": "runtime/plates/P_meeting_room_portrait_east_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L1_plate_graphite",
@@ -117,7 +117,7 @@
   {
    "id": "P_meeting_room_portrait_east_paint",
    "path": "runtime/plates/P_meeting_room_portrait_east_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L2_plate_paint",
@@ -132,7 +132,7 @@
   {
    "id": "P_meeting_room_portrait_graphite",
    "path": "runtime/plates/P_meeting_room_portrait_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L1_plate_graphite",
@@ -147,7 +147,7 @@
   {
    "id": "P_meeting_room_portrait_paint",
    "path": "runtime/plates/P_meeting_room_portrait_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L2_plate_paint",
@@ -162,7 +162,7 @@
   {
    "id": "P_meeting_room_portrait_room_graphite",
    "path": "runtime/plates/P_meeting_room_portrait_room_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L1_plate_graphite",
@@ -177,7 +177,7 @@
   {
    "id": "P_meeting_room_portrait_room_paint",
    "path": "runtime/plates/P_meeting_room_portrait_room_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L2_plate_paint",
@@ -192,7 +192,7 @@
   {
    "id": "P_open_plan_desktop_graphite",
    "path": "runtime/plates/P_open_plan_desktop_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L1_plate_graphite",
@@ -202,12 +202,12 @@
    "visibility": "public",
    "preload": "scene",
    "reduced_motion_fallback": "same asset (static plate)",
-   "sha256": "e594ba88db8fb13ca3b7f713592126cd875c71ff50aaf8670152765323a5b93e"
+   "sha256": "84d1dad5d31fc48c34092cf1dd314c6e56111cbbef8478f5b13de850171a8e28"
   },
   {
    "id": "P_open_plan_desktop_paint",
    "path": "runtime/plates/P_open_plan_desktop_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "layer_role": "L2_plate_paint",
@@ -217,12 +217,12 @@
    "visibility": "public",
    "preload": "scene",
    "reduced_motion_fallback": "same asset (static plate)",
-   "sha256": "1bbaae4b636056feeb6ee121fe18d48795ca6a49342cb693cfe07d9e27ce8b92"
+   "sha256": "da57b05fe0976c96b9fe98b4369f19a1e6a193cdd644619ce48a218386a2ba13"
   },
   {
    "id": "P_open_plan_portrait_graphite",
    "path": "runtime/plates/P_open_plan_portrait_graphite.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L1_plate_graphite",
@@ -232,12 +232,12 @@
    "visibility": "public",
    "preload": "scene",
    "reduced_motion_fallback": "same asset (static plate)",
-   "sha256": "6969e02d5aadd68ec4181e1b603ff2f7ba240a8ac2b0fe854c115a57580f4638"
+   "sha256": "43805d11c48ed4b654997574e715e8cc7eefdf15f8d335325141d56d8ff92385"
   },
   {
    "id": "P_open_plan_portrait_paint",
    "path": "runtime/plates/P_open_plan_portrait_paint.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "layer_role": "L2_plate_paint",
@@ -247,12 +247,12 @@
    "visibility": "public",
    "preload": "scene",
    "reduced_motion_fallback": "same asset (static plate)",
-   "sha256": "abffc145442a5df45f5077ad2d5d1cdc66f0604e1cdccc2340d19bc96abfb153"
+   "sha256": "eb6c71b45446677742f60ae1c87c175a48a339859e662987c4cb68a3d4a5658d"
   },
   {
    "id": "author_page",
    "path": "runtime/props/author_page.png",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 800,
    "height": 1120,
    "layer_role": "L5_reveal_public_motif",
@@ -267,7 +267,7 @@
   {
    "id": "display_texture",
    "path": "runtime/props/display_texture.png",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1600,
    "height": 800,
    "layer_role": "L2_display_surface",
@@ -282,7 +282,7 @@
   {
    "id": "summary_prop",
    "path": "runtime/props/summary_prop.png",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 600,
    "height": 800,
    "layer_role": "L4_hero_prop",
@@ -299,7 +299,7 @@
   {
    "id": "D01_desk",
    "path": "reference/frames/desktop/D01_desk.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -307,12 +307,12 @@
    "viewport": "desktop",
    "runtime": false,
    "reduced_motion_still": false,
-   "sha256": "0ea9a03aad1d6a41dfdc71a66bbe8c19f783bb8904dd213a306b0e41a6744d69"
+   "sha256": "d054cc573dbabcc88fd5d92ec08fb695a410dedf6454fa783b04624974aeb9f7"
   },
   {
    "id": "D02_meeting",
    "path": "reference/frames/desktop/D02_meeting.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -325,7 +325,7 @@
   {
    "id": "D03_hallway",
    "path": "reference/frames/desktop/D03_hallway.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -338,7 +338,7 @@
   {
    "id": "D03a_leave",
    "path": "reference/frames/desktop/D03a_leave.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -351,7 +351,7 @@
   {
    "id": "D04a_return_seated",
    "path": "reference/frames/desktop/D04a_return_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -364,7 +364,7 @@
   {
    "id": "D04b_return_standing",
    "path": "reference/frames/desktop/D04b_return_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -377,7 +377,7 @@
   {
    "id": "D05a_decision_seated",
    "path": "reference/frames/desktop/D05a_decision_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -390,7 +390,7 @@
   {
    "id": "D05b_decision_standing",
    "path": "reference/frames/desktop/D05b_decision_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -403,7 +403,7 @@
   {
    "id": "D06a_speak_seated",
    "path": "reference/frames/desktop/D06a_speak_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -416,7 +416,7 @@
   {
    "id": "D06a_speak_standing",
    "path": "reference/frames/desktop/D06a_speak_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -429,7 +429,7 @@
   {
    "id": "D06b_private",
    "path": "reference/frames/desktop/D06b_private.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -442,7 +442,7 @@
   {
    "id": "D06c_pass_seated",
    "path": "reference/frames/desktop/D06c_pass_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -455,7 +455,7 @@
   {
    "id": "D06c_pass_standing",
    "path": "reference/frames/desktop/D06c_pass_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -468,7 +468,7 @@
   {
    "id": "D07_boundary_pass",
    "path": "reference/frames/desktop/D07_boundary_pass.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "boundary",
@@ -481,7 +481,7 @@
   {
    "id": "D07_boundary_private",
    "path": "reference/frames/desktop/D07_boundary_private.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "boundary",
@@ -494,7 +494,7 @@
   {
    "id": "D07_boundary_speak",
    "path": "reference/frames/desktop/D07_boundary_speak.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "boundary",
@@ -507,7 +507,7 @@
   {
    "id": "D07a_held",
    "path": "reference/frames/desktop/D07a_held.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -520,7 +520,7 @@
   {
    "id": "D07b_withdraw",
    "path": "reference/frames/desktop/D07b_withdraw.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "frame",
@@ -533,7 +533,7 @@
   {
    "id": "D08a_lift",
    "path": "reference/frames/desktop/D08a_lift.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "reveal-public-motif",
@@ -546,7 +546,7 @@
   {
    "id": "D08b_loading",
    "path": "reference/frames/desktop/D08b_loading.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "reveal-public-motif",
@@ -559,7 +559,7 @@
   {
    "id": "D08c_reveal_layout",
    "path": "reference/frames/desktop/D08c_reveal_layout.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "reveal-public-motif",
@@ -572,7 +572,7 @@
   {
    "id": "D08d_retry",
    "path": "reference/frames/desktop/D08d_retry.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "reveal-public-motif",
@@ -585,7 +585,7 @@
   {
    "id": "M01_desk",
    "path": "reference/frames/mobile/M01_desk.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -593,12 +593,12 @@
    "viewport": "portrait",
    "runtime": false,
    "reduced_motion_still": false,
-   "sha256": "d182f39fe9145e5b4c6499a061c57597959dc972411232764388d2a3813459e1"
+   "sha256": "e0f0f3a291b18b2eaeb13724e837615758019f916b7f5876537929956f89f3b5"
   },
   {
    "id": "M02_meeting",
    "path": "reference/frames/mobile/M02_meeting.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -611,11 +611,11 @@
   {
    "id": "M02b_meeting_room",
    "path": "reference/frames/mobile/M02b_meeting_room.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
-   "role": "layer-reference",
-   "location": null,
+   "role": "frame",
+   "location": "correction.meeting_room",
    "viewport": "portrait",
    "runtime": false,
    "reduced_motion_still": false,
@@ -624,7 +624,7 @@
   {
    "id": "M03_hallway",
    "path": "reference/frames/mobile/M03_hallway.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -637,7 +637,7 @@
   {
    "id": "M04a_return_seated",
    "path": "reference/frames/mobile/M04a_return_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -650,7 +650,7 @@
   {
    "id": "M04b_return_standing",
    "path": "reference/frames/mobile/M04b_return_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -663,7 +663,7 @@
   {
    "id": "M05a_decision_seated",
    "path": "reference/frames/mobile/M05a_decision_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -676,7 +676,7 @@
   {
    "id": "M05b_decision_standing",
    "path": "reference/frames/mobile/M05b_decision_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -689,7 +689,7 @@
   {
    "id": "M06a_speak_seated",
    "path": "reference/frames/mobile/M06a_speak_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -702,7 +702,7 @@
   {
    "id": "M06a_speak_standing",
    "path": "reference/frames/mobile/M06a_speak_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -715,7 +715,7 @@
   {
    "id": "M06b_private",
    "path": "reference/frames/mobile/M06b_private.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -728,7 +728,7 @@
   {
    "id": "M06c_pass_seated",
    "path": "reference/frames/mobile/M06c_pass_seated.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -741,7 +741,7 @@
   {
    "id": "M06c_pass_standing",
    "path": "reference/frames/mobile/M06c_pass_standing.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "frame",
@@ -754,7 +754,7 @@
   {
    "id": "M07_boundary_speak",
    "path": "reference/frames/mobile/M07_boundary_speak.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "boundary",
@@ -767,7 +767,7 @@
   {
    "id": "M08a_lift",
    "path": "reference/frames/mobile/M08a_lift.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "reveal-public-motif",
@@ -780,7 +780,7 @@
   {
    "id": "M08b_loading",
    "path": "reference/frames/mobile/M08b_loading.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "reveal-public-motif",
@@ -793,7 +793,7 @@
   {
    "id": "M08c_reveal_layout",
    "path": "reference/frames/mobile/M08c_reveal_layout.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "reveal-public-motif",
@@ -806,7 +806,7 @@
   {
    "id": "M08d_retry",
    "path": "reference/frames/mobile/M08d_retry.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 780,
    "height": 1688,
    "role": "reveal-public-motif",
@@ -819,7 +819,7 @@
   {
    "id": "L3_mask",
    "path": "reference/layers/L3_mask.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "layer-reference",
@@ -832,7 +832,7 @@
   {
    "id": "L4_actors",
    "path": "reference/layers/L4_actors.webp",
-   "revision": "correction-assets-r3",
+   "revision": "correction-assets-r4",
    "width": 1920,
    "height": 1080,
    "role": "layer-reference",
@@ -872,5 +872,5 @@
    "rule": "never in plates, frames, props, scene preload or any pre-boundary payload; identical for all three acts"
   }
  ],
- "superseded": "All files from the previous correction-slice export (r1/r2 frames, layers L1–L4, baked-label boards) are superseded; delete them."
+ "superseded": "Replaces correction-assets-r3 entirely. r4 changed pixels: D01_desk, M01_desk, P_open_plan_{desktop,portrait}_{graphite,paint}; every other file is byte-identical to r3 and keeps its hash."
 }

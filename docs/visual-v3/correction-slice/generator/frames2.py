@@ -89,7 +89,7 @@ P_READ = pose(yaw=28, head_pitch=34, neck_fwd=0.8, spine_pitch=6, support='R', p
               armR=dict(flex=30, abd=4, elbow=100, inw=40, hand='grip', curl=0.8), armL=dict(flex=28, abd=6, elbow=96, inw=60, hand='grip', curl=0.8))
 P_WALK_OUT = pose(yaw=-130, spine_pitch=4, head_pitch=10, legR=dict(flex=22, knee=8), legL=dict(flex=-18, knee=20, toe=24),
                   armR=dict(flex=6, abd=6, elbow=40, hand='grip', curl=0.8), armL=dict(flex=16, abd=4, elbow=24))
-P_DESK = pose(yaw=-62, head_yaw=-8, head_pitch=8, spine_pitch=4, support='L', legR=dict(flex=6, knee=6), legL=dict(flex=-6, knee=4),
+P_DESK = pose(yaw=G.OPEN_PLAN['hero_anchors']['at_desk']['yaw'], head_yaw=G.OPEN_PLAN['hero_anchors']['at_desk']['head_yaw'], head_pitch=8, spine_pitch=4, support='L', legR=dict(flex=6, knee=6), legL=dict(flex=-6, knee=4),
               armR=dict(flex=34, abd=4, elbow=84, inw=30, hand='grip', curl=0.8), armL=dict(flex=26, abd=10, elbow=20, hand='rest', curl=0.3))
 P_MIRA = pose(yaw=-58, spine_pitch=4, head_yaw=-10, legR=dict(flex=10, knee=6), legL=dict(flex=-8, knee=6),
               armR=dict(flex=34, abd=20, elbow=70, hand='open', curl=0.25, inw=-25), armL=dict(flex=14, abd=8, elbow=50, hand='relax'))

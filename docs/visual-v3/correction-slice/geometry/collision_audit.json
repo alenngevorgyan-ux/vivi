@@ -1,0 +1,367 @@
+{
+ "geometry_revision": "correction-geo-r4",
+ "hero_footprint_radius": 0.2,
+ "actor_footprint_radius": 0.25,
+ "sample_step": 0.05,
+ "all_ok": true,
+ "checks": [
+  {
+   "location": "correction.open_plan",
+   "kind": "anchor",
+   "name": "at_desk",
+   "posture": "stand",
+   "point": [
+    5.97,
+    2.3
+   ],
+   "in_walkable": true,
+   "nearest": "hero_desk",
+   "clearance": 0.22,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.open_plan",
+   "kind": "anchor",
+   "name": "to_corridor",
+   "posture": "stand",
+   "point": [
+    9.2,
+    9.2
+   ],
+   "in_walkable": true,
+   "nearest": "desk_row_2b",
+   "clearance": 4.887,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.open_plan",
+   "kind": "route",
+   "name": "desk_to_P0",
+   "points": [
+    [
+     5.97,
+     2.3
+    ],
+    [
+     6.4,
+     3.4
+    ],
+    [
+     8.6,
+     8.6
+    ],
+    [
+     9.2,
+     9.2
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "hero_desk",
+   "clearance": 0.22,
+   "at": [
+    5.97,
+    2.3
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.corridor",
+   "kind": "anchor",
+   "name": "from_meeting",
+   "posture": "stand",
+   "point": [
+    2.9,
+    5.78
+   ],
+   "in_walkable": true,
+   "nearest": "sill",
+   "clearance": 2.905,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.corridor",
+   "kind": "anchor",
+   "name": "reading",
+   "posture": "stand",
+   "point": [
+    0.75,
+    7.6
+   ],
+   "in_walkable": true,
+   "nearest": "sill",
+   "clearance": 0.57,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.corridor",
+   "kind": "anchor",
+   "name": "return_threshold",
+   "posture": "stand",
+   "point": [
+    2.9,
+    5.78
+   ],
+   "in_walkable": true,
+   "nearest": "sill",
+   "clearance": 2.905,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.corridor",
+   "kind": "route",
+   "name": "exit_to_reading",
+   "points": [
+    [
+     2.9,
+     5.78
+    ],
+    [
+     1.6,
+     6.6
+    ],
+    [
+     0.75,
+     7.6
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "sill",
+   "clearance": 0.57,
+   "at": [
+    0.75,
+    7.6
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.corridor",
+   "kind": "route",
+   "name": "reading_to_return",
+   "points": [
+    [
+     0.75,
+     7.6
+    ],
+    [
+     1.8,
+     6.4
+    ],
+    [
+     2.9,
+     5.78
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "sill",
+   "clearance": 0.57,
+   "at": [
+    0.75,
+    7.6
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "anchor",
+   "name": "entry",
+   "posture": "stand",
+   "point": [
+    0.5,
+    4.3
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.96,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "anchor",
+   "name": "own_seat",
+   "posture": "seat",
+   "point": [
+    0.65,
+    3.1
+   ],
+   "in_walkable": true,
+   "nearest": "chair_west_1",
+   "clearance": 1.387,
+   "required": 0.0,
+   "exempt": [
+    "chair_own_seat"
+   ],
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "anchor",
+   "name": "stand_near_entry",
+   "posture": "stand",
+   "point": [
+    1.2,
+    3.7
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.475,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "anchor",
+   "name": "near_director",
+   "posture": "stand",
+   "point": [
+    5.6,
+    5.4
+   ],
+   "in_walkable": true,
+   "nearest": "chair_director",
+   "clearance": 0.59,
+   "required": 0.2,
+   "exempt": [],
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "route",
+   "name": "stand_to_near_director",
+   "points": [
+    [
+     1.2,
+     3.7
+    ],
+    [
+     1.5,
+     2.1
+    ],
+    [
+     5.5,
+     2.1
+    ],
+    [
+     5.5,
+     4.4
+    ],
+    [
+     5.6,
+     5.4
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.371,
+   "at": [
+    1.256,
+    3.4
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "route",
+   "name": "seat_to_near_director",
+   "points": [
+    [
+     0.65,
+     3.1
+    ],
+    [
+     1.0,
+     2.1
+    ],
+    [
+     5.5,
+     2.1
+    ],
+    [
+     5.5,
+     4.4
+    ],
+    [
+     5.6,
+     5.4
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.284,
+   "at": [
+    0.833,
+    2.576
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "route",
+   "name": "entry_to_seat",
+   "points": [
+    [
+     0.5,
+     4.3
+    ],
+    [
+     0.9,
+     3.6
+    ],
+    [
+     0.65,
+     3.1
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.26,
+   "at": [
+    0.9,
+    3.6
+   ],
+   "required": 0.2,
+   "ok": true
+  },
+  {
+   "location": "correction.meeting_room",
+   "kind": "route",
+   "name": "entry_to_stand",
+   "points": [
+    [
+     0.5,
+     4.3
+    ],
+    [
+     1.2,
+     3.7
+    ]
+   ],
+   "in_walkable": true,
+   "nearest": "chair_own_seat",
+   "clearance": 0.475,
+   "at": [
+    1.2,
+    3.7
+   ],
+   "required": 0.2,
+   "ok": true
+  }
+ ]
+}
