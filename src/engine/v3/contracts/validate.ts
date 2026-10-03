@@ -918,8 +918,10 @@ export function findPrivateLeaks(publicValue: unknown, canaries: readonly string
   const hay = JSON.stringify(publicValue).toLowerCase();
   const found: number[] = [];
   canaries.forEach((canary, i) => {
-    const needle = canary.trim().toLowerCase();
-    if (needle.length >= 4 && hay.includes(needle)) found.push(i);
+    const raw = canary.trim().toLowerCase();
+    // The haystack is serialized, so compare the needle as it serializes: a quote or newline in a canary must still match.
+    const needle = JSON.stringify(raw).slice(1, -1);
+    if (raw.length >= 4 && hay.includes(needle)) found.push(i);
   });
   return found;
 }

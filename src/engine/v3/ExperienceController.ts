@@ -408,8 +408,12 @@ function applyPreparation(m: PlaybackManifestV3, s: RuntimeSnapshot, id: string)
   const patch = (eid: string, f: (x: EntityState) => EntityState) => (entities = entities.map(x => (x.id === eid ? f(x) : x)));
 
   if (a.kind === 'reposition') {
-    undo.push({ kind: 'state', entity: hero.id, key: 'mark_role', value: hero.state.mark_role ?? null });
+    // The hero stands in one place: a new position supersedes an active one and inherits its baseline,
+    // so undoing either can never strand the hero on a mark that no active preparation explains.
+    const active = s.preparations.find(r => r.undo.some(u => u.kind === 'state' && u.entity === hero.id && u.key === 'mark_role'));
     patch(hero.id, x => ({ ...x, state: { ...x.state, mark_role: a.markRole } }));
+    if (active) return { ...s, entities, preparations: [...s.preparations.filter(r => r !== active), { id, undo: active.undo }] };
+    undo.push({ kind: 'state', entity: hero.id, key: 'mark_role', value: hero.state.mark_role ?? null });
   } else {
     const obj = entityOf(s, a.object);
     if (!obj) return undefined;
@@ -483,6 +487,30 @@ export function restoreSnapshot(m: PlaybackManifestV3, raw: unknown): RuntimeSna
   if (!s.receivedFacts.every(id => m.facts.some(f => f.id === id))) return undefined;
   if (!Array.isArray(s.entities) || s.entities.length !== m.initialEntities.length || !m.initialEntities.every(e => s.entities.some(x => x.id === e.id && x.kind === e.kind))) return undefined;
   if (s.decision && !m.opportunities.some(o => o.id === s.decision!.option)) return undefined;
+  // Everything the reducer later reads must have its contract shape: a stored snapshot is untrusted input.
+  const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const beats = new Set(m.scenePlans.flatMap(p => p.beats.map(b => b.id)));
+  const locations = new Set(m.scenePlans.map(p => p.location));
+  const kindOf = new Map(m.initialEntities.map(e => [e.id, e.kind] as const));
+  if (!s.deliveredBeats.every(id => beats.has(id)) || !s.seenObservations.every(id => m.observations.some(o => o.id === id))) return undefined;
+  if (typeof s.attemptId !== 'string' || typeof s.boundaryLocked !== 'boolean' || !Number.isInteger(s.txCounter) || s.txCounter < 0) return undefined;
+  if (!isRec(s.variables) || !Object.values(s.variables).every(v => typeof v === 'string')) return undefined;
+  const t = s.time as unknown;
+  if (!isRec(t) || !['presentationMs', 'narrativeMs', 'opportunityMs'].every(k => Number.isFinite(t[k])) || !['soft', 'untimed', 'timed'].includes(t.policy as string)) return undefined;
+  // One owner per entity, and only owners that exist: no actor carried, no one in a place this manifest never shows.
+  const ownerOk = (e: unknown): boolean => {
+    if (!isRec(e) || !isRec(e.owner) || !isRec(e.state)) return false;
+    const o = e.owner;
+    if (o.kind === 'location') return locations.has(o.id as string);
+    if (o.kind === 'actor') return e.kind === 'object' && kindOf.get(o.id as string) === 'actor';
+    return o.kind === 'offstage' && o.id === 'offstage';
+  };
+  if (!s.entities.every(ownerOk)) return undefined;
+  const hero = s.entities.find(e => e.id === m.perspectiveActor);
+  if (!hero || hero.owner.kind !== 'location' || hero.owner.id !== s.location) return undefined;
+  const prepOk = (r: unknown) => isRec(r) && m.preparations.some(p => p.id === r.id) && Array.isArray(r.undo) && r.undo.every(u => isRec(u) && kindOf.has(u.entity as string));
+  if (!Array.isArray(s.preparations) || !s.preparations.every(prepOk)) return undefined;
+  if (s.decision && (!m.primaryDecision || s.decision.id !== m.primaryDecision.id || !m.primaryDecision.options.includes(s.decision.option))) return undefined;
 
   const clean: RuntimeSnapshot = {
     ...s,
@@ -493,6 +521,9 @@ export function restoreSnapshot(m: PlaybackManifestV3, raw: unknown): RuntimeSna
     transition: undefined,
     reservation: undefined,
     time: { ...s.time, pauses: [] },
+    // Activation ids belong to one page session (a new InputManager restarts at k1/p1). Nothing an old
+    // activation could act twice on survives the reset above, so keeping them would only swallow fresh input.
+    consumedActivations: [],
   };
   if (s.decision) return { ...clean, phase: s.phase === 'revealed' || s.phase === 'ended' ? s.phase : 'boundary', boundaryLocked: true, reveal: s.phase === 'revealed' || s.phase === 'ended' ? 'ready' : 'idle' };
   if (s.boundaryLocked) return { ...clean, phase: 'boundary' };
