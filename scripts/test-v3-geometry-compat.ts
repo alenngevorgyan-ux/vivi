@@ -14,14 +14,19 @@ import { readDesignGeometryR3 } from './lib/designGeometryR3.ts';
  * adapter, compiled into scenes that select the recipes Design assigns to its beats, and validated by the real
  * validators. Nothing in this file moves, clamps or waives a Design value.
  *
- * KNOWN SOURCE DEFECTS are keyed by the SHA-256 of the exact source bytes. A source whose hash is not in that
- * table must validate with ZERO issues. So when Design publishes the corrected geometry, replace the fixture (or
- * point VIVI_DESIGN_GEOMETRY_SOURCE at it): the new hash has no exceptions and this same test must pass untouched.
+ * KNOWN SOURCES are keyed by the SHA-256 of the exact source bytes: each pinned hash names the one Design revision
+ * those bytes must declare, and the source defects (if any) they are known to carry. A pinned hash with a different
+ * declared revision is a provenance failure. A source whose hash is not pinned must validate with ZERO issues. The
+ * expected provenance always derives from the supplied source (its declared revision and its byte hash), never from
+ * a hard-coded revision, so a corrected revision runs through this same test untouched.
  *
- * Run against another file:  VIVI_DESIGN_GEOMETRY_SOURCE=/path/to/source.json npm run test:v3-geometry-compat
+ * `npm run test:v3-geometry-compat` runs it twice: on the committed r3 fixture (historical regression evidence) and
+ * on the imported Design r4 source (docs/visual-v3/correction-slice/geometry/source.json), the build input.
+ *
+ * Run against another file:  VIVI_DESIGN_GEOMETRY_SOURCE=/path/to/source.json node --import tsx scripts/test-v3-geometry-compat.ts
  */
 
-console.log('Testing V3 B02 against the real Design geometry...\n');
+console.log(`Testing V3 B02 against the real Design geometry (${process.env.VIVI_DESIGN_GEOMETRY_SOURCE ?? 'committed r3 fixture'})...\n`);
 let n = 0;
 const ok = (label: string) => console.log(`✓ ${++n}. ${label}`);
 
@@ -31,22 +36,29 @@ const bytes = readFileSync(path ?? FIXTURE);
 const sourceHash = createHash('sha256').update(bytes).digest('hex');
 const raw = JSON.parse(bytes.toString('utf8'));
 
-/** The one published r3 source defect: a STANDING hero anchor whose root lies inside the hero desk obstacle. Design patches it separately. */
+/** r3: the one published source defect is a STANDING hero anchor whose root lies inside the hero desk obstacle. */
 const R3_SHA = '992340663d8cc7f384d8ccacd6dbe5d3ea687e8e803d6dc55cf3aa166f558273';
-const KNOWN_SOURCE_DEFECTS: Record<string, Array<{ path: RegExp; why: string }>> = {
-  [R3_SHA]: [
+/** r4: Design's B02 micro-patch (design/vivi-v3-correction-slice @ 2140372), closed in reports/v3-b02-final-closure.md. No known defect. */
+const R4_SHA = 'a541aac8af489bdea7ca6fed2711d89032ff90e2975706cf74926ca8a39a0c81';
+const KNOWN_SOURCES: Record<string, { revision: string; defects: Array<{ path: RegExp; why: string }> }> = {
+  [R4_SHA]: { revision: 'correction-geo-r4', defects: [] },
+  [R3_SHA]: { revision: 'correction-geo-r3', defects: [
     { path: /^compiledScenes\.desk_desktop\.entryMark$/, why: 'open_plan.hero_anchors.at_desk root [5.55, 2.25] is inside obstacle hero_desk (x 4.05–5.75, z 1.95–2.65); posture stand' },
     { path: /^compiledScenes\.desk_desktop\.marks\.at_desk$/, why: 'same root' },
     { path: /^compiledScenes\.desk_desktop\.routes\.desk_to_p0\[0\]$/, why: 'route desk_to_P0 starts at the same root' },
     { path: /^compiledScenes\.desk_portrait\.entryMark$/, why: 'same root' },
     { path: /^compiledScenes\.desk_portrait\.marks\.at_desk$/, why: 'same root' },
     { path: /^compiledScenes\.desk_portrait\.routes\.desk_to_p0\[0\]$/, why: 'route desk_to_P0 starts at the same root' },
-  ],
+  ] },
 };
-const expected = KNOWN_SOURCE_DEFECTS[sourceHash] ?? [];
+const known = KNOWN_SOURCES[sourceHash];
+// Strict provenance: pinned bytes must declare their pinned revision. An unpinned source carries no exceptions.
+if (known) assert.equal(raw.revision, known.revision, `source ${sourceHash.slice(0, 12)} is pinned as ${known.revision} but declares ${raw.revision}`);
+assert.match(String(raw.revision), /^[a-z0-9][a-z0-9._-]{0,63}$/, 'the source declares an explicit revision');
+const expected = known?.defects ?? [];
 
 const reading = readDesignGeometryR3(raw);
-const OPTS = { geometryRevision: 'correction-geo-r3-adapted', adapterVersion: '1.0.0', sourceHash };
+const OPTS = { geometryRevision: `${raw.revision}-adapted`, adapterVersion: '1.0.0', sourceHash };
 const { geometry, marks, routes } = adaptDesignGeometry(reading.source, OPTS);
 const L = { desk: 'correction_open_plan', hall: 'correction_corridor', room: 'correction_meeting_room' };
 const cam = (loc: string, recipe: string) => reading.cameraIds[`${loc}/${recipe}`] ?? assert.fail(`no camera ${loc}/${recipe}`);
@@ -114,7 +126,7 @@ const paths = (r: { issues: Array<{ path: string; message: string }> }) => r.iss
     'correction_open_plan.attachments', 'correction_open_plan.display_surfaces', 'correction_open_plan.objects', 'correction_open_plan.occluders', 'correction_open_plan.walls',
   ].sort());
 }
-ok('Fixture: the committed Design r3 source is the reviewed file (hash pinned); all 8 camera recipes are read; every unmapped key is listed');
+ok(`Source: ${path ? `supplied ${raw.revision}` : 'the committed Design r3 fixture'} (${known ? 'hash pinned to its declared revision' : 'unpinned hash, zero exceptions allowed'}); all 8 camera recipes are read; every unmapped key is listed`);
 
 {
   // The adapter takes the actual r3 values, deterministically, and the resource is structurally valid.
@@ -122,14 +134,16 @@ ok('Fixture: the committed Design r3 source is the reviewed file (hash pinned); 
   assert.equal(JSON.stringify(again), JSON.stringify({ geometry, marks, routes }), 'same bytes, same output');
   const v = validateRuntimeGeometry(geometry);
   assert.equal(v.ok, true, paths(v));
-  assert.deepEqual(geometry.provenance, { sourceRevision: 'correction-geo-r3', adapterVersion: '1.0.0', sourceHash });
+  // Expected provenance derives from the supplied source: its declared revision and its byte hash.
+  assert.deepEqual(geometry.provenance, { sourceRevision: raw.revision, adapterVersion: '1.0.0', sourceHash });
+  assert.equal(geometry.geometryRevision, `${raw.revision}-adapted`);
   assert.equal(geometry.cameras.length, 8, 'no camera is discarded');
   // No clamping: every normalized point is the affine image of the source point, in range, and nothing moved.
   const room = reading.source.locations.find(l => l.location === L.room)!;
   const own = room.marks.own_seat;
   assert.deepEqual(marks[L.room].own_seat, { x: Number(((100 * own.at[0]) / 6.8).toFixed(3)), y: Number(((100 * own.at[1]) / 7.4).toFixed(3)), facing: 'yaw_p90' });
 }
-ok('The real r3 source adapts without exception, deterministically, with provenance, and the resource validates');
+ok(`The real ${raw.revision} source adapts without exception, deterministically, with provenance derived from the supplied source, and the resource validates`);
 
 {
   // INTERIOR CAMERAS. Five r3 recipes stand inside their location's bounds; the old adapter rejected each.
@@ -193,9 +207,9 @@ ok('Interior cameras (corridor desktop+portrait, meeting portrait/portrait_room/
   const port = geometry.cameras.find(c => c.id === cam(L.room, 'portrait'))!;
   const room_ = geometry.cameras.find(c => c.id === cam(L.room, 'portrait_room'))!;
   const inSafe = (k: typeof east, p: { x: number; y: number }) => { const s = projectPoint(k, p.x, p.y, 0); return !!s && s.sx >= k.safe.x && s.sx <= k.safe.x + k.safe.width && s.sy >= k.safe.y && s.sy <= k.safe.y + k.safe.height; };
-  assert.equal(inSafe(east, own), false, 'r3: own_seat is outside portrait_east');
-  assert.equal(inSafe(room_, own), false, 'r3: own_seat is outside portrait_room (x≈−2238)');
-  assert.equal(inSafe(port, nd), false, 'r3: near_director is outside the default portrait (x≈1544)');
+  assert.equal(inSafe(east, own), false, 'own_seat is outside portrait_east');
+  assert.equal(inSafe(room_, own), false, 'own_seat is outside portrait_room (x≈−2238)');
+  assert.equal(inSafe(port, nd), false, 'near_director is outside the default portrait (x≈1544)');
   assert.equal(inSafe(east, nd), true);
   assert.equal(inSafe(port, own), true);
 
@@ -219,7 +233,7 @@ ok('Interior cameras (corridor desktop+portrait, meeting portrait/portrait_room/
   const na = validateGeometryForManifest(noRoomFraming.geo, noRoomFraming.m);
   assert.ok(na.issues.some(i => /anchors\.mira/.test(i.path)) && na.issues.some(i => /anchors\.director/.test(i.path)), `only the default portrait is selected → Mira and the director are shown by no selected framing: ${paths(na)}`);
 }
-ok('Recipe coverage: each r3 scene validates against its own recipe (own_seat ∉ portrait_east, near_director ∉ portrait); the only failures are the published at_desk defect');
+ok(`Recipe coverage: each ${raw.revision} scene validates against its own recipe (own_seat ∉ portrait_east, near_director ∉ portrait); ${expected.length ? 'the only failures are the published at_desk defect' : 'zero failures'}`);
 
 {
   // SEATED MARK. Design says: own_seat { posture: seat, seat: chair_own_seat }.
