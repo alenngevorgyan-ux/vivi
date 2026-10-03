@@ -287,6 +287,75 @@ ok('Validation issues never echo the offending text');
 }
 ok('Reveal data cannot be found in the semantic plan, public manifest, stored post, snapshots, readable model or effects');
 
+{
+  // Malformed input of every shape is refused, never thrown on: validators, loader and reducer.
+  let seed = 20261003;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const junk = [null, undefined, 0, -1, 1e999, NaN, '', 'x', 'a'.repeat(300), true, [], [1, 2], {}, { kind: 'zzz' }, { id: 5 }, '__proto__', ['__proto__'], { __proto__: null }, '<b>', 'https://x.test'];
+  const pick = <T,>(xs: T[]) => xs[Math.floor(rnd() * xs.length)];
+  const paths = (v: unknown, base: Array<string | number> = []): Array<Array<string | number>> => {
+    if (!v || typeof v !== 'object') return [base];
+    const out: Array<Array<string | number>> = [base];
+    for (const k of Object.keys(v)) out.push(...paths((v as any)[k], [...base, Array.isArray(v) ? Number(k) : k]));
+    return out;
+  };
+  const mutate = (root: any) => {
+    const ps = paths(root).filter(p => p.length > 0);
+    const p = pick(ps);
+    let o = root;
+    for (const k of p.slice(0, -1)) o = o[k];
+    const last = p[p.length - 1];
+    if (rnd() < 0.2) delete o[last];
+    else o[last] = clone(pick(junk));
+  };
+  let rejected = 0;
+  for (let i = 0; i < 1500; i++) {
+    const post: any = foundationPost();
+    for (let j = 0, k = 1 + Math.floor(rnd() * 3); j < k; j++) mutate(post);
+    const r1 = validateStoredPostV3(post);
+    const r2 = loadPlayable(post);
+    const plan: any = foundationSemanticPlan();
+    for (let j = 0, k = 1 + Math.floor(rnd() * 3); j < k; j++) mutate(plan);
+    const r3 = validateSemanticPlan(plan);
+    if (!r1.ok) rejected++;
+    assert.ok(r1.ok || r1.issues.length > 0);
+    assert.ok(r2.kind !== 'v3' || r1.ok, 'the loader never plays what the validator rejects');
+    assert.ok(r3.ok || r3.issues.length > 0);
+  }
+  assert.ok(rejected > 600, 'most random mutations are caught');
+  // A validated manifest is safe to play: the reducer never throws on any event, in any order, whatever the payload.
+  const m = foundationManifest();
+  const types = ['LOADED', 'ENTERED', 'TICK', 'PAUSE', 'RESUME', 'SELECT_TARGET', 'CLEAR_TARGET', 'ACTIVATE_CONTEXT', 'OPEN_ACTIONS', 'CLOSE_SHEET', 'OPEN_OBSERVATION', 'CLOSE_OBSERVATION', 'OPEN_MODAL', 'CLOSE_MODAL', 'ADVANCE', 'APPLY_PREPARATION', 'REVERT_PREPARATION', 'REQUEST_PORTAL', 'TRANSITION_READY', 'TRANSITION_FAILED', 'REQUEST_INTENT', 'CANCEL', 'CONFIRM', 'DECISION_RECORDED', 'ENACTED', 'HOLD_DONE', 'SKIP', 'REACH_BOUNDARY', 'BOUNDARY_DONE', 'REVEAL_LOADED', 'REVEAL_FAILED', 'RETRY_REVEAL', 'END', 'NOPE'];
+  const ids = ['o_a1', 'o_b1', 'p_a_to_b', 'p_b_to_c', 'p_b_peek_a', 'p_a_back_b', 'prep_stand', 'prep_hold_note', 'prep_put_back_note', 'act_speak', 'act_wait', 'act_ask', 'ghost', 'tx1', 'tx2', 'settings'];
+  let accepted = 0;
+  for (let run = 0; run < 400; run++) {
+    let s = createExperience(m, { attemptId: 'fuzz' });
+    for (let i = 0; i < 80; i++) {
+      const type = pick(types);
+      const id = pick(ids);
+      const ev: any = { type, id, txId: pick(['tx1', 'tx2', 'tx3']), reason: pick(['hidden', 'blur', 'modal', 'user']), dtMs: pick([16, -4, NaN, 5000]), activationId: rnd() < 0.15 ? pick(junk) : `f${run}-${i}`, target: pick([{ kind: 'self' }, { kind: 'object', id: 'lamp' }, { kind: 'portal', id: 'p_a_to_b' }, { kind: 'actor', id: 'ghost' }, null, 5]) };
+      const before = s;
+      const res = step(m, s, ev);
+      if (res.rejected) assert.equal(res.state, before, 'a rejected event returns the very same state');
+      else accepted++;
+      s = res.state;
+      // Invariants that must hold in every reachable state.
+      assert.ok(s.entities.length === 4 && new Set(s.entities.map(e => e.id)).size === 4, 'entities are never duplicated or lost');
+      assert.ok(!s.decision || s.boundaryLocked, 'a decision implies the lock');
+      assert.ok(s.visitedScenes.includes(s.scene), 'the current scene was visited');
+      assert.equal(new Set(s.receivedFacts).size, s.receivedFacts.length, 'facts are never received twice');
+      assert.equal(new Set(s.deliveredBeats).size, s.deliveredBeats.length, 'beats are never delivered twice');
+      assert.ok(s.arcIndex >= 0 && s.arcIndex < m.spine.length);
+      assert.ok(!(s.phase === 'transitioning') || !!s.transition);
+      assert.ok(!(s.phase === 'confirming') || !!s.reservation);
+      JSON.stringify(s);
+    }
+  }
+  assert.ok(accepted > 2000, 'the fuzz actually exercised the reducer');
+  for (const bad of [null, undefined, 5, 'x', [], {}, { type: 5 }, { type: 'LOADED', activationId: 5 }, { type: 'NOPE' }]) assert.equal(step(m, createExperience(m, { attemptId: 'x' }), bad as any).rejected?.code, 'invalid_event', 'a malformed event is refused as such');
+}
+ok('Fuzz: validators and loader never throw or accept junk; the reducer never throws, never corrupts state and keeps its invariants');
+
 /* ===================================================== 2. controller ==== */
 
 {

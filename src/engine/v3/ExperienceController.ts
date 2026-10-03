@@ -132,6 +132,8 @@ const addUnique = <T,>(xs: T[], items: T[]) => {
 };
 
 export function step(m: PlaybackManifestV3, s: RuntimeSnapshot, e: ExperienceEvent): StepResult {
+  // Events come from UI code and tests; a malformed one is refused, never allowed to throw inside the reducer.
+  if (!e || typeof e !== 'object' || typeof e.type !== 'string') return rejectWith(s, 'invalid_event', 'unknown');
   const rej = (code: RejectionCode) => rejectWith(s, code, e.type);
 
   /* decisions are idempotent: a repeat of the accepted act is a no-op, anything else is closed */
@@ -145,6 +147,7 @@ export function step(m: PlaybackManifestV3, s: RuntimeSnapshot, e: ExperienceEve
 
   /* one physical activation, at most one state change */
   const act = 'activationId' in e ? e.activationId : undefined;
+  if (act !== undefined && (typeof act !== 'string' || act === '')) return rej('invalid_event');
   if (act !== undefined && s.consumedActivations.includes(act)) return rej('duplicate_activation');
 
   const r = apply(m, s, e);
@@ -179,6 +182,7 @@ function apply(m: PlaybackManifestV3, s: RuntimeSnapshot, e: ExperienceEvent): S
 
     /* ------------------------------------------------------- selection -- */
     case 'SELECT_TARGET':
+      if (!e.target || typeof e.target !== 'object' || typeof e.target.kind !== 'string') return rej('invalid_event');
       if (!playing || s.reservation) return rej('wrong_phase');
       if (s.openObservation || s.modal || s.sheet) return rej('busy');
       if (!targetExists(m, e.target)) return rej('unknown_id');
@@ -330,6 +334,8 @@ function apply(m: PlaybackManifestV3, s: RuntimeSnapshot, e: ExperienceEvent): S
         : rej('wrong_phase');
     case 'END':
       return s.phase === 'revealed' ? ok({ ...s, phase: 'ended' }) : rej('wrong_phase');
+    default:
+      return rej('invalid_event');
   }
 }
 
