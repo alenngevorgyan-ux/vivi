@@ -12,6 +12,8 @@ import type { ExperienceEvent, StepResult } from '../../../engine/v3/ExperienceC
 import type { InputIntent } from '../../../engine/input/InputManager';
 import { loadPlayable } from '../../../engine/v3/compat/loadPlayable';
 import { foundationPost, foundationReveal } from '../../../engine/v3/testing/foundationFixture';
+import { harnessJournal } from '../../../devtools/v3HarnessJournal';
+import type { DecisionRepository, HostConfig } from './hostContracts';
 import { V3FoundationPlayer, type PlayerApi } from './V3FoundationPlayer';
 
 declare global {
@@ -20,6 +22,7 @@ declare global {
       intents: InputIntent[];
       events: Array<{ type: string; rejected?: string }>;
       decisions: Array<{ decision: string; option: string }>;
+      host: () => { status: unknown; revealRecord: unknown } | undefined;
       nativeClicks: number;
       getState: () => RuntimeSnapshot | undefined;
       dispatch: (e: ExperienceEvent) => StepResult | undefined;
@@ -39,6 +42,7 @@ export default function V3Harness() {
       get intents() { return log.current.intents; },
       get events() { return log.current.events; },
       get decisions() { return log.current.decisions; },
+      host: () => (api.current ? { status: api.current.host.getStatus(), revealRecord: api.current.host.revealRecord() } : undefined),
       get nativeClicks() { return Number(document.querySelector('[data-testid="native-clicks"]')?.textContent ?? 0); },
       getState: () => api.current?.getState(),
       dispatch: e => api.current?.dispatch(e),
@@ -49,13 +53,29 @@ export default function V3Harness() {
   const onReady = useCallback((a: PlayerApi) => { api.current = a; }, []);
   const onIntent = useCallback((i: InputIntent) => { log.current.intents.push(i); }, []);
   const onEvent = useCallback((e: ExperienceEvent, r: StepResult) => { log.current.events.push({ type: e.type, rejected: r.rejected?.code }); }, []);
-  // `&persist=reject` (dev only) makes the host's write fail, to reproduce how the hook treats a rejected persistDecision.
-  const persistDecision = useCallback((decision: string, option: string): void | Promise<void> => {
-    log.current.decisions.push({ decision, option });
-    if (new URLSearchParams(window.location.search).get('persist') === 'reject') return Promise.reject(new Error('persist failed'));
+  // The harness is a renderer-less shell, so it selects the explicit headless host. Everything else is a real contract:
+  // the repository acknowledges the exact operation, the journal survives a reload (sessionStorage), and the private
+  // record is fetched, validated and bound exactly as a visual host's would be.
+  // Dev-only fault injection: `&persist=reject` always fails the repository write; `&persist=flaky` fails the first.
+  const hostConfig = React.useMemo<HostConfig>(() => {
+    const mode = () => new URLSearchParams(window.location.search).get('persist');
+    let calls = 0;
+    const repository: DecisionRepository = {
+      record: op => {
+        log.current.decisions.push({ decision: op.decisionId, option: op.option });
+        calls++;
+        if (mode() === 'reject' || (mode() === 'flaky' && calls === 1)) return Promise.reject(new Error('persist failed'));
+        return Promise.resolve({ key: op.key, decisionId: op.decisionId, option: op.option });
+      },
+    };
+    return {
+      mode: 'headless',
+      repository,
+      journal: harnessJournal,
+      loadReveal: () => Promise.resolve(foundationReveal()),
+      reveal: { revealRef: 'reveal-foundation', recordRevision: 'r1' },
+    };
   }, []);
-  // The reveal record is a separate fixture, fetched only after the boundary.
-  const loadReveal = useCallback(() => Promise.resolve(foundationReveal()), []);
 
   if (loaded.kind !== 'v3') return <p role="alert">The fixture did not load as V3.</p>;
 
@@ -71,7 +91,7 @@ export default function V3Harness() {
         <button type="button" data-testid="unmount-player" onClick={() => setMounted(false)}>Leave route</button>
         <button type="button" data-testid="mount-player" onClick={() => setMounted(true)}>Return to route</button>
       </div>
-      {mounted ? <V3FoundationPlayer manifest={loaded.manifest} loadReveal={loadReveal} persistDecision={persistDecision} onIntent={onIntent} onEvent={onEvent} onReady={onReady} /> : <p data-testid="player-gone">The player is not mounted.</p>}
+      {mounted ? <V3FoundationPlayer manifest={loaded.manifest} host={hostConfig} onIntent={onIntent} onEvent={onEvent} onReady={onReady} /> : <p data-testid="player-gone">The player is not mounted.</p>}
       <div aria-hidden="true" style={{ height: '2400px' }} data-testid="spacer">scroll space</div>
     </main>
   );

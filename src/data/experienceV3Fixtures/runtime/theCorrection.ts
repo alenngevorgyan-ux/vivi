@@ -34,7 +34,7 @@ export const CORRECTION_VERSIONS = {
   planningEnvelope: 'vivi-format-proof-1',
   formatProofSha: '028e400fb78d888036a5e184a8060200e63a5a0b',
   foundationSha: 'ae60563c64ac245f94e7e1abc9a8a7089e844055',
-  contract: { runtimeManifest: 3, semanticSchema: 3, postSchema: 3, snapshot: 1 },
+  contract: { runtimeManifest: 3, semanticSchema: 3, postSchema: 3, snapshot: 2, revealSchema: 1 },
   /** The integration compiler stand-in (compileFixturePlan) and this adapter binding. */
   compilerVersion: '0.1.0-dev.1',
   stagingApprovalId: 'editorial-staging-correction-1',
@@ -45,6 +45,8 @@ export const CORRECTION_VERSIONS = {
   },
   /** Both variants resolve this one private record; see theCorrection.reveal.ts. */
   revealRef: 'reveal-the-correction-gold-1',
+  /** The private record's own revision. Both variants map to it explicitly; the control's manifest revision differs. */
+  recordRevision: 'gold-1',
 } as const;
 
 /* ------------------------------------------------------- shared binding --- */

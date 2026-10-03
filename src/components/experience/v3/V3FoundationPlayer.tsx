@@ -22,18 +22,23 @@ import type { ExperienceEvent, StepResult } from '../../../engine/v3/ExperienceC
 import { InputManager, type InputIntent } from '../../../engine/input/InputManager';
 import { FocusCoordinatorProvider, RevealHeading, ScopeDialog, WorldEntryButton, WorldSurface, useFocusCoordinator } from './FocusCoordinator';
 import { useExperience } from './useExperience';
+import type { HostConfig } from './hostContracts';
 import './v3foundation.css';
 
 export interface PlayerApi {
   dispatch: (e: ExperienceEvent) => StepResult;
   getState: () => RuntimeSnapshot;
   manager: InputManager;
+  host: import('./ExperienceHost').ExperienceHost;
 }
 
 export interface V3FoundationPlayerProps {
   manifest: PlaybackManifestV3;
-  loadReveal?: (experienceId: string, revision: string) => Promise<unknown>;
-  persistDecision?: (decision: string, option: string) => void | Promise<void>;
+  /** The host contracts: preparation, journal, repository, private-record loader and binding. Stable per revision. */
+  host: HostConfig;
+  /** A stored snapshot to resume (validated; an invalid one starts fresh). */
+  restore?: unknown;
+  attemptId?: string;
   /** Observe every semantic intent the InputManager emits (diagnostics and tests). */
   onIntent?: (intent: InputIntent) => void;
   onEvent?: (event: ExperienceEvent, result: StepResult) => void;
@@ -57,9 +62,9 @@ export function V3FoundationPlayer(props: V3FoundationPlayerProps) {
 
 const refKey = (r: EntityRef) => (r.kind === 'self' ? 'self' : `${r.kind}-${r.id}`);
 
-function PlayerBody({ manifest, manager, intentRef, loadReveal, persistDecision, onIntent, onEvent, onReady }: V3FoundationPlayerProps & { manager: InputManager; intentRef: React.MutableRefObject<(i: InputIntent) => void> }) {
+function PlayerBody({ manifest, manager, intentRef, host: hostConfig, restore, attemptId, onIntent, onEvent, onReady }: V3FoundationPlayerProps & { manager: InputManager; intentRef: React.MutableRefObject<(i: InputIntent) => void> }) {
   const focus = useFocusCoordinator();
-  const { state, dispatch, readable, getState } = useExperience(manifest, { manager, loadReveal, persistDecision, onEvent });
+  const { host, state, status, dispatch, readable, getState } = useExperience(manifest, { manager, host: hostConfig, restore, attemptId, onEvent });
   const activation = (e: React.SyntheticEvent) => manager.activationIdFor(e.nativeEvent);
 
   /* semantic intents → controller events. The only place a device meets the story. */
@@ -85,13 +90,12 @@ function PlayerBody({ manifest, manager, intentRef, loadReveal, persistDecision,
   };
 
   useEffect(() => {
-    onReady?.({ dispatch, getState, manager });
-  }, [dispatch, getState, manager, onReady]);
+    onReady?.({ dispatch, getState, manager, host });
+  }, [dispatch, getState, manager, host, onReady]);
 
-  /* lifecycle: load, enter, and hand focus back after a scene swap (never on the first entry) */
+  /* lifecycle: the host prepares the scene and sends LOADED; the shell enters, and hands focus back after a scene swap (never on the first entry) */
   const firstEntry = useRef(true);
   useEffect(() => {
-    if (state.phase === 'loading') dispatch({ type: 'LOADED' });
     if (state.phase === 'entering') {
       if (firstEntry.current) firstEntry.current = false;
       else focus.handoffToWorld();
@@ -142,11 +146,29 @@ function PlayerBody({ manifest, manager, intentRef, loadReveal, persistDecision,
           <p data-testid="reveal-note">The author's account loads from a separate record, after the boundary.</p>
         </section>
       ) : null}
-      {state.phase === 'reveal_loading' && state.reveal === 'failed' && (
-        <p role="alert">
-          The account did not load. Your act is kept. <button type="button" onClick={() => dispatch({ type: 'RETRY_REVEAL' })}>Try again</button>
+      {state.phase === 'loading' && status.entry === 'failed' && (
+        <p role="alert" data-testid="entry-failed">
+          The scene did not load. <button type="button" data-testid="entry-retry" onClick={() => host.retryEntry()}>Try again</button>
         </p>
       )}
+      {state.phase === 'playing' && status.transition.state === 'failed' && (
+        <p role="alert" data-testid="transition-failed">
+          That place did not load. You are still here.
+        </p>
+      )}
+      {state.decision && (status.persistence.error || status.persistence.repository === 'unconfigured' || status.persistence.journal === 'unconfigured') && (
+        <p role="alert" data-testid="persistence-failed">
+          Your act is kept on this device but is not saved yet. <button type="button" data-testid="persistence-retry" onClick={() => host.retryPersistence()}>Save again</button>
+        </p>
+      )}
+      {state.phase === 'reveal_loading' && status.reveal.state === 'failed' && (
+        <p role="alert" data-testid="reveal-failed">
+          The account did not load. Your act is kept. <button type="button" data-testid="reveal-retry" onClick={() => host.retryReveal()}>Try again</button>
+        </p>
+      )}
+      <p className="v3-hint" data-testid="host-status" hidden>
+        {`entry:${status.entry} gate:${status.revealGate} journal:${status.persistence.journal} repo:${status.persistence.repository} reveal:${status.reveal.state}`}
+      </p>
     </section>
   );
 }

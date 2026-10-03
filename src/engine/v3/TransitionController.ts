@@ -16,7 +16,8 @@
  */
 
 import type { PlaybackManifestV3 } from './contracts/manifest.ts';
-import type { RuntimeSnapshot } from './contracts/state.ts';
+import type { HeroPlacement, PreparationRecord, RuntimeSnapshot } from './contracts/state.ts';
+import type { EntityState } from './contracts/manifest.ts';
 import { pause, resume } from './ClockService.ts';
 import { portalBlock } from './queries.ts';
 import type { RejectionCode, StepResult } from './types.ts';
@@ -57,7 +58,7 @@ export function commitTransition(m: PlaybackManifestV3, s: RuntimeSnapshot, txId
   const portal = m.portals.find(p => p.id === tx.portal);
   if (!portal) return abortTransition(s, txId); // cannot happen with a validated manifest; fail safe
   const spineIdx = m.spine.indexOf(tx.toScene);
-  const entities = s.entities.map(e => (e.id === m.perspectiveActor ? { ...e, owner: { kind: 'location' as const, id: tx.toLocation } } : e));
+  const { entities, heroMarks, preparations } = moveHero(m, s, tx.fromLocation, tx.toLocation, tx.toScene);
   return {
     state: {
       ...s,
@@ -67,6 +68,8 @@ export function commitTransition(m: PlaybackManifestV3, s: RuntimeSnapshot, txId
       arcIndex: portal.kind === 'spine' && spineIdx > s.arcIndex ? spineIdx : s.arcIndex,
       visitedScenes: s.visitedScenes.includes(tx.toScene) ? s.visitedScenes : [...s.visitedScenes, tx.toScene],
       entities,
+      heroMarks,
+      preparations,
       transition: undefined,
       time: resume(s.time, 'transition', tx.id),
     },
@@ -78,4 +81,40 @@ export function abortTransition(s: RuntimeSnapshot, txId: string): StepResult {
   const tx = s.transition;
   if (!tx || tx.id !== txId) return reject(s, 'stale_transaction');
   return { state: { ...s, phase: 'playing', transition: undefined, time: resume(s.time, 'transition', tx.id) }, effects: [] };
+}
+
+/**
+ * Only the hero moves. Its placement in the location it leaves is saved; in the destination it takes the
+ * placement it left there, or on a first visit the destination scene's entry mark. A cut to another scene of
+ * the same location keeps the same body where it is. The current location's placement lives only on the hero
+ * entity, so there is never a second copy to drift.
+ */
+function moveHero(m: PlaybackManifestV3, s: RuntimeSnapshot, from: string, to: string, toScene: string): Pick<RuntimeSnapshot, 'entities' | 'heroMarks' | 'preparations'> {
+  const hero = s.entities.find(e => e.id === m.perspectiveActor);
+  const relocate = (e: EntityState): EntityState => ({ ...e, owner: { kind: 'location', id: to } });
+  if (!hero || from === to) return { entities: s.entities.map(e => (e === hero ? relocate(e) : e)), heroMarks: s.heroMarks, preparations: s.preparations };
+
+  const positional = (r: PreparationRecord) => r.undo.some(u => u.entity === hero.id && (u.kind === 'mark' || (u.kind === 'state' && u.key === 'mark_role')));
+  const carried = s.preparations.filter(positional);
+  const leaving: HeroPlacement = {
+    ...(hero.mark ? { mark: { ...hero.mark } } : {}),
+    ...(hero.state.mark_role ? { role: hero.state.mark_role } : {}),
+    ...(carried.length ? { preparations: carried } : {}),
+  };
+  const { [to]: saved, ...others } = s.heroMarks;
+  const entry = m.compiledScenes.find(c => c.id === toScene)?.entryMark;
+  const arriving: HeroPlacement = saved ?? (entry ? { mark: { ...entry } } : {});
+
+  const { mark: _mark, ...base } = relocate(hero);
+  const { mark_role: _role, ...state } = hero.state;
+  const placed: EntityState = {
+    ...base,
+    ...(arriving.mark ? { mark: { ...arriving.mark } } : {}),
+    state: arriving.role ? { ...state, mark_role: arriving.role } : state,
+  };
+  return {
+    entities: s.entities.map(e => (e === hero ? placed : e)),
+    heroMarks: { ...others, [from]: leaving },
+    preparations: [...s.preparations.filter(r => !positional(r)), ...(arriving.preparations ?? [])],
+  };
 }

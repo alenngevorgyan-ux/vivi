@@ -32,7 +32,8 @@ import type {
 
 export const POST_SCHEMA_VERSION = 3 as const;
 export const RUNTIME_MANIFEST_VERSION = 3 as const;
-export const SNAPSHOT_VERSION = 1 as const;
+export const SNAPSHOT_VERSION = 2 as const;
+export const REVEAL_SCHEMA_VERSION = 1 as const;
 
 export interface SpatialMark {
   /** 0..100 in the kit's floor space. */
@@ -101,14 +102,21 @@ export interface PlaybackManifestV3 {
   stagingDisclosure: string;
 }
 
-/** Private author record. Never part of the manifest and never sent before the boundary. */
+/**
+ * Private author record. Never part of the manifest and never sent before the boundary.
+ * Untrusted when it arrives from a host loader: `validateRevealRecord` (contracts/reveal.ts) checks it at runtime.
+ */
 export interface RevealRecordV3 {
+  revealSchemaVersion: 1;
   experienceId: Id;
+  /** The private record's own revision; variants map onto it explicitly (a control shares its story's record). */
   revision: Id;
   status: 'author_account' | 'fictional_editorial' | 'withheld' | 'documented';
   act?: string;
   why?: string;
   aftermath?: string;
+  /** What the account deliberately does not disclose, shown as an honest limit. */
+  withheld?: string;
   authorOption?: OpportunityId;
   authorHandle: string;
   sourceRefs?: string[];

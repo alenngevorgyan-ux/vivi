@@ -26,7 +26,7 @@ import {
   correctionSemanticPlan,
   type CorrectionVariant,
 } from '../src/data/experienceV3Fixtures/runtime/theCorrection.ts';
-import { CORRECTION_REVEAL_CANARIES, CORRECTION_REVEAL_PRESENTATION, correctionReveal, resolveCorrectionReveal } from '../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
+import { CORRECTION_REVEAL_CANARIES, CORRECTION_REVEAL_PRESENTATION, correctionReveal, correctionRevealBinding, resolveCorrectionReveal } from '../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
 import { CORRECTION_SOURCE_LEDGER, traceCorrectionFacts } from '../src/data/experienceV3Fixtures/runtime/theCorrection.provenance.ts';
 import { correctionActSlots, correctionAmbientCues, correctionSceneSlots, SCENE_HOOKS } from '../src/data/experienceV3Fixtures/runtime/theCorrection.presentation.ts';
 import { PLACEHOLDER_GEOMETRY_ID } from '../src/data/experienceV3Fixtures/runtime/placeholderGeometry.ts';
@@ -737,7 +737,7 @@ passed('Dev trace: deterministic across runs, shows scene/location/facts/entitie
 {
   // Portal requested twice; stale and late completions; failure restores the source exactly.
   const h = correctionHost('rich', { holdPreloads: true });
-  walkToDecision(new HeadlessHost(h.m, { resolveReveal: resolveCorrectionReveal }), 'rich'); // sanity: the plain host still works
+  walkToDecision(new HeadlessHost(h.m, { resolveReveal: resolveCorrectionReveal, binding: correctionRevealBinding() }), 'rich'); // sanity: the plain host still works
   ok(h, { type: 'LOADED' });
   ok(h, { type: 'ENTERED' });
   advance(h);
@@ -818,7 +818,7 @@ passed('Dev trace: deterministic across runs, shows scene/location/facts/entitie
   assert.deepEqual([h.s.phase, h.decisions.length], ['revealed', 1]);
   assert.deepEqual(h.reveal, correctionReveal());
   // An unresolvable record fails safely too.
-  const u = new HeadlessHost(correctionManifest('rich'), { resolveReveal: () => undefined });
+  const u = new HeadlessHost(correctionManifest('rich'), { resolveReveal: () => undefined, binding: correctionRevealBinding() });
   walkToDecision(u, 'rich');
   commit(u, 'correct_public');
   finishToBoundary(u);
@@ -839,7 +839,10 @@ function finishToBoundary(h: HeadlessHost) {
   ok(h, { type: 'REQUEST_PORTAL', id: 'cut_to_meeting', activationId: h.aid() });
   const stored = JSON.stringify(h.s); // what a pagehide save would hold
   const r = correctionHost('rich', { restoreFrom: stored, holdPreloads: true });
-  assert.deepEqual([r.s.phase, r.s.scene, r.s.transition, r.s.time.pauses], ['playing', 'c_desk', undefined, []]);
+  // A restored story re-enters through loading: the host prepares the restored scene exactly as on first entry.
+  assert.deepEqual([r.s.phase, r.s.scene, r.s.transition, r.s.time.pauses], ['loading', 'c_desk', undefined, []]);
+  ok(r, { type: 'LOADED' });
+  ok(r, { type: 'ENTERED' });
   // Foundation fix: a reloaded InputManager restarts at the same ids; the first gesture after resume must count.
   assert.ok(JSON.parse(stored).consumedActivations.includes('h1'));
   assert.deepEqual(r.s.consumedActivations, [], 'activation ids from the previous page session are not carried over');
@@ -860,11 +863,14 @@ function finishToBoundary(h: HeadlessHost) {
   expectRejected(r.send({ type: 'REQUEST_INTENT', id: 'correct_public', activationId: r.aid() }), 'decision_closed');
   expectRejected(r.send({ type: 'CONFIRM', id: 'request_private', activationId: r.aid() }), 'duplicate_decision');
   ok(r, { type: 'BOUNDARY_DONE' });
+  // The reducer asks for no second write. Resending the unrecorded operation under its identical key is the host's job (test-v3-host.ts).
   assert.deepEqual([r.s.phase, r.effects.filter(e => e.type === 'persist_decision').length], ['revealed', 0]);
+  assert.equal(JSON.parse(saved).decision.status, 'recorded', 'the stored claim');
+  assert.equal(restoreSnapshot(h.m, JSON.parse(saved))!.decision?.status, 'accepted', 'a stored "recorded" is a claim, not an acknowledgement: it restores as accepted');
   assert.deepEqual(r.reveal, correctionReveal());
   // A snapshot from the other variant, a future snapshot version or another decision version never restores.
   assert.equal(restoreSnapshot(correctionManifest('compressed'), JSON.parse(saved)), undefined);
-  assert.equal(restoreSnapshot(h.m, { ...JSON.parse(saved), snapshotVersion: 2 }), undefined);
+  assert.equal(restoreSnapshot(h.m, { ...JSON.parse(saved), snapshotVersion: 1 }), undefined);
   assert.equal(restoreSnapshot(h.m, { ...JSON.parse(saved), decisionVersion: 'gold-2' }), undefined);
 }
 {
@@ -949,7 +955,7 @@ function finishToBoundary(h: HeadlessHost) {
   const q = m.scenePlans[3].beats.find(b => b.id === 'ev_question')!;
   q.events = q.events.filter(e => !(e.kind === 'deliver' && e.facts.includes('f12')));
   assert.ok(validateManifest(m).ok, 'structurally valid, so the controller is the guard');
-  const h = new HeadlessHost(m, { resolveReveal: resolveCorrectionReveal });
+  const h = new HeadlessHost(m, { resolveReveal: resolveCorrectionReveal, binding: correctionRevealBinding() });
   walkToDecision(h, 'rich');
   assert.ok(!h.s.receivedFacts.includes('f12'));
   expectRejected(h.send({ type: 'REQUEST_INTENT', id: 'correct_public', activationId: h.aid() }), 'knowledge_missing', 'no act without the minimum');

@@ -25,6 +25,8 @@ export interface SceneGeometry {
   entryMark?: SpatialMark;
   /** Named marks (0..100 floor space). Every reposition `markRole` in the scene must have one. */
   marks?: Record<Id, SpatialMark>;
+  /** Approved routes between marks (0..100 points); carried into the manifest unchanged. */
+  routes?: Record<Id, Array<[number, number]>>;
 }
 
 export interface GeometryExport {
@@ -69,6 +71,7 @@ export function compileFixturePlan(plan: SemanticPlanV3, input: CompileInput): P
       accessibleText: s.requiredFacts.map(fact => ({ fact, text: claimText.get(fact)! })),
       ...(geo.entryMark ? { entryMark: structuredClone(geo.entryMark) } : {}),
       ...(geo.marks ? { marks: structuredClone(geo.marks) } : {}),
+      ...(geo.routes ? { routes: structuredClone(geo.routes) } : {}),
     };
   });
 

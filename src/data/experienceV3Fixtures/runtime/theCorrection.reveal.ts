@@ -14,6 +14,7 @@
 
 import privateReveal from '../spec/the-correction.reveal.private.json' with { type: 'json' };
 import type { RevealRecordV3 } from '../../../engine/v3/contracts/manifest.ts';
+import type { RevealBinding } from '../../../components/experience/v3/hostContracts.ts';
 import { CORRECTION_VERSIONS } from './theCorrection.ts';
 
 /** The exact gold record, as authored. Read-only. */
@@ -21,12 +22,14 @@ export const CORRECTION_PRIVATE_REVEAL = privateReveal;
 
 export function correctionReveal(): RevealRecordV3 {
   return {
+    revealSchemaVersion: 1,
     experienceId: privateReveal.experienceId,
     revision: privateReveal.revision,
     status: 'fictional_editorial',
     act: privateReveal.act,
     why: privateReveal.why,
     aftermath: privateReveal.aftermath,
+    withheld: privateReveal.deliberatelyWithheld,
     // The author's act maps onto one option. The mapping is private and is never needed to play.
     authorOption: privateReveal.authorOption,
     authorHandle: privateReveal.authorHandle,
@@ -72,4 +75,16 @@ export function resolveCorrectionReveal(experienceId: string, manifestRevision: 
   if (experienceId !== CORRECTION_VERSIONS.experienceId) return undefined;
   const known = Object.values(CORRECTION_VERSIONS.manifest).some(v => v.revision === manifestRevision);
   return known ? correctionReveal() : undefined;
+}
+
+/**
+ * The trusted mapping a host passes to ExperienceHost: every variant of this experience resolves the one
+ * private record, validated against the gold-1 launch profile (exact status, all three fields, sources and option).
+ */
+export function correctionRevealBinding(): RevealBinding {
+  return {
+    revealRef: CORRECTION_VERSIONS.revealRef,
+    recordRevision: CORRECTION_VERSIONS.recordRevision,
+    profile: { status: 'fictional_editorial', requireFields: ['act', 'why', 'aftermath'], sourceRefs: ['r01', 'r02', 'r03'], authorOption: privateReveal.authorOption },
+  };
 }

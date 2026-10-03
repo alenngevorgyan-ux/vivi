@@ -908,20 +908,58 @@ export function validateStoredPostV3(raw: unknown, opts: ValidationOptions = {})
   return c.ok ? { ok: true, value: raw as unknown as StoredPostV3, issues: [] } : { ok: false, issues: c.issues };
 }
 
+/** Free text that is safe to render as plain text: a string, non-empty, within `max`, and free of URLs, markup, style or expressions. */
+export function isSafeText(v: unknown, max: number): v is string {
+  return typeof v === 'string' && v.trim().length > 0 && v.length <= max && !FORBIDDEN_TEXT.some(re => re.test(v));
+}
+
+/**
+ * Private canaries: the strings that must never reach a viewer before the boundary. One normalization is
+ * shared by authoring and scanning (NFC, trimmed, lowercased; length in JS string units). A canary shorter
+ * than MIN_CANARY_LENGTH would either match ordinary words or be skipped, so it is INVALID configuration,
+ * never a silent pass.
+ */
+export const MIN_CANARY_LENGTH = 4;
+export const normalizeCanary = (c: string): string => c.normalize('NFC').trim().toLowerCase();
+
+/** Author-time check of a fixture's canary list. Issues carry the index only, never the private text. */
+export function validatePrivateCanaries(canaries: unknown): ValidationResult<string[]> {
+  const c = new Ctx();
+  if (!Array.isArray(canaries) || canaries.length === 0) {
+    c.add('canaries', 'type', 'expected a non-empty list of private canaries');
+    return { ok: false, issues: c.issues };
+  }
+  canaries.forEach((x, i) => {
+    if (typeof x !== 'string') c.add(`canaries[${i}]`, 'type', 'a canary must be text');
+    else if (normalizeCanary(x).length < MIN_CANARY_LENGTH) c.add(`canaries[${i}]`, 'cap', `a canary must be at least ${MIN_CANARY_LENGTH} characters after normalization`);
+  });
+  return c.ok ? { ok: true, value: canaries as string[], issues: [] } : { ok: false, issues: c.issues };
+}
+
+/** Thrown when a leak scan is given an invalid canary list: invalid configuration can never read as "no leak". */
+export class PrivateCanaryError extends Error {
+  constructor(readonly invalidIndexes: number[]) {
+    super(`invalid private canary configuration at index ${invalidIndexes.join(', ')}`);
+    this.name = 'PrivateCanaryError';
+  }
+}
+
 /**
  * Leak check for fixtures and pipelines: given strings that must never reach a
  * viewer before the boundary (the author's act, why, aftermath), report which
  * of them appear anywhere in a serialized public structure. Returns the INDEXES
- * of the canaries found, never their text.
+ * of the canaries found, never their text. Throws PrivateCanaryError (indexes
+ * only) if the canary list itself is invalid.
  */
 export function findPrivateLeaks(publicValue: unknown, canaries: readonly string[]): number[] {
-  const hay = JSON.stringify(publicValue).toLowerCase();
+  const valid = validatePrivateCanaries(canaries);
+  if (!valid.ok) throw new PrivateCanaryError(valid.issues.map(i => Number(/\[(\d+)\]/.exec(i.path)?.[1] ?? -1)));
+  const hay = (JSON.stringify(publicValue) ?? '').normalize('NFC').toLowerCase();
   const found: number[] = [];
   canaries.forEach((canary, i) => {
-    const raw = canary.trim().toLowerCase();
     // The haystack is serialized, so compare the needle as it serializes: a quote or newline in a canary must still match.
-    const needle = JSON.stringify(raw).slice(1, -1);
-    if (raw.length >= 4 && hay.includes(needle)) found.push(i);
+    const needle = JSON.stringify(normalizeCanary(canary)).slice(1, -1);
+    if (hay.includes(needle)) found.push(i);
   });
   return found;
 }

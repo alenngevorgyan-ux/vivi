@@ -5,7 +5,14 @@
  * real reducer and performs the effects the reducer requests (preload →
  * TRANSITION_READY → ENTERED, persist_decision → DECISION_RECORDED,
  * load_reveal → REVEAL_LOADED / REVEAL_FAILED, save_snapshot). It knows no
- * story: the experience arrives as a manifest plus a reveal resolver.
+ * story: the experience arrives as a manifest plus a reveal resolver and the
+ * trusted reveal binding.
+ *
+ * It is the SYNCHRONOUS reducer-level model of the host contract: it
+ * acknowledges exactly the accepted decision and option, and a reveal record is
+ * released only after `validateRevealRecord` accepts it against the binding.
+ * The asynchronous contract (deferred preload, journal, repository, stale
+ * guards) is ExperienceHost's, and is tested directly in test-v3-host.ts.
  *
  * Every processed event becomes a trace row built from the readable model and
  * the snapshot. Rows never contain reveal text: once released, the record's
@@ -14,12 +21,16 @@
 
 import type { PlaybackManifestV3, RevealRecordV3 } from '../../src/engine/v3/contracts/manifest.ts';
 import type { RuntimeSnapshot } from '../../src/engine/v3/contracts/state.ts';
+import { validateRevealRecord } from '../../src/engine/v3/contracts/reveal.ts';
+import type { RevealBinding } from '../../src/components/experience/v3/hostContracts.ts';
 import { createExperience, restoreSnapshot, step, type ControllerEffect, type ExperienceEvent, type StepResult } from '../../src/engine/v3/ExperienceController.ts';
 import { buildReadableModel } from '../../src/engine/v3/readable.ts';
 
 export interface HostOptions {
   attemptId?: string;
-  resolveReveal: (experienceId: string, revision: string) => RevealRecordV3 | undefined;
+  resolveReveal: (experienceId: string, revision: string) => unknown;
+  /** The trusted record mapping and launch profile. A record that fails it is never released. */
+  binding: Pick<RevealBinding, 'recordRevision' | 'profile'>;
   /** Fault injection: the first N reveal loads fail. */
   failRevealLoads?: number;
   /** Hold preloads open instead of completing them (to test stale/late completion). */
@@ -126,7 +137,8 @@ export class HeadlessHost {
         if (!this.decisions.some(d => d.decisionVersion === this.m.decisionVersion && d.attemptId === this.s.attemptId)) {
           this.decisions.push({ decisionVersion: this.m.decisionVersion, attemptId: this.s.attemptId, decision: eff.decision, option: eff.option });
         }
-        this.dispatch({ type: 'DECISION_RECORDED' }, 'host');
+        // The acknowledgement names exactly this decision and option; anything else is rejected by the reducer.
+        this.dispatch({ type: 'DECISION_RECORDED', decision: eff.decision, option: eff.option }, 'host');
         return;
       case 'load_reveal': {
         if (this.failures > 0) {
@@ -134,12 +146,13 @@ export class HeadlessHost {
           this.dispatch({ type: 'REVEAL_FAILED' }, 'host');
           return;
         }
-        const r = this.opts.resolveReveal(eff.experienceId, eff.revision);
-        if (!r) {
+        const raw = this.opts.resolveReveal(eff.experienceId, eff.revision);
+        const v = validateRevealRecord(raw, { experienceId: this.m.experienceId, recordRevision: this.opts.binding.recordRevision, options: this.m.primaryDecision?.options ?? null, profile: this.opts.binding.profile });
+        if (!v.ok) {
           this.dispatch({ type: 'REVEAL_FAILED' }, 'host');
           return;
         }
-        this.reveal = r;
+        this.reveal = v.value;
         this.dispatch({ type: 'REVEAL_LOADED' }, 'host');
         return;
       }

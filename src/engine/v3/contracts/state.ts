@@ -5,7 +5,7 @@
  */
 
 import type { BeatId, DecisionId, EntityId, EntityRef, FactId, Id, LocationId, ObservationId, OpportunityId, PortalId, PreparationId, SceneId } from './semantic.ts';
-import type { EntityState } from './manifest.ts';
+import type { EntityState, SpatialMark } from './manifest.ts';
 
 export type Phase =
   | 'loading'
@@ -45,7 +45,20 @@ export interface PreparationRecord {
   undo: Array<
     | { kind: 'owner'; entity: EntityId; owner: EntityState['owner'] }
     | { kind: 'state'; entity: EntityId; key: Id; value: string | null }
+    | { kind: 'mark'; entity: EntityId; mark: SpatialMark | null }
   >;
+}
+
+/**
+ * Where the hero stood in a location, kept when the hero leaves it so a return
+ * restores the same body position. `role` names one of the destination scene's
+ * compiled marks (a reversible reposition); `mark` is the normalized position.
+ */
+export interface HeroPlacement {
+  mark?: SpatialMark;
+  role?: Id;
+  /** Reversible repositions that produced this placement; they come back with it, so undo still works on return. */
+  preparations?: PreparationRecord[];
 }
 
 export interface SheetState {
@@ -66,7 +79,9 @@ export interface TransitionTransaction {
 }
 
 export interface RuntimeSnapshot {
-  snapshotVersion: 1;
+  snapshotVersion: 2;
+  /** Binds a stored snapshot to its experience: a revision id alone can repeat across experiences. */
+  experienceId: Id;
   attemptId: Id;
   manifestRevision: Id;
   decisionVersion: Id;
@@ -82,6 +97,11 @@ export interface RuntimeSnapshot {
   /** `beat:index` of every semantic event applied; each applies once. */
   consumedEvents: Id[];
   entities: EntityState[];
+  /**
+   * The hero's placement in each location it has LEFT. The current location's placement is the hero
+   * entity's own `mark` / `state.mark_role`; there is no other copy. Saved on leaving, restored on return.
+   */
+  heroMarks: Record<LocationId, HeroPlacement>;
   variables: Record<Id, string>;
   preparations: PreparationRecord[];
   time: ClockState;

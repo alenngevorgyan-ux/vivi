@@ -73,7 +73,8 @@ export type ExperienceEvent =
   | { type: 'REQUEST_INTENT'; id: string; activationId: string }
   | { type: 'CANCEL' }
   | { type: 'CONFIRM'; id: string; activationId: string }
-  | { type: 'DECISION_RECORDED' }
+  /** A repository acknowledged THIS decision and option durably. Never sent for a queued or absent write. */
+  | { type: 'DECISION_RECORDED'; decision: string; option: string }
   | { type: 'ENACTED' }
   | { type: 'HOLD_DONE' }
   | { type: 'SKIP' }
@@ -94,8 +95,12 @@ const MAX_ACTIVATIONS = 32;
 export function createExperience(m: PlaybackManifestV3, opts: { attemptId: string }): RuntimeSnapshot {
   const first = m.spine[0];
   const scene = m.scenePlans.find(s => s.id === first)!;
+  const entry = m.compiledScenes.find(c => c.id === scene.id)?.entryMark;
+  // The hero starts on the first scene's entry mark unless the manifest staged it explicitly.
+  const entities = structuredClone(m.initialEntities).map(e => (e.id === m.perspectiveActor && !e.mark && entry ? { ...e, mark: { ...entry } } : e));
   return {
     snapshotVersion: SNAPSHOT_VERSION,
+    experienceId: m.experienceId,
     attemptId: opts.attemptId,
     manifestRevision: m.revision,
     decisionVersion: m.decisionVersion,
@@ -108,7 +113,8 @@ export function createExperience(m: PlaybackManifestV3, opts: { attemptId: strin
     receivedFacts: [],
     seenObservations: [],
     consumedEvents: [],
-    entities: structuredClone(m.initialEntities),
+    entities,
+    heroMarks: {},
     variables: {},
     preparations: [],
     time: initialClock('soft'),
@@ -305,7 +311,10 @@ function apply(m: PlaybackManifestV3, s: RuntimeSnapshot, e: ExperienceEvent): S
       );
     }
     case 'DECISION_RECORDED':
-      return s.decision ? ok({ ...s, decision: { ...s.decision, status: 'recorded' } }) : rej('wrong_phase');
+      if (!s.decision) return rej('wrong_phase');
+      // The acknowledgement must name exactly the accepted choice; anything else is not this decision's record.
+      if (e.decision !== s.decision.id || e.option !== s.decision.option) return rej('ack_mismatch');
+      return s.decision.status === 'recorded' ? rej('already_applied') : ok({ ...s, decision: { ...s.decision, status: 'recorded' } });
 
     /* ------------------------------------------- enactment to the reveal -- */
     case 'ENACTED':
@@ -408,12 +417,17 @@ function applyPreparation(m: PlaybackManifestV3, s: RuntimeSnapshot, id: string)
   const patch = (eid: string, f: (x: EntityState) => EntityState) => (entities = entities.map(x => (x.id === eid ? f(x) : x)));
 
   if (a.kind === 'reposition') {
+    // The current scene's compiled marks are the one coordinate authority. A scene that has marks must name
+    // this role; a scene without geometry (a renderer-less fixture) keeps the semantic role only.
+    const marks = m.compiledScenes.find(c => c.id === s.scene)?.marks;
+    const target = marks?.[a.markRole];
+    if (marks && !target) return undefined;
     // The hero stands in one place: a new position supersedes an active one and inherits its baseline,
     // so undoing either can never strand the hero on a mark that no active preparation explains.
     const active = s.preparations.find(r => r.undo.some(u => u.kind === 'state' && u.entity === hero.id && u.key === 'mark_role'));
-    patch(hero.id, x => ({ ...x, state: { ...x.state, mark_role: a.markRole } }));
+    patch(hero.id, x => ({ ...x, ...(target ? { mark: { ...target } } : {}), state: { ...x.state, mark_role: a.markRole } }));
     if (active) return { ...s, entities, preparations: [...s.preparations.filter(r => r !== active), { id, undo: active.undo }] };
-    undo.push({ kind: 'state', entity: hero.id, key: 'mark_role', value: hero.state.mark_role ?? null });
+    undo.push({ kind: 'state', entity: hero.id, key: 'mark_role', value: hero.state.mark_role ?? null }, { kind: 'mark', entity: hero.id, mark: hero.mark ? { ...hero.mark } : null });
   } else {
     const obj = entityOf(s, a.object);
     if (!obj) return undefined;
@@ -440,6 +454,10 @@ function revertPreparation(s: RuntimeSnapshot, rec: PreparationRecord): RuntimeS
     entities = entities.map(x => {
       if (x.id !== u.entity) return x;
       if (u.kind === 'owner') return { ...x, owner: u.owner };
+      if (u.kind === 'mark') {
+        const { mark: _old, ...rest } = x;
+        return u.mark ? { ...rest, mark: { ...u.mark } } : rest;
+      }
       const state = { ...x.state };
       if (u.value === null) delete state[u.key];
       else state[u.key] = u.value;
@@ -469,49 +487,140 @@ export function deriveScopes(s: RuntimeSnapshot): ScopeKind[] {
 
 /* ------------------------------------------------------------- resume --- */
 
+const PHASES = new Set<string>(['loading', 'entering', 'playing', 'transitioning', 'confirming', 'enacting', 'holding', 'boundary', 'reveal_loading', 'revealed', 'ended']);
+const PRE_COMMIT = new Set<string>(['loading', 'entering', 'playing', 'transitioning', 'confirming']);
+const MEMORY_LOCKED = new Set<string>(['boundary', 'reveal_loading', 'revealed', 'ended']);
+const SNAPSHOT_KEYS = new Set([
+  'snapshotVersion', 'experienceId', 'attemptId', 'manifestRevision', 'decisionVersion', 'phase', 'scene', 'location', 'arcIndex', 'visitedScenes',
+  'deliveredBeats', 'receivedFacts', 'seenObservations', 'consumedEvents', 'entities', 'heroMarks', 'variables', 'preparations', 'time', 'decision',
+  'reservation', 'transition', 'selectedTarget', 'sheet', 'openObservation', 'modal', 'boundaryLocked', 'reveal', 'txCounter', 'consumedActivations',
+]);
+const PAUSE_KEY = /^(reading|modal|hidden|blur|transition|user):[^\s]{1,80}$/;
+
+const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isNonEmpty = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
+const isMark = (v: unknown): boolean =>
+  isRec(v) && Object.keys(v).every(k => k === 'x' || k === 'y' || k === 'facing') &&
+  [v.x, v.y].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 100) && isNonEmpty(v.facing);
+/** A list of distinct strings, each accepted by `known`. */
+const idSet = (v: unknown, known: (x: string) => boolean): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string' && known(x)) && new Set(v).size === v.length;
+
 /**
  * Validate a stored snapshot against the manifest and normalise in-flight
- * state. Returns undefined for anything corrupted or from another revision;
- * the caller then starts fresh. An accepted act stays accepted: resuming
- * after it goes to the boundary, never back to a choice.
+ * state. A stored snapshot is untrusted input: every record is checked for its
+ * shape BEFORE anything nested is read, so no input can make this throw.
+ * Returns undefined for anything malformed, inconsistent or from another
+ * experience/revision; the caller then starts fresh.
+ *
+ * - An accepted act stays accepted and never reopens: it resumes at the boundary.
+ * - A `recorded` status is a claim, not an acknowledgement: it comes back as
+ *   `accepted`, and the host must obtain a repository ack again (idempotent).
+ * - A completed reveal (`revealed`/`ended`) stays completed; the private record
+ *   itself is not in the snapshot and must be re-resolved by the host.
+ * - Anything not yet committed re-enters through `loading`, so a visual host
+ *   prepares the restored scene before play, exactly as on first entry.
  */
 export function restoreSnapshot(m: PlaybackManifestV3, raw: unknown): RuntimeSnapshot | undefined {
-  if (typeof raw !== 'object' || raw === null) return undefined;
-  const s = raw as RuntimeSnapshot;
-  const strs = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string');
-  if (s.snapshotVersion !== SNAPSHOT_VERSION || s.manifestRevision !== m.revision || s.decisionVersion !== m.decisionVersion) return undefined;
-  if (!m.scenePlans.some(p => p.id === s.scene) || currentScene(m, s).location !== s.location) return undefined;
-  if (!Number.isInteger(s.arcIndex) || s.arcIndex < 0 || s.arcIndex >= m.spine.length) return undefined;
-  if (![s.visitedScenes, s.deliveredBeats, s.receivedFacts, s.seenObservations, s.consumedEvents, s.consumedActivations].every(strs)) return undefined;
-  if (!s.visitedScenes.every(id => m.scenePlans.some(p => p.id === id))) return undefined;
-  if (!s.receivedFacts.every(id => m.facts.some(f => f.id === id))) return undefined;
-  if (!Array.isArray(s.entities) || s.entities.length !== m.initialEntities.length || !m.initialEntities.every(e => s.entities.some(x => x.id === e.id && x.kind === e.kind))) return undefined;
-  if (s.decision && !m.opportunities.some(o => o.id === s.decision!.option)) return undefined;
-  // Everything the reducer later reads must have its contract shape: a stored snapshot is untrusted input.
-  const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-  const beats = new Set(m.scenePlans.flatMap(p => p.beats.map(b => b.id)));
-  const locations = new Set(m.scenePlans.map(p => p.location));
+  if (!isRec(raw)) return undefined;
+  if (!Object.keys(raw).every(k => SNAPSHOT_KEYS.has(k))) return undefined;
+  const r = raw;
+
+  /* identity and enums */
+  if (r.snapshotVersion !== SNAPSHOT_VERSION || r.experienceId !== m.experienceId || r.manifestRevision !== m.revision || r.decisionVersion !== m.decisionVersion) return undefined;
+  if (!isNonEmpty(r.attemptId) || typeof r.phase !== 'string' || !PHASES.has(r.phase)) return undefined;
+  if (!['idle', 'loading', 'failed', 'ready'].includes(r.reveal as string) || typeof r.boundaryLocked !== 'boolean') return undefined;
+  if (!Number.isInteger(r.txCounter) || (r.txCounter as number) < 0) return undefined;
+
+  /* position on the arc */
+  const plan = typeof r.scene === 'string' ? m.scenePlans.find(p => p.id === r.scene) : undefined;
+  if (!plan || r.location !== plan.location) return undefined;
+  const arc = r.arcIndex;
+  if (!Number.isInteger(arc) || (arc as number) < 0 || (arc as number) >= m.spine.length) return undefined;
+  const spineAt = m.spine.indexOf(plan.id);
+  if (spineAt > (arc as number)) return undefined; // standing ahead of the furthest scene reached is impossible
+
+  /* receipts: known ids, each once */
+  const sceneIds = new Set(m.scenePlans.map(p => p.id));
+  const beatEvents = new Map(m.scenePlans.flatMap(p => p.beats.map(b => [b.id, b.events.length] as const)));
+  if (!idSet(r.visitedScenes, x => sceneIds.has(x)) || !r.visitedScenes.includes(plan.id)) return undefined;
+  if (!idSet(r.deliveredBeats, x => beatEvents.has(x))) return undefined;
+  if (!idSet(r.receivedFacts, x => m.facts.some(f => f.id === x))) return undefined;
+  if (!idSet(r.seenObservations, x => m.observations.some(o => o.id === x))) return undefined;
+  const eventOk = (x: string) => {
+    const i = x.lastIndexOf(':');
+    const n = beatEvents.get(x.slice(0, i));
+    const k = Number(x.slice(i + 1));
+    return i > 0 && n !== undefined && Number.isInteger(k) && k >= 0 && k < n;
+  };
+  if (!idSet(r.consumedEvents, eventOk)) return undefined;
+  if (!Array.isArray(r.consumedActivations) || !r.consumedActivations.every(x => typeof x === 'string')) return undefined;
+
+  /* variables and clock */
+  if (!isRec(r.variables) || !Object.values(r.variables).every(v => typeof v === 'string')) return undefined;
+  const t = r.time;
+  if (!isRec(t) || !Object.keys(t).every(k => ['presentationMs', 'narrativeMs', 'opportunityMs', 'policy', 'pauses'].includes(k))) return undefined;
+  if (![t.presentationMs, t.narrativeMs, t.opportunityMs].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0)) return undefined;
+  if (!['soft', 'untimed', 'timed'].includes(t.policy as string)) return undefined;
+  if (!Array.isArray(t.pauses) || !t.pauses.every(p => typeof p === 'string' && PAUSE_KEY.test(p))) return undefined;
+
+  /* entities: the manifest's registry exactly, one owner each, owners that exist */
   const kindOf = new Map(m.initialEntities.map(e => [e.id, e.kind] as const));
-  if (!s.deliveredBeats.every(id => beats.has(id)) || !s.seenObservations.every(id => m.observations.some(o => o.id === id))) return undefined;
-  if (typeof s.attemptId !== 'string' || typeof s.boundaryLocked !== 'boolean' || !Number.isInteger(s.txCounter) || s.txCounter < 0) return undefined;
-  if (!isRec(s.variables) || !Object.values(s.variables).every(v => typeof v === 'string')) return undefined;
-  const t = s.time as unknown;
-  if (!isRec(t) || !['presentationMs', 'narrativeMs', 'opportunityMs'].every(k => Number.isFinite(t[k])) || !['soft', 'untimed', 'timed'].includes(t.policy as string)) return undefined;
-  // One owner per entity, and only owners that exist: no actor carried, no one in a place this manifest never shows.
-  const ownerOk = (e: unknown): boolean => {
-    if (!isRec(e) || !isRec(e.owner) || !isRec(e.state)) return false;
-    const o = e.owner;
-    if (o.kind === 'location') return locations.has(o.id as string);
-    if (o.kind === 'actor') return e.kind === 'object' && kindOf.get(o.id as string) === 'actor';
+  const locations = new Set(m.scenePlans.map(p => p.location));
+  const ownerOk = (o: unknown, selfId: string, selfKind: string): boolean => {
+    if (!isRec(o) || !Object.keys(o).every(k => k === 'kind' || k === 'id')) return false;
+    if (o.kind === 'location') return typeof o.id === 'string' && locations.has(o.id);
+    if (o.kind === 'actor') return selfKind === 'object' && typeof o.id === 'string' && o.id !== selfId && kindOf.get(o.id) === 'actor';
     return o.kind === 'offstage' && o.id === 'offstage';
   };
-  if (!s.entities.every(ownerOk)) return undefined;
-  const hero = s.entities.find(e => e.id === m.perspectiveActor);
-  if (!hero || hero.owner.kind !== 'location' || hero.owner.id !== s.location) return undefined;
-  const prepOk = (r: unknown) => isRec(r) && m.preparations.some(p => p.id === r.id) && Array.isArray(r.undo) && r.undo.every(u => isRec(u) && kindOf.has(u.entity as string));
-  if (!Array.isArray(s.preparations) || !s.preparations.every(prepOk)) return undefined;
-  if (s.decision && (!m.primaryDecision || s.decision.id !== m.primaryDecision.id || !m.primaryDecision.options.includes(s.decision.option))) return undefined;
+  const stateOk = (v: unknown) => isRec(v) && Object.values(v).every(x => typeof x === 'string');
+  const entityOk = (e: unknown): boolean =>
+    isRec(e) && Object.keys(e).every(k => ['id', 'kind', 'owner', 'mark', 'state'].includes(k)) &&
+    typeof e.id === 'string' && kindOf.get(e.id) === e.kind && ownerOk(e.owner, e.id, e.kind as string) && stateOk(e.state) && (e.mark === undefined || isMark(e.mark));
+  if (!Array.isArray(r.entities) || r.entities.length !== m.initialEntities.length || !r.entities.every(entityOk)) return undefined;
+  const entities = r.entities as EntityState[];
+  if (new Set(entities.map(e => e.id)).size !== entities.length) return undefined;
+  const hero = entities.find(e => e.id === m.perspectiveActor);
+  if (!hero || hero.owner.kind !== 'location' || hero.owner.id !== plan.location) return undefined;
 
+  /* reversible preparations: known ids, the full undo union */
+  const undoOk = (u: unknown): boolean => {
+    if (!isRec(u) || typeof u.entity !== 'string' || !kindOf.has(u.entity)) return false;
+    const entityKind = kindOf.get(u.entity)!;
+    if (u.kind === 'owner') return Object.keys(u).length === 3 && ownerOk(u.owner, u.entity, entityKind);
+    if (u.kind === 'state') return Object.keys(u).length === 4 && isNonEmpty(u.key) && (u.value === null || typeof u.value === 'string');
+    if (u.kind === 'mark') return Object.keys(u).length === 3 && (u.mark === null || isMark(u.mark));
+    return false;
+  };
+  const recordOk = (p: unknown): boolean =>
+    isRec(p) && Object.keys(p).every(k => k === 'id' || k === 'undo') && typeof p.id === 'string' && m.preparations.some(x => x.id === p.id) && Array.isArray(p.undo) && p.undo.every(undoOk);
+  const recordsOk = (v: unknown): v is PreparationRecord[] => Array.isArray(v) && v.every(recordOk) && new Set(v.map(p => (p as PreparationRecord).id)).size === v.length;
+  if (!recordsOk(r.preparations)) return undefined;
+
+  /* the hero's saved placements, one per location it has left */
+  if (!isRec(r.heroMarks)) return undefined;
+  for (const [loc, pl] of Object.entries(r.heroMarks)) {
+    if (!locations.has(loc) || loc === plan.location || !isRec(pl)) return undefined;
+    if (!Object.keys(pl).every(k => k === 'mark' || k === 'role' || k === 'preparations')) return undefined;
+    if ((pl.mark !== undefined && !isMark(pl.mark)) || (pl.role !== undefined && !isNonEmpty(pl.role)) || (pl.preparations !== undefined && !recordsOk(pl.preparations))) return undefined;
+  }
+
+  /* the decision, and its agreement with phase, lock and reveal */
+  const d = r.decision;
+  if (d !== undefined) {
+    if (!isRec(d) || !Object.keys(d).every(k => k === 'id' || k === 'option' || k === 'status')) return undefined;
+    if (!m.primaryDecision || d.id !== m.primaryDecision.id || !m.primaryDecision.options.includes(d.option as string) || (d.status !== 'accepted' && d.status !== 'recorded')) return undefined;
+    // A saved acceptance is locked and past the choice; anything else is a contradiction, never a reopened choice.
+    if (r.boundaryLocked !== true || PRE_COMMIT.has(r.phase)) return undefined;
+  } else if (m.primaryDecision) {
+    // A decision story cannot be past its act without the act.
+    if (r.boundaryLocked || !PRE_COMMIT.has(r.phase)) return undefined;
+  } else if (r.boundaryLocked !== MEMORY_LOCKED.has(r.phase) || r.phase === 'enacting' || r.phase === 'holding') return undefined;
+  const completed = r.phase === 'revealed' || r.phase === 'ended';
+  if ((r.reveal === 'ready') !== completed) return undefined;
+  if ((r.reveal === 'loading' || r.reveal === 'failed') && r.phase !== 'reveal_loading') return undefined;
+
+  /* validated: normalise the in-flight parts */
+  const s = raw as unknown as RuntimeSnapshot;
   const clean: RuntimeSnapshot = {
     ...s,
     selectedTarget: undefined,
@@ -525,9 +634,8 @@ export function restoreSnapshot(m: PlaybackManifestV3, raw: unknown): RuntimeSna
     // activation could act twice on survives the reset above, so keeping them would only swallow fresh input.
     consumedActivations: [],
   };
-  if (s.decision) return { ...clean, phase: s.phase === 'revealed' || s.phase === 'ended' ? s.phase : 'boundary', boundaryLocked: true, reveal: s.phase === 'revealed' || s.phase === 'ended' ? 'ready' : 'idle' };
+  if (s.decision) return { ...clean, decision: { ...s.decision, status: 'accepted' }, phase: completed ? s.phase : 'boundary', reveal: completed ? 'ready' : 'idle' };
   // The memory form has no decision: a completed reveal is still completed. It must not regress to the boundary.
-  if (s.boundaryLocked && (s.phase === 'revealed' || s.phase === 'ended')) return { ...clean, phase: s.phase, reveal: 'ready' };
-  if (s.boundaryLocked) return { ...clean, phase: 'boundary' };
-  return { ...clean, phase: s.phase === 'loading' ? 'loading' : 'playing' };
+  if (s.boundaryLocked) return completed ? { ...clean, phase: s.phase, reveal: 'ready' } : { ...clean, phase: 'boundary', reveal: 'idle' };
+  return { ...clean, phase: 'loading', reveal: 'idle' };
 }

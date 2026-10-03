@@ -9,14 +9,14 @@
 import assert from 'node:assert/strict';
 import type { ExperienceEvent, StepResult } from '../../src/engine/v3/ExperienceController.ts';
 import { correctionManifest, type CorrectionVariant } from '../../src/data/experienceV3Fixtures/runtime/theCorrection.ts';
-import { resolveCorrectionReveal } from '../../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
+import { correctionRevealBinding, resolveCorrectionReveal } from '../../src/data/experienceV3Fixtures/runtime/theCorrection.reveal.ts';
 import { HeadlessHost, type HostOptions } from './v3HeadlessHost.ts';
 
 export type CorrectionOption = 'correct_public' | 'request_private' | 'pass_question';
 export const CORRECTION_OPTIONS: readonly CorrectionOption[] = ['correct_public', 'request_private', 'pass_question'];
 
 export function correctionHost(variant: CorrectionVariant = 'rich', opts: Partial<HostOptions> = {}): HeadlessHost {
-  return new HeadlessHost(correctionManifest(variant), { resolveReveal: resolveCorrectionReveal, ...opts });
+  return new HeadlessHost(correctionManifest(variant), { resolveReveal: resolveCorrectionReveal, binding: correctionRevealBinding(), ...opts });
 }
 
 export const expectOk = (res: StepResult, what: string) => assert.equal(res.rejected, undefined, `${what}: rejected as ${res.rejected?.code}`);

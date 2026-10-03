@@ -507,31 +507,45 @@ async function main() {
   });
 
   /* --------------------------------------------------------- 10c --- */
-  // KNOWN GAP (QA BUG-04, deferred to Integration Review): a rejected persistDecision is swallowed by useExperience.
-  // This test pins the CURRENT behaviour so it is visible and cannot change silently; it is not an endorsement.
-  {
+  // B04: a failed decision write is visible, never "recorded", and retries the identical operation.
+  for (const mode of ['reject', 'flaky'] as const) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await ctx.newPage();
     const errors: string[] = [];
     page.on('pageerror', e => errors.push(String(e)));
+    const name = mode === 'reject' ? 'B04: a rejected decision write is shown, stays unrecorded, and never reopens the choice' : 'B04: Save again re-sends the same operation and the decision becomes recorded only on the acknowledgement';
     try {
-      await page.goto(`${base}/?v3=foundation&persist=reject`);
+      await page.goto(`${base}/?v3=foundation&persist=${mode}`);
       await page.waitForFunction(() => document.querySelector('[data-testid="phase"]')?.textContent === 'playing');
       await reachDecision(page);
       await page.evaluate(() => (document.querySelector('[data-testid="readable-act-act_speak"]') as HTMLButtonElement).click());
       await page.waitForSelector(T('confirm-button'));
       await page.evaluate(() => (document.querySelector('[data-testid="confirm-button"]') as HTMLButtonElement).click());
-      await settle(page, 300);
-      const s = await state(page);
+      await page.waitForSelector(T('persistence-failed'));
+      let s = await state(page);
       assert.equal(s.decision.status, 'accepted', 'a failed write leaves the decision unrecorded (never "recorded")');
-      assert.equal((await decisions(page)).length, 1, 'the write was attempted exactly once: nothing retries it');
-      assert.equal((await events(page)).filter(e => e.type === 'DECISION_RECORDED').length, 0, 'no DECISION_RECORDED and no failure event is ever dispatched');
-      assert.deepEqual(errors, [], 'the rejection is swallowed silently (no page error, no diagnostic)');
-      results.push(['KNOWN GAP BUG-04: a rejected persistDecision is swallowed (decision stays accepted, unrecorded, no retry, no error surface)', null]);
-      console.log(`✓ ${results.length}. KNOWN GAP BUG-04: a rejected persistDecision is swallowed (pinned, deferred to Integration Review)`);
+      assert.equal((await decisions(page)).length, 1, 'the write was attempted once so far');
+      assert.equal((await events(page)).filter(e => e.type === 'DECISION_RECORDED').length, 0, 'no DECISION_RECORDED before an acknowledgement');
+      assert.equal((await page.textContent(T('persistence-failed')))?.includes('not saved'), true, 'the failure is visible to the reader');
+      assert.equal(s.boundaryLocked, true, 'the accepted choice stays locked');
+      await page.evaluate(() => (document.querySelector('[data-testid="persistence-retry"]') as HTMLButtonElement).click());
+      await settle(page, 200);
+      s = await state(page);
+      assert.equal((await decisions(page)).length, 2, 'Save again sends the operation once more');
+      assert.equal((await decisions(page)).every(d => d.option === 'act_speak'), true, 'always the same accepted option');
+      if (mode === 'flaky') {
+        assert.equal(s.decision.status, 'recorded', 'the acknowledgement records it');
+        assert.equal(await page.locator(T('persistence-failed')).count(), 0, 'and the failure notice clears');
+      } else {
+        assert.equal(s.decision.status, 'accepted', 'a second rejection still leaves it unrecorded');
+        assert.equal(await page.locator(T('persistence-failed')).count(), 1, 'and the notice stays');
+      }
+      assert.deepEqual(errors, [], 'no page error');
+      results.push([name, null]);
+      console.log(`✓ ${results.length}. ${name}`);
     } catch (e) {
-      results.push(['BUG-04 repro', String((e as Error).stack ?? e)]);
-      console.log(`✗ ${results.length}. BUG-04 repro\n   ${String((e as Error).message).split('\n').join('\n   ')}`);
+      results.push([name, String((e as Error).stack ?? e)]);
+      console.log(`✗ ${results.length}. ${name}\n   ${String((e as Error).message).split('\n').join('\n   ')}`);
     } finally {
       await ctx.close();
     }

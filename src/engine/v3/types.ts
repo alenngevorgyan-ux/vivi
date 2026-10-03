@@ -22,6 +22,7 @@ export type RejectionCode =
   | 'nothing_to_advance'
   | 'nothing_to_cancel'
   | 'already_applied'
+  | 'ack_mismatch'
   | 'not_applied';
 
 /** Effects are requests to the host. The reducer performs none of them. */

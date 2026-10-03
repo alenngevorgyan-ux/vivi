@@ -7,7 +7,7 @@ import { compileFixture } from '../src/data/experienceFixtures/replay.ts';
 import { CAPS } from '../src/engine/v3/contracts/semantic.ts';
 import type { PlaybackManifestV3 } from '../src/engine/v3/contracts/manifest.ts';
 import type { RuntimeSnapshot } from '../src/engine/v3/contracts/state.ts';
-import { findPrivateLeaks, validateManifest, validateSemanticPlan, validateStoredPostV3, type IssueCode, type ValidationIssue } from '../src/engine/v3/contracts/validate.ts';
+import { findPrivateLeaks, PrivateCanaryError, validateManifest, validateSemanticPlan, validateStoredPostV3, type IssueCode, type ValidationIssue } from '../src/engine/v3/contracts/validate.ts';
 import { isPaused, pause, resume, tick, initialClock } from '../src/engine/v3/ClockService.ts';
 import { createExperience, deriveScopes, movementEligible, restoreSnapshot, step, type ExperienceEvent, type StepResult } from '../src/engine/v3/ExperienceController.ts';
 import { buildReadableModel, readableEvents } from '../src/engine/v3/readable.ts';
@@ -521,7 +521,11 @@ ok('An act cannot be requested before the minimum knowledge is received or outsi
   expectRejected(send(r, { type: 'REQUEST_INTENT', id: 'act_speak', activationId: aid() }), 'decision_closed', 'selecting another act after the decision');
   expectRejected(send(r, { type: 'REQUEST_INTENT', id: 'act_ask', activationId: aid() }), 'duplicate_decision', 'selecting the same act again');
   assert.equal(r.log.filter(x => x.effects.some(e => e.type === 'persist_decision')).length, 1, 'persisted exactly once');
-  expectOk(send(r, { type: 'DECISION_RECORDED' }), 'recorded');
+  expectRejected(send(r, { type: 'DECISION_RECORDED', decision: 'd_main', option: 'act_speak' }), 'ack_mismatch', 'an ack for a different option is not this decision\'s record');
+  expectRejected(send(r, { type: 'DECISION_RECORDED', decision: 'other', option: 'act_ask' }), 'ack_mismatch', 'an ack for a different decision');
+  assert.equal(r.s.decision?.status, 'accepted', 'a mismatched ack changes nothing');
+  expectOk(send(r, { type: 'DECISION_RECORDED', decision: 'd_main', option: 'act_ask' }), 'recorded');
+  expectRejected(send(r, { type: 'DECISION_RECORDED', decision: 'd_main', option: 'act_ask' }), 'already_applied', 'a second ack');
   assert.equal(r.s.decision?.status, 'recorded');
   assert.equal(r.s.decision?.option, 'act_ask', 'the accepted option never changes');
 }
@@ -639,7 +643,8 @@ ok('Reveal cannot be reached without an accepted act (or the memory form); skip 
   assert.ok(r.s.receivedFacts.includes('f2'), 'a fact learned elsewhere is kept');
   assert.deepEqual(r.s.seenObservations, ['o_a1']);
   assert.deepEqual(r.s.deliveredBeats, ['b_a1', 'b_b1'], 'no beat is delivered twice or forgotten');
-  assert.deepEqual(r.s.preparations.map(p => p.id), ['prep_stand', 'prep_hold_note']);
+  // The hero's positional preparation is stashed with its placement and restored on return, so the set (not the order) is the contract.
+  assert.deepEqual(r.s.preparations.map(p => p.id).sort(), ['prep_hold_note', 'prep_stand']);
   assert.equal(r.s.entities.find(e => e.id === 'hero')!.state.mark_role, 'near_other');
   assert.deepEqual(r.s.entities.find(e => e.id === 'note')!.owner, { kind: 'actor', id: 'hero' });
   assert.equal(entityLocation(r.s, 'other'), 'room_b', 'the other person did not move or duplicate');
@@ -926,17 +931,17 @@ ok('Clock: pauses are keyed reason:owner, so reading/modal/hidden/transition can
   const back = restoreSnapshot(r.m, saved)!;
   assert.ok(back, 'a stored snapshot restores');
   assert.deepEqual(back.receivedFacts, ['f1']);
-  assert.equal(back.phase, 'playing');
+  assert.equal(back.phase, 'loading', 'a restored story re-enters through loading so the host prepares the scene first');
   // Corrupted or foreign snapshots are refused, never half-applied.
   for (const bad of [
-    null, 5, {}, { ...saved, snapshotVersion: 2 }, { ...saved, manifestRevision: 'r2' }, { ...saved, decisionVersion: 'dv2' }, { ...saved, scene: 'nope' },
+    null, 5, {}, { ...saved, snapshotVersion: 1 }, { ...saved, manifestRevision: 'r2' }, { ...saved, decisionVersion: 'dv2' }, { ...saved, scene: 'nope' },
     { ...saved, location: 'room_b' }, { ...saved, arcIndex: 9 }, { ...saved, receivedFacts: ['ghost'] }, { ...saved, visitedScenes: ['ghost'] }, { ...saved, entities: [] }, { ...saved, deliveredBeats: [1] }, { ...saved, decision: { id: 'd_main', option: 'ghost', status: 'accepted' } },
   ]) assert.equal(restoreSnapshot(r.m, bad), undefined);
   // In-flight state is normalised: a half-open confirmation does not resume.
   toDecision(r);
   send(r, { type: 'REQUEST_INTENT', id: 'act_speak', activationId: aid() });
   const mid = restoreSnapshot(r.m, JSON.parse(JSON.stringify(r.s)))!;
-  assert.equal(mid.phase, 'playing');
+  assert.equal(mid.phase, 'loading');
   assert.equal(mid.reservation, undefined);
   // An accepted act stays accepted and never returns to a choice.
   send(r, { type: 'CONFIRM', id: 'act_speak', activationId: aid() });
@@ -952,7 +957,7 @@ ok('Clock: pauses are keyed reason:owner, so reading/modal/hidden/transition can
   send(t, { type: 'REQUEST_PORTAL', id: 'p_a_to_b', activationId: aid() });
   const tr = restoreSnapshot(t.m, JSON.parse(JSON.stringify(t.s)))!;
   assert.equal(tr.scene, 'scene_a');
-  assert.equal(tr.phase, 'playing');
+  assert.equal(tr.phase, 'loading');
   assert.equal(tr.transition, undefined);
 }
 ok('Snapshots restore only when valid for this manifest revision; in-flight state is normalised and an accepted act stays accepted');
@@ -1331,13 +1336,15 @@ ok('Activation identity: separate synthetic/AT clicks get unique ids; key-genera
   assert.deepEqual(findPrivateLeaks({ line: 'first\nsecond' }, ['first\nsecond']), [0], 'a multi-line canary is found');
   assert.deepEqual(findPrivateLeaks({ line: 'C:\\keys\\spare' }, ['C:\\keys\\spare']), [0], 'a backslash canary is found');
   assert.deepEqual(findPrivateLeaks({ line: 'nothing here' }, ['She said "never again"']), []);
-  assert.deepEqual(findPrivateLeaks({ line: 'x' }, ['  ']), [], 'blank canaries never match');
-  // Documented behaviour (left for Integration Review): a canary shorter than 4 characters is NOT checked at all.
-  // A naive substring check would flag ordinary words ("no", "key") everywhere, so it was deliberately not loosened here.
-  assert.deepEqual(findPrivateLeaks({ line: 'the key is under the mat' }, ['key']), [], 'a 3-character canary is ignored by design');
+  // B07: a canary shorter than MIN_CANARY_LENGTH is INVALID configuration (it would match ordinary words or be skipped),
+  // so a scan with one throws instead of reporting "no leak". The error carries indexes only.
+  assert.throws(() => findPrivateLeaks({ line: 'the key is under the mat' }, ['key']), (e: unknown) => e instanceof PrivateCanaryError && e.invalidIndexes.join() === '0' && !e.message.includes('key'), 'a 3-character canary is rejected, not ignored');
+  assert.throws(() => findPrivateLeaks({ line: 'x' }, ['  ']), PrivateCanaryError, 'a blank canary is invalid, not a silent pass');
+  assert.throws(() => findPrivateLeaks({ line: 'x' }, ['long enough canary', 'no']), (e: unknown) => e instanceof PrivateCanaryError && e.invalidIndexes.join() === '1', 'the bad index is named');
+  assert.throws(() => findPrivateLeaks({}, []), PrivateCanaryError, 'an empty list is a missing configuration');
   assert.deepEqual(findPrivateLeaks({ line: 'the keys are under the mat' }, ['keys']), [0], 'a 4-character canary is checked');
 }
-ok('Leak check: quote, backslash and newline canaries match as serialized; canaries under 4 characters are documented as unchecked');
+ok('Leak check: quote, backslash and newline canaries match as serialized; invalid (short, blank, empty) canary configuration throws instead of passing');
 
 /* ============================== 9. runtime stays model-free and generic === */
 

@@ -118,6 +118,7 @@ export const foundationPost = (): StoredPostV3 => ({ postSchemaVersion: 3, id: '
 /** Private author record. Lives apart from the manifest; the canaries prove it never leaks into it. */
 export const FOUNDATION_REVEAL_CANARIES = ['CANARY-ACT-9f3k', 'CANARY-WHY-4q7m', 'CANARY-AFTER-2x8v'] as const;
 export const foundationReveal = (): RevealRecordV3 => ({
+  revealSchemaVersion: 1,
   experienceId: 'foundation_fixture',
   revision: 'r1',
   status: 'fictional_editorial',
