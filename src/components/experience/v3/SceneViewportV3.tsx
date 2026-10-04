@@ -29,6 +29,9 @@ import { SceneLayersV3, type BodyLayer, type CutoutLayer, type IslandPx, type La
 import { routeBetween, selectFraming, type ActPose, type Orientation, type StagingV3 } from './staging';
 import type { AssetCache } from './AssetPreloader';
 import type { FigurePose } from './Figure';
+import { castBody, POSES } from './rig/poses';
+import { FigureAnimator } from './rig/FigureAnimator';
+import { build as rigBuild, pose as rigPose, type Body, type Pose } from './rig/rig';
 import { findPath, framedFloor, metresBetween, pickReach, screenToFloorDir, stepBody, WALK, type BodyState, type FloorLimit } from './locomotion';
 import type { Hotspot } from './hotspots';
 
@@ -88,7 +91,27 @@ export interface SceneViewportProps {
   keyHint?: string;
   /** A foot met the floor (two per stride), for footsteps. */
   onStep?: () => void;
+  /** Local light colour on the cast for a location (story binding): a cold practical or a warm one. */
+  tintOf?: (location: string) => 'cold' | 'warm' | undefined;
 }
+
+/** How long each act's body language takes before its stop frame (ms, after any approach walk). */
+const ACT_MS: Record<ActPose, number> = { speak: 1300, ask: 650, still: 950 };
+const bodyCache = new Map<string, { body: Body; standH: number }>();
+function castOf(id: string, spec: StagingV3['figures'][string]) {
+  const key = `${id}|${spec.build}|${spec.palette.coat}`;
+  let c = bodyCache.get(key);
+  if (!c) {
+    const body = castBody(spec.build, spec.palette);
+    const { head } = rigBuild(body, rigPose({ yaw: 90 }));
+    c = { body, standH: -(head.c[1] - head.ry * 1.05) };
+    bodyCache.set(key, c);
+  }
+  return c;
+}
+const signOf = (v: number) => (v < 0 ? -1 : 1);
+/** An authored pose at a mark's yaw: keep its three-quarter nuance when it already faces the same side. */
+const faceTo = (p: Pose, yaw: number | undefined): Pose => (yaw === undefined || signOf(p.yaw) === signOf(yaw) ? p : { ...p, yaw, head_yaw: -p.head_yaw, twist: -p.twist });
 
 const ROLE_EPS = 1e-6;
 const SCRIPT_MPS = 1.5;
@@ -98,13 +121,27 @@ const same = (a?: { x: number; y: number }, b?: { x: number; y: number }) => !!a
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-/** The camera's position on the floor for the current framing (things with a face are used from its side). */
-export function sceneViewFrom(m: PlaybackManifestV3, s: RuntimeSnapshot, staging: StagingV3, geometry: RuntimeGeometryV3, orientation: Orientation): FloorPoint | undefined {
+/** The decision and the act hold the approved composition (all three anchors in frame). */
+export const holdsComposition = (m: PlaybackManifestV3, s: RuntimeSnapshot) =>
+  m.primaryDecision?.scene === s.scene && (!!s.decision || !m.scenePlans.find(p => p.id === s.scene)?.beats.some(bt => !s.deliveredBeats.includes(bt.id)));
+
+/**
+ * The camera the view uses. Design's recipes, selected by orientation — except that a phone EXPLORING a room
+ * looks through the scene's wide recipe, cropped to the screen's height and following the body (more floor,
+ * a readable hero); at the decision and the act it cuts to Design's portrait composition.
+ */
+export function viewCamera(m: PlaybackManifestV3, s: RuntimeSnapshot, staging: StagingV3, geometry: RuntimeGeometryV3, orientation: Orientation) {
   const cs = m.compiledScenes.find(c => c.id === s.scene);
   const beats = new Set(m.scenePlans.find(p => p.id === s.scene)?.beats.map(b => b.id) ?? []);
   const lastBeat = [...s.deliveredBeats].reverse().find(b => beats.has(b));
-  const id = selectFraming(staging, s.scene, { orientation, lastBeat, option: s.decision?.option });
-  const cam = geometry.cameras.find(c => c.id === id) ?? geometry.cameras.find(c => c.id === cs?.cameraRecipe);
+  const wide = orientation === 'portrait' && !holdsComposition(m, s) ? staging.framings[s.scene]?.landscape : undefined;
+  const id = wide ?? selectFraming(staging, s.scene, { orientation, lastBeat, option: s.decision?.option });
+  return geometry.cameras.find(c => c.id === id) ?? geometry.cameras.find(c => c.id === cs?.cameraRecipe);
+}
+
+/** The camera's position on the floor for the current framing (things with a face are used from its side). */
+export function sceneViewFrom(m: PlaybackManifestV3, s: RuntimeSnapshot, staging: StagingV3, geometry: RuntimeGeometryV3, orientation: Orientation): FloorPoint | undefined {
+  const cam = viewCamera(m, s, staging, geometry, orientation);
   return cam ? [cam.projection.camX, cam.projection.camY] : undefined;
 }
 
@@ -112,10 +149,7 @@ export function sceneViewFrom(m: PlaybackManifestV3, s: RuntimeSnapshot, staging
 export function sceneFloorLimit(m: PlaybackManifestV3, s: RuntimeSnapshot, staging: StagingV3, geometry: RuntimeGeometryV3, orientation: Orientation): FloorLimit | undefined {
   const cs = m.compiledScenes.find(c => c.id === s.scene);
   const dims = staging.locations[s.location];
-  const beats = new Set(m.scenePlans.find(p => p.id === s.scene)?.beats.map(b => b.id) ?? []);
-  const lastBeat = [...s.deliveredBeats].reverse().find(b => beats.has(b));
-  const id = selectFraming(staging, s.scene, { orientation, lastBeat, option: s.decision?.option });
-  const cam = geometry.cameras.find(c => c.id === id) ?? geometry.cameras.find(c => c.id === cs?.cameraRecipe);
+  const cam = viewCamera(m, s, staging, geometry, orientation);
   if (!cam || !dims || !cs) return undefined;
   const hero = s.entities.find(e => e.id === m.perspectiveActor)?.mark;
   const keep: Array<[number, number]> = Object.values(cs.marks ?? {}).map(k => [k.x, k.y]);
@@ -124,11 +158,13 @@ export function sceneFloorLimit(m: PlaybackManifestV3, s: RuntimeSnapshot, stagi
 }
 
 /** Camera: cover the box, zoom, centre on a reference point, clamp so no plate border ever shows. */
-function cameraFit(cam: RuntimeGeometryV3['cameras'][number], box: { w: number; h: number }, zoom: number, focus: { sx: number; sy: number }): Fit {
+function cameraFit(cam: RuntimeGeometryV3['cameras'][number], box: { w: number; h: number }, zoom: number, focus: { sx: number; sy: number }, band?: number): Fit {
   const { width: vw, height: vh } = cam.viewport;
-  const scale = Math.max(1e-6, Math.max(box.w / vw, box.h / vh) * zoom);
+  // `band`: the plate fills only the top `band` px (a phone's painted window; below it is paper for text).
+  const H = band ?? box.h;
+  const scale = Math.max(1e-6, Math.max(box.w / vw, H / vh) * zoom);
   const offX = Math.min(0, Math.max(box.w - vw * scale, box.w / 2 - focus.sx * scale));
-  const offY = Math.min(0, Math.max(box.h - vh * scale, box.h / 2 - focus.sy * scale));
+  const offY = Math.min(0, Math.max(H - vh * scale, H / 2 - focus.sy * scale));
   return { cam, scale, offX, offY, box };
 }
 
@@ -140,7 +176,7 @@ interface Script {
 }
 
 export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(function SceneViewportV3(props, ref) {
-  const { manifest: m, state: s, staging, geometry, assets, orientation, reducedMotion, displayTitle, act, onActStopped, onWithdrawn, overlay, control, hotspots = [], onNear, keyHint = 'E' } = props;
+  const { manifest: m, state: s, staging, geometry, assets, orientation, reducedMotion, displayTitle, act, onActStopped, onWithdrawn, overlay, control, hotspots = [], onNear, keyHint = 'E', tintOf } = props;
   const wrap = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
 
@@ -163,8 +199,9 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
   /* ------------------------------------------------------- framing --- */
   const sceneBeats = new Set(m.scenePlans.find(p => p.id === s.scene)?.beats.map(b => b.id) ?? []);
   const lastBeat = [...s.deliveredBeats].reverse().find(b => sceneBeats.has(b));
-  const cameraId = selectFraming(staging, s.scene, { orientation, lastBeat, option: s.decision?.option });
-  const cam = geometry.cameras.find(c => c.id === cameraId) ?? geometry.cameras.find(c => c.id === cs.cameraRecipe)!;
+  const holdRef = useRef(false);
+  holdRef.current = holdsComposition(m, s);
+  const cam = viewCamera(m, s, staging, geometry, orientation) ?? geometry.cameras.find(c => c.id === cs.cameraRecipe)!;
   const plates = staging.plates[cam.id];
 
   /* ---------------------------------------------- hero presentation --- */
@@ -183,6 +220,12 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
   const stoppedFor = useRef<string>('');
   const live = useRef(props);
   live.current = props;
+  const animators = useRef(new Map<string, FigureAnimator>());
+  const figTargets = useRef(new Map<string, { base: Pose; ease: number; breath: number; look?: { yaw: number; amount: number }; seed: number }>());
+  const figPoses = useRef(new Map<string, { pose: Pose; coatLag: number }>());
+  const motion = useRef({ heading: 90, speed: 0, travelX: 0 });
+  const actRef = useRef({ instance: '', start: 0, arrivedAt: 0 });
+  const stoppedRef = useRef<() => void>(() => undefined);
 
   const walk = useCallback(
     (path: Array<[number, number]>, done?: () => void) => {
@@ -206,8 +249,6 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
-    let poseClock = 0;
-    let shownStride = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, (now - last) / 1000); // never catch up after a hidden tab
@@ -220,6 +261,7 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
       const fit = fitRef.current;
       let moved = 0;
       const startX = b.pos[0];
+      const startY = b.pos[1];
 
       if (script.current) {
         // A story walk (approved route / door / approach): eased, uninterruptible presentation.
@@ -231,7 +273,6 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
         b.pos = [p.x, p.y];
         b.stride += moved / WALK.strideM;
         b.vel = [0, 0];
-        if (p.heading) b.facingLeft = p.heading < 0;
         if (t >= 1) {
           script.current = null;
           sc.done?.();
@@ -277,19 +318,32 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
         footRef.current = foot;
         if (moved > 0) P.onStep?.();
       }
-      if (!script.current && fit) {
-        const a = toStage(fit, startX, b.pos[1], 0);
-        const c = toStage(fit, b.pos[0], b.pos[1], 0);
-        if (a && c && Math.abs(c.x - a.x) > 0.05) b.facingLeft = c.x < a.x;
+      // Which way the body is travelling on screen: the rig turns to it (down the screen = toward the camera).
+      const mo = motion.current;
+      if (fit && moved > 0) {
+        const a = toStage(fit, startX, startY, 0);
+        const c2 = toStage(fit, b.pos[0], b.pos[1], 0);
+        if (a && c2 && Math.hypot(c2.x - a.x, c2.y - a.y) > 0.05) {
+          mo.heading = (Math.atan2(c2.x - a.x, (c2.y - a.y) * 1.6) * 180) / Math.PI;
+          mo.travelX = Math.abs(c2.x - a.x) > 0.05 ? Math.sign(c2.x - a.x) : 0;
+        }
       }
-
-      // Pose changes on twos (12 fps); position, light and camera stay smooth.
-      poseClock += dt;
-      if (poseClock >= 1 / 12) {
-        poseClock = 0;
-        shownStride = b.stride;
+      mo.speed = dt > 0 ? Math.min(1.2, moved / dt / WALK.speed) : 0;
+      if (moved <= 0) mo.travelX = 0;
+      // Every body's pose: authored base + walk + breath + gaze, eased and sampled on twos.
+      for (const [id, tg] of figTargets.current) {
+        let an = animators.current.get(id);
+        if (!an) animators.current.set(id, (an = new FigureAnimator()));
+        const isHero = id === m.perspectiveActor;
+        figPoses.current.set(id, an.update(dt, { base: tg.base, speed: isHero ? mo.speed : 0, heading: isHero ? mo.heading : undefined, stride: isHero ? b.stride : 0, look: tg.look, breath: tg.breath, ease: tg.ease, travelX: isHero ? mo.travelX : 0, seed: tg.seed, reducedMotion: P.reducedMotion }));
       }
-      strideShown.current = shownStride;
+      // The act's stop frame: the approach is over and the body language has played out.
+      const ar = actRef.current;
+      if (st.phase === 'enacting' && ar.instance && !script.current) {
+        if (!ar.arrivedAt) ar.arrivedAt = now;
+        const ms = P.reducedMotion ? 0 : ACT_MS[P.act?.pose ?? 'still'];
+        if (now - ar.arrivedAt >= ms) stoppedRef.current();
+      }
 
       // Interaction the body is at.
       const hs = P.hotspots ?? [];
@@ -299,36 +353,52 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
         P.onNear?.(near);
       }
 
-      // Camera: follow the body with weight; settle in from a wider establishing framing on entry.
+      // Camera. Follow the body with weight and settle after a walk; lean a little toward what is within reach (a
+      // small focus pull); push gently toward a door being left. At the decision and through the act it HOLDS the
+      // approved composition (visual bible §7: held for decision and boundary; nothing moves after the act).
       const c = camRef.current;
       const camNow = geometry.cameras.find(x => x.id === camIdRef.current);
       if (c && camNow) {
         const heroH = d ? staging.figures[m.perspectiveActor].heightM / d.heightScale : 0.6;
-        const fp = projectPoint(camNow, b.pos[0], b.pos[1], heroH * 0.55);
-        if (fp) {
-          const lead = d ? 0.35 : 0;
-          const lp = d ? projectPoint(camNow, b.pos[0] + ((b.vel[0] * lead * 100) / d.widthM), b.pos[1] + ((b.vel[1] * lead * 100) / d.depthM), heroH * 0.55) : undefined;
-          const tx = (lp ?? fp).sx;
-          const ty = (lp ?? fp).sy;
-          const k = P.reducedMotion ? 1 : 1 - Math.exp(-dt / 0.55);
-          c.sx += (tx - c.sx) * k;
-          c.sy += (ty - c.sy) * k;
+        const hold = holdRef.current;
+        let tx = camNow.viewport.width / 2;
+        let ty = camNow.viewport.height / 2;
+        let zt = 1;
+        if (!hold) {
+          const lead = 0.35;
+          const lp = d ? projectPoint(camNow, b.pos[0] + (b.vel[0] * lead * 100) / d.widthM, b.pos[1] + (b.vel[1] * lead * 100) / d.depthM, heroH * 0.55) : undefined;
+          if (lp) {
+            tx = lp.sx;
+            ty = lp.sy;
+          }
+          zt = ZOOM;
+          const nh = (P.hotspots ?? []).find(h => h.id === nearRef.current);
+          const fp = nh ? projectPoint(camNow, nh.focus[0], nh.focus[1], nh.focus[2]) : undefined;
+          if (fp) {
+            // a phone's narrow window leans further, so the body and what it can use share the frame
+            const lean = P.orientation === 'portrait' ? 0.5 : 0.22;
+            tx += (fp.sx - tx) * lean;
+            ty += (fp.sy - ty) * 0.12;
+            zt += 0.025;
+          }
+          if (st.phase === 'transitioning') zt += 0.05;
         }
+        const k = P.reducedMotion ? 1 : 1 - Math.exp(-dt / (hold ? 1.1 : 0.6));
+        c.sx += (tx - c.sx) * k;
+        c.sy += (ty - c.sy) * k;
         c.entry = Math.min(1, c.entry + dt / 1.6);
-        c.zoom = P.reducedMotion ? ZOOM : 1 + (ZOOM - 1) * easeOut(c.entry);
+        const settle = 1 + (zt - 1) * easeOut(c.entry);
+        c.zoom = P.reducedMotion ? zt : c.zoom + (settle - c.zoom) * (c.entry < 1 ? 1 : 1 - Math.exp(-dt / 0.9));
       }
-      breathRef.current = now / 3400;
       setFrame(f => (f + 1) % 1e6);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const strideShown = useRef(0);
   const footRef = useRef(0);
   const limitRef = useRef<FloorLimit | undefined>(undefined);
   limitRef.current = useMemo(() => sceneFloorLimit(m, s, staging, geometry, orientation), [m, s.scene, s.location, cam.id, orientation, staging, geometry, heroMark?.x, heroMark?.y]); // eslint-disable-line react-hooks/exhaustive-deps
-  const breathRef = useRef(0);
   const camIdRef = useRef(cam.id);
   camIdRef.current = cam.id;
 
@@ -397,21 +467,19 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
       const fromRoute = route && route.length > 1 && dims && metresBetween(dims, [here.x, here.y], route[0] as FloorPoint) < 0.6;
       const pathed = !fromRoute && loc && dims ? findPath(loc, dims, b.pos, [target.x, target.y], limitRef.current) : undefined;
       const path: Array<[number, number]> = fromRoute ? [[here.x, here.y], ...(route as Array<[number, number]>).slice(1)] : pathed ? [...pathed.slice(0, -1), [target.x, target.y]] : [[here.x, here.y], [target.x, target.y]];
-      walk(path, s.phase === 'enacting' ? () => stopped() : undefined);
-    } else if (s.phase === 'enacting') stopped();
+      walk(path, s.phase === 'enacting' ? () => (actRef.current.arrivedAt = performance.now()) : undefined);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.scene, s.location, target?.x, target?.y, s.transition?.id, s.phase]);
 
-  // The act's stop pose is on screen: the approach is finished (or there was none). Once per act instance.
+  // The act's stop pose is on screen: approach finished and its body language played. Once per act instance.
   const stopped = () => {
     if (!actInstance || stoppedFor.current === actInstance) return;
     stoppedFor.current = actInstance;
     onActStopped?.(actInstance);
   };
-  useEffect(() => {
-    if (s.phase === 'enacting' && !script.current && target && same({ x: body.current.pos[0], y: body.current.pos[1] }, target)) stopped();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.phase, actInstance]);
+  stoppedRef.current = stopped;
+  if (s.phase === 'enacting' && actRef.current.instance !== actInstance) actRef.current = { instance: actInstance, start: performance.now(), arrivedAt: 0 };
 
   /* -------------------------------------------- boundary withdrawal --- */
   const withdrawn = s.phase === 'boundary' || s.phase === 'reveal_loading' || s.phase === 'revealed' || s.phase === 'ended';
@@ -440,7 +508,31 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
     const fp = projectPoint(cam, pres.x, pres.y, heroHeightU * 0.55) ?? { sx: cam.viewport.width / 2, sy: cam.viewport.height / 2 };
     camRef.current = { sx: fp.sx, sy: fp.sy, zoom: reducedMotion ? ZOOM : 1, entry: reducedMotion ? 1 : 0, scene: `${s.scene}|${cam.id}` };
   }
-  const fit = cameraFit(cam, box, camRef.current.zoom, camRef.current);
+  // Phone exploring through a wide recipe: a painted window over the top of the screen, ending in paper.
+  const band = orientation === 'portrait' && cam.orientation === 'landscape' && box.h > 0 ? Math.round(box.h * 0.7) : undefined;
+  let fit = cameraFit(cam, box, camRef.current.zoom, camRef.current, band);
+  // Phone, decision/act: Design's portrait composition, scaled and placed so the body spans ≈28–70% of the screen
+  // — clear of the question above and the stacked choices below. The plate then ends in paper (visual bible:
+  // portrait crops may bleed off three sides and leave paper for text).
+  let plateFade = !!band;
+  let plateFadeSides = false;
+  if (orientation === 'portrait' && holdRef.current && box.h > 0 && dims) {
+    const feet = toStage(fit, pres.x, pres.y, 0);
+    const head = toStage(fit, pres.x, pres.y, heroHeightU);
+    if (feet && head && feet.y - head.y > 1) {
+      const k = Math.min(1, (box.h * 0.36) / (feet.y - head.y));
+      const scale = fit.scale * k;
+      const fx = fit.offX + (feet.x - fit.offX) * k; // feet x under the new scale (same plate point)
+      const plateW = cam.viewport.width * scale;
+      let offX = fit.offX * k + (box.w / 2 - fx) * (plateW > box.w ? 0.6 : 0);
+      offX = plateW > box.w ? Math.min(0, Math.max(box.w - plateW, offX)) : (box.w - plateW) / 2;
+      const feetRefY = (feet.y - fit.offY) / fit.scale;
+      const offY = box.h * 0.645 - feetRefY * scale;
+      fit = { ...fit, scale, offX, offY };
+      plateFade = true;
+      plateFadeSides = plateW < box.w - 1;
+    }
+  }
   const fitRef = useRef<Fit | null>(null);
   fitRef.current = box.w > 0 ? fit : null;
   const paintIn = reducedMotion ? 1 : easeOut(Math.min(1, camRef.current.entry * 1.25));
@@ -450,21 +542,29 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
   const tops: OverlayLayout['actors'] = {};
   let heroTop: { x: number; y: number } | undefined;
   const widthU = (metres: number) => (dims ? (100 * metres) / dims.widthM : 6);
-  const place = (id: string, x: number, y: number, facing: string | undefined, posture: 'stand' | 'seat', pose: FigurePose, treatment: BodyLayer['treatment'], hScale = 1, opts: { headingLeft?: boolean; holding?: { src?: string }; label?: string; stride?: number; breath?: number } = {}) => {
+  const tint = tintOf?.(s.location);
+  const place = (id: string, x: number, y: number, posture: 'stand' | 'seat', pose: FigurePose, treatment: BodyLayer['treatment'], target: { base: Pose; ease: number; breath: number; look?: { yaw: number; amount: number }; seed: number }, hScale = 1, opts: { holding?: { src?: string }; label?: string } = {}) => {
     const spec = staging.figures[id];
     if (!spec || !dims) return;
     const hU = (spec.heightM / dims.heightScale) * hScale;
     const bb = bodyBox(fit, x, y, hU, widthU(0.5));
     if (!bb || bb.height <= 0) return;
-    const height = bb.height;
-    const w = height * 0.6;
-    const yaw = yawOf(facing) ?? 90;
-    const facingLeft = opts.headingLeft ?? yaw < 0;
-    bodies.push({ kind: 'body', id, depth: y, box: { left: bb.cx - w / 2, top: bb.feet - height, width: w, height }, spec, posture, pose, facingLeft, treatment, holding: opts.holding, label: opts.label, stride: opts.stride, breath: opts.breath, floor: [x, y] });
+    figTargets.current.set(id, target);
+    const cast = castOf(id, spec);
+    const shown = figPoses.current.get(id) ?? { pose: target.base, coatLag: 0 };
+    const hu = bb.height / cast.standH;
+    const height = posture === 'seat' ? bb.height * 0.78 : bb.height;
+    const w = bb.height * 0.5;
+    const finish = treatment === 'graphite' ? 0.25 : treatment === 'through_glass' ? 0.4 : id === m.perspectiveActor ? 1 : spec.posture === 'seat' ? 0.78 : 0.92;
+    bodies.push({
+      kind: 'body', id, depth: y, box: { left: bb.cx - w / 2, top: bb.feet - height, width: w, height }, spec, posture, pose, facingLeft: shown.pose.yaw < 0, treatment, holding: opts.holding, label: opts.label, floor: [x, y],
+      rig: { body: cast.body, pose: shown.pose, hu, coatLag: shown.coatLag, feet: { x: bb.cx, y: bb.feet }, finish, tint: treatment === 'paint' ? tint : undefined, hero: id === m.perspectiveActor },
+    });
     const top = { x: bb.cx, y: bb.feet - height };
     if (id === m.perspectiveActor) heroTop = top;
     else tops[id] = top;
   };
+  const seen = new Set<string>();
 
   // The hero: where the body is presented (free, walked, or on the snapshot's mark).
   const summaryOwned = s.entities.some(e => e.kind === 'object' && e.owner.kind === 'actor' && e.owner.id === hero.id);
@@ -473,33 +573,69 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
     const atMark = target && same(pres, target);
     const role = atMark ? roleAt(cs, pres) ?? hero.state.mark_role : undefined;
     const seated = !pres.walking && !!role && staging.heroPostures[s.location]?.[role] === 'seat';
-    let pose: FigurePose = s.scene === m.spine[0] ? 'look' : s.location !== m.scenePlans.find(p => p.id === m.primaryDecision?.scene)?.location && !pres.walking ? 'read' : 'hold';
+    const decisionScene = m.primaryDecision?.scene === s.scene;
+    const sceneDone = !m.scenePlans.find(p => p.id === s.scene)?.beats.some(bt => !s.deliveredBeats.includes(bt.id));
+    let pose: FigurePose = s.scene === m.spine[0] ? 'look' : !decisionScene && s.location !== m.scenePlans.find(p => p.id === m.primaryDecision?.scene)?.location ? 'read' : 'hold';
     if (pres.walking) pose = 'walk';
     else if (s.decision && act && s.phase !== 'loading') pose = act.pose === 'speak' ? 'speak' : act.pose === 'ask' ? 'ask' : 'still';
-    const free = !atMark || pres.walking;
-    const facing = s.decision && approachTarget ? approachTarget.facing : heroMark?.facing;
-    place(hero.id, pres.x, pres.y, facing, seated && pose !== 'ask' ? 'seat' : 'stand', pose, withdrawn ? 'ink' : 'paint', 1, {
-      headingLeft: free ? body.current.facingLeft : undefined,
+    const posture: 'stand' | 'seat' = seated && pose !== 'ask' ? 'seat' : 'stand';
+    // The authored body language for this moment (Design frames2 poses), and the act's choreography.
+    const since = performance.now() - actRef.current.start;
+    let base: Pose;
+    let breath = 1;
+    let ease = 0.3;
+    if (s.decision && act) {
+      ease = 0.42;
+      if (act.pose === 'speak') base = posture === 'seat' ? (since < 550 && s.phase === 'enacting' ? POSES.seatDecide : POSES.seatSpeak) : since < 550 && s.phase === 'enacting' ? POSES.gather : POSES.standSpeak;
+      else if (act.pose === 'ask') base = script.current ? POSES.standFree : POSES.private;
+      else {
+        base = posture === 'seat' ? POSES.seatSilent : POSES.standSilent;
+        breath = 0.35; // chosen stillness, not a dead frame
+      }
+      if (s.phase !== 'enacting') breath = 0; // the held frame: the breath is held too
+    } else if (pose === 'look' && atMark) base = POSES.desk;
+    else if (pose === 'read' && atMark) base = POSES.read;
+    else if (posture === 'seat') base = decisionScene && sceneDone ? POSES.seatDecide : POSES.seatHold;
+    else if (atMark) base = decisionScene && sceneDone ? POSES.standDecide : POSES.standReturn;
+    else base = { ...POSES.standFree, yaw: motion.current.heading };
+    if (posture === 'seat' || (s.decision && act?.pose !== 'ask')) ease = Math.max(ease, 0.45);
+    const facing = s.decision && approachTarget ? approachTarget.facing : atMark ? heroMark?.facing : undefined;
+    base = faceTo(base, yawOf(facing));
+    // Gaze: toward what is within reach (a small, human head turn), never an NPC's.
+    let look: { yaw: number; amount: number } | undefined;
+    const nh = hotspots.find(h => h.id === nearRef.current);
+    if (nh && !s.decision) {
+      const hp = toStage(fit, pres.x, pres.y, 0);
+      const tp = toStage(fit, nh.focus[0], nh.focus[1], 0);
+      if (hp && tp) look = { yaw: tp.x >= hp.x ? 80 : -80, amount: 0.55 };
+    }
+    place(hero.id, pres.x, pres.y, posture, pose, withdrawn ? 'ink' : 'paint', { base, ease, breath, look, seed: 0 }, 1, {
       holding: summaryOwned ? { src: summarySrc } : undefined,
       label: 'You',
-      stride: strideShown.current,
-      breath: breathRef.current,
     });
+    seen.add(hero.id);
   }
-  // Everyone else in this location stays exactly where the snapshot has them (breathing is non-informational idle).
+  // Everyone else stays exactly where the snapshot has them. Idle breathing only; once the act is accepted they hold.
   const others = s.entities.filter((e): e is EntityState & { mark: SpatialMark } => e.kind === 'actor' && e.id !== hero.id && !!e.mark);
   others.forEach((e, i) => {
     const spec = staging.figures[e.id];
     if (!spec) return;
+    const authored = spec.posture === 'seat' ? POSES.director : POSES.mira;
+    const tgt = { base: faceTo(authored, yawOf(e.mark.facing)), ease: 0.4, breath: s.decision ? 0 : 0.8, seed: i + 1 };
     if (e.owner.kind === 'location' && e.owner.id === s.location) {
-      place(e.id, e.mark.x, e.mark.y, e.mark.facing, spec.posture, spec.posture === 'seat' ? 'table' : 'gesture', withdrawn ? 'graphite' : 'paint', 1, { breath: withdrawn ? undefined : breathRef.current * 0.93 + i * 0.37 });
+      place(e.id, e.mark.x, e.mark.y, spec.posture, spec.posture === 'seat' ? 'table' : 'gesture', withdrawn ? 'graphite' : 'paint', tgt);
+      seen.add(e.id);
       return;
     }
     // Seen through an open door: the same body, carried by the door's transform. Never a proxy, never a transfer.
     const open = m.portals.some(p => p.kind === 'excursion' && p.fromScene === s.scene && p.to === (e.owner as { id: string }).id && s.variables[`portal_${p.id}`] === 'open');
     const v = open ? staging.seeThrough.find(t => t.from === (e.owner as { id: string }).id && t.to === s.location) : undefined;
-    if (v) place(e.id, v.x[0] * e.mark.x + v.x[1], v.y[0] * e.mark.y + v.y[1], e.mark.facing, spec.posture, spec.posture === 'seat' ? 'table' : 'gesture', 'through_glass', v.h);
+    if (v) {
+      place(e.id, v.x[0] * e.mark.x + v.x[1], v.y[0] * e.mark.y + v.y[1], spec.posture, spec.posture === 'seat' ? 'table' : 'gesture', 'through_glass', tgt, v.h);
+      seen.add(e.id);
+    }
   });
+  for (const id of [...figTargets.current.keys()]) if (!seen.has(id)) figTargets.current.delete(id);
 
   // Occluder cut-outs: only where an occluder stands in front of a body it overlaps on screen.
   const cutouts: CutoutLayer[] = [];
@@ -567,6 +703,14 @@ export const SceneViewportV3 = forwardRef<ViewportHandle, SceneViewportProps>(fu
     items,
     marks,
     reducedMotion,
+    recede: holdRef.current && !withdrawn ? 1 : 0,
+    fadeBottom: plateFade,
+    fadeSides: plateFadeSides,
+    commit: (() => {
+      if (s.phase !== 'confirming') return undefined;
+      const hb = bodies.find(x => x.id === m.perspectiveActor)?.box;
+      return hb ? { left: hb.left - hb.width * 0.35, top: hb.top - hb.height * 0.08, width: hb.width * 1.7, height: hb.height * 1.14 } : undefined;
+    })(),
   };
 
   /* ---------------------------------------------------- hit testing --- */

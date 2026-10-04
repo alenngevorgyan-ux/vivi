@@ -80,6 +80,8 @@ export interface ExperiencePlayerV3Props {
   prefs?: PreferenceStore;
   /** What each place sounds like (story binding). Without it the player is silent. */
   roomTone?: RoomToneOf;
+  /** The colour of each place's light on the cast (story binding). */
+  tintOf?: (location: string) => 'cold' | 'warm' | undefined;
 }
 
 export function ExperiencePlayerV3(props: ExperiencePlayerV3Props) {
@@ -171,7 +173,11 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   const [nearId, setNearId] = useState<string | undefined>(undefined);
   const nearRef = useRef<string | undefined>(undefined);
   nearRef.current = nearId;
-  const [started, setStarted] = useState(false);
+  // The title card is for a fresh start only; a resumed attempt goes straight back into the room.
+  const [started, setStarted] = useState(() => {
+    const st = getState();
+    return st.deliveredBeats.length > 1 || st.visitedScenes.length > 1 || !!st.decision;
+  });
   const [moved, setMoved] = useState(false);
   const [sound] = useState(() => new SoundscapeV3());
   const [muted, setMuted] = useState(() => prefs.read('muted') ?? false);
@@ -409,6 +415,7 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
               hotspots={interactions.hotspots}
               onNear={setNearId}
               onStep={props.roomTone ? onStep : undefined}
+              tintOf={props.tintOf}
               keyHint={coarse ? 'tap' : 'E'}
             />
           </WorldSurface>

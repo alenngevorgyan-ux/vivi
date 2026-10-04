@@ -381,7 +381,10 @@ async function main() {
     await click(p, 'advance');
     const disp = await box(p, 'surface-o_deck');
     if (disp) {
-      await p.touchscreen.tap(disp.x + disp.width / 2, disp.y + disp.height / 2);
+      // The camera follows the body, so the display may be partly outside the window: tap its visible middle.
+      const vis0 = Math.max(disp.x, 8);
+      const vis1 = Math.min(disp.x + disp.width, 390 - 8);
+      await p.touchscreen.tap((vis0 + vis1) / 2, disp.y + disp.height / 2);
       await p.locator(T('observation')).waitFor({ timeout: 8000 }); // the body walks to it first
       assert.ok((await state(p)).seenObservations.includes('obs_title'), 'tapping the display opens Read the deck title');
       await click(p, 'observation-close');

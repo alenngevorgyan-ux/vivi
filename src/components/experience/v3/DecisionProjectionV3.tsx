@@ -68,21 +68,35 @@ export function DecisionProjectionV3({ readable, reserved, copy, dispatch, activ
     const H = 72; // two wrapped lines at the base size; the pass below keeps labels apart
     // Each label starts beside its anchor; overlapping labels are pushed apart vertically (order is fixed and
     // neutral: manifest order), then kept inside the stage. Equal size, equal style.
-    const placed: Array<{ id: string; left: number; top: number }> = [];
+    const placed: Array<{ id: string; left: number; top: number; ax: number; ay: number }> = [];
     for (const o of options) {
       const a = anchorOf(o.id, overlay, staging) ?? { x: overlay.box.w / 2, y: overlay.box.h / 2, above: false };
       const left = Math.min(Math.max(8, a.x - W / 2), overlay.box.w - W - 8);
-      let top = Math.min(Math.max(8, a.above ? a.y - H - 12 : a.y + 10), overlay.box.h - H - 8);
+      // Notes sit a leader's length from their anchor (Design C06), never on top of it.
+      let top = Math.min(Math.max(8, a.above ? a.y - H - 44 : a.y + 46), overlay.box.h - H - 8);
       for (let guard = 0; guard < 6; guard++) {
         const hit = placed.find(q => Math.abs(q.left - left) < W && Math.abs(q.top - top) < H);
         if (!hit) break;
         top = hit.top + H + 6 <= overlay.box.h - H - 8 ? hit.top + H + 6 : Math.max(8, hit.top - H - 6);
       }
-      placed.push({ id: o.id, left, top });
+      placed.push({ id: o.id, left, top, ax: a.x, ay: a.y });
     }
     return (
       <div role="group" aria-label={heading ?? 'Your act'} className="v3p-decision is-anchored" data-testid="decision-group">
         <p id="v3p-decision-hint" className="v3p-sr-only">Choosing opens a separate confirmation. Nothing happens until you confirm.</p>
+        {/* Design C06: each intention is a note with a graphite leader to its anchor in the room. */}
+        <svg className="v3p-leaders" width={overlay.box.w} height={overlay.box.h} aria-hidden="true">
+          {placed.map(q => {
+            const ex = Math.min(Math.max(q.ax, q.left + 14), q.left + W - 14);
+            const ey = q.ay < q.top ? q.top : q.top + H * 0.62;
+            return (
+              <g key={q.id} className={reserved === q.id ? 'is-chosen' : undefined}>
+                <path d={`M${q.ax.toFixed(1)},${q.ay.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`} />
+                <circle cx={q.ax} cy={q.ay} r={2.4} />
+              </g>
+            );
+          })}
+        </svg>
         {placed.map(q => button(q.id, { position: 'absolute', left: q.left, top: q.top, width: W }))}
       </div>
     );

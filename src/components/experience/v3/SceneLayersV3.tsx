@@ -9,8 +9,11 @@
  * Story text is never part of a raster: the title on a display is DOM text placed on the display's projected rect.
  */
 
-import React, { useId } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { bakedIslandTextures, bakeIslandTextures, islandImageBox, VARIANTS, type IslandTexture } from './islandTextures';
 import { Figure, type FigurePose } from './Figure';
+import { PaintedFigure } from './rig/PaintedFigure';
+import type { Body, Pose } from './rig/rig';
 import type { FigureSpec } from './staging';
 
 export interface IslandPx {
@@ -39,6 +42,8 @@ export interface BodyLayer {
   breath?: number;
   /** The presented floor position (QA: the world position, independent of where the camera is). */
   floor?: [number, number];
+  /** The painted rig (Design r4 construction): body, live pose, scale and the feet's stage point. */
+  rig?: { body: Body; pose: Pose; hu: number; coatLag: number; feet: { x: number; y: number }; finish: number; tint?: 'cold' | 'warm'; hero: boolean };
 }
 
 export interface CutoutLayer {
@@ -84,6 +89,14 @@ export interface LayerModel {
   items: Array<BodyLayer | CutoutLayer>;
   marks?: MarkLayer[];
   reducedMotion: boolean;
+  /** The one rust mark: a four-corner bracket closing around the body while an act awaits confirmation. */
+  commit?: { left: number; top: number; width: number; height: number };
+  /** 0..1: the unremembered room recedes toward paper (decision focus). */
+  recede?: number;
+  /** The plate's lower edge is in view: let it end in paper. */
+  fadeBottom?: boolean;
+  /** The plate is narrower than the frame: its sides end in paper too. */
+  fadeSides?: boolean;
 }
 
 /* ------------------------------------------------------- the deckled edge --- */
@@ -135,14 +148,54 @@ function loopPath(rx: number, ry: number): string {
   return `M${pts.join('L')}`;
 }
 
-function Plates({ m, maskId, testIds }: { m: LayerModel; maskId: string; testIds: boolean }) {
+/** Figure scale in ~3% steps: small camera moves rescale the drawn figure with CSS instead of redrawing it. */
+const quantHu = (hu: number) => Math.pow(2, Math.round(Math.log2(Math.max(1, hu)) * 24) / 24);
+
+function useIslandTextures(): IslandTexture[] | null {
+  const [t, setT] = useState<IslandTexture[] | null>(() => bakedIslandTextures());
+  useEffect(() => {
+    if (t) return;
+    let live = true;
+    void bakeIslandTextures().then(x => live && x && setT(x));
+    return () => {
+      live = false;
+    };
+  }, [t]);
+  return t;
+}
+
+function Plates({ m, maskId, testIds, tex }: { m: LayerModel; maskId: string; testIds: boolean; tex: IslandTexture[] | null }) {
   const p = m.plate;
+  const box = (e: IslandPx) => islandImageBox(e.cx, e.cy, Math.max(1, e.rx), Math.max(1, e.ry));
   return (
-    <svg className="v3p-plates" width={m.box.w} height={m.box.h} aria-hidden="true">
+    <svg
+      className="v3p-plates"
+      width={m.box.w}
+      height={m.box.h}
+      aria-hidden="true"
+      style={(() => {
+        if (!m.fadeBottom && !m.fadeSides) return undefined;
+        const layers = [`linear-gradient(to bottom, #000 ${p.top + p.height - 90}px, transparent ${p.top + p.height - 6}px)`];
+        if (m.fadeSides) layers.push(`linear-gradient(to right, transparent ${p.left + 4}px, #000 ${p.left + 48}px, #000 ${p.left + p.width - 48}px, transparent ${p.left + p.width - 4}px)`);
+        const mask = layers.join(', ');
+        return { maskImage: mask, WebkitMaskImage: mask, maskComposite: 'intersect', WebkitMaskComposite: 'source-in' } as React.CSSProperties;
+      })()}
+    >
       <defs>
         <mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={m.box.w} height={m.box.h}>
           <rect x={0} y={0} width={m.box.w} height={m.box.h} fill="#000" />
-          {m.islands.map((e, i) => {
+          {tex
+            ? m.islands.map((e, i) => {
+                const t = tex[(e.seed ?? i) % VARIANTS];
+                const bx = box(e);
+                return (
+                  <g key={i}>
+                    <image href={t.outer} {...bx} preserveAspectRatio="none" opacity={0.46} />
+                    <image href={t.core} {...bx} preserveAspectRatio="none" />
+                  </g>
+                );
+              })
+            : m.islands.map((e, i) => {
             const edge = EDGES[(e.seed ?? i) % EDGES.length];
             return (
               <g key={i} transform={`translate(${e.cx.toFixed(1)} ${e.cy.toFixed(1)}) scale(${Math.max(1, e.rx).toFixed(1)} ${Math.max(1, e.ry).toFixed(1)})`}>
@@ -154,12 +207,13 @@ function Plates({ m, maskId, testIds }: { m: LayerModel; maskId: string; testIds
           })}
         </mask>
       </defs>
-      {p.graphite && <image href={p.graphite} x={p.left} y={p.top} width={p.width} height={p.height} preserveAspectRatio="none" data-testid={testIds ? 'plate-graphite' : undefined} />}
+      {p.graphite && <image href={p.graphite} x={p.left} y={p.top} width={p.width} height={p.height} preserveAspectRatio="none" opacity={1 - 0.38 * (m.recede ?? 0)} className="v3p-graphite" data-testid={testIds ? 'plate-graphite' : undefined} />}
       {p.paint && (
         <g className={`v3p-paint${m.withdrawn ? ' is-withdrawn' : ''}${m.reducedMotion ? ' is-still' : ''}`} mask={`url(#${maskId})`}>
           <image href={p.paint} x={p.left} y={p.top} width={p.width} height={p.height} preserveAspectRatio="none" data-testid={testIds ? 'plate-paint' : undefined} />
           {/* The wet edge: pigment pools where the wash stops. */}
-          {m.islands.map((e, i) => (
+          {tex && m.islands.map((e, i) => <image key={`r${i}`} href={tex[(e.seed ?? i) % VARIANTS].rim} {...box(e)} preserveAspectRatio="none" opacity={0.38} style={{ mixBlendMode: 'multiply' }} />)}
+          {!tex && m.islands.map((e, i) => (
             <path
               key={i}
               d={EDGES[(e.seed ?? i) % EDGES.length].inner}
@@ -204,9 +258,10 @@ function Mark({ k }: { k: MarkLayer }) {
 
 export function SceneLayersV3({ model, overlay }: { model: LayerModel; overlay?: React.ReactNode }) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const tex = useIslandTextures();
   return (
     <div className="v3p-layers" style={{ width: model.box.w, height: model.box.h }} data-testid="scene-layers">
-      <Plates m={model} maskId={`isl-${uid}`} testIds />
+      <Plates m={model} maskId={`isl-${uid}`} testIds tex={tex} />
       {model.surfaces.map(s => (
         <div key={s.entity} className={`v3p-surface${model.dimSurfaces ? ' is-dim' : ''}`} style={{ left: s.rect.left, top: s.rect.top, width: s.rect.width, height: s.rect.height }} data-testid={`surface-${s.entity}`}>
           {s.textureSrc && <img src={s.textureSrc} alt="" draggable={false} className="v3p-surface-texture" />}
@@ -219,15 +274,30 @@ export function SceneLayersV3({ model, overlay }: { model: LayerModel; overlay?:
       {model.items.map(it =>
         it.kind === 'cutout' ? (
           <div key={it.id} className="v3p-cutout" style={{ clipPath: `polygon(${it.polygon.map(p => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(', ')})` }} data-testid={`cutout-${it.id}`} aria-hidden="true">
-            <Plates m={model} maskId={`isl-${uid}-${it.id}`} testIds={false} />
+            <Plates m={model} maskId={`isl-${uid}-${it.id}`} testIds={false} tex={tex} />
           </div>
         ) : (
-          <div key={it.id} className={`v3p-body is-${it.treatment}${model.reducedMotion ? ' is-still' : ''}`} style={{ left: it.box.left, top: it.box.top, width: it.box.width, height: it.box.height }} data-testid={`body-${it.id}`} data-depth={it.depth.toFixed(2)} data-pose={it.pose} data-floor={it.floor ? `${it.floor[0].toFixed(3)},${it.floor[1].toFixed(3)}` : undefined}>
-            <Figure spec={it.spec} posture={it.posture} pose={it.pose} facingLeft={it.facingLeft} holding={it.holding} ink={it.treatment === 'ink'} testId={`figure-${it.id}`} label={it.label} stride={it.stride} breath={it.breath} />
+          <div key={it.id} className={`v3p-body is-${it.treatment}${model.reducedMotion ? ' is-still' : ''}${it.rig ? ' is-rig' : ''}`} style={it.rig ? { left: it.rig.feet.x, top: it.rig.feet.y, width: 0, height: 0 } : { left: it.box.left, top: it.box.top, width: it.box.width, height: it.box.height }} data-testid={`body-${it.id}`} data-depth={it.depth.toFixed(2)} data-pose={it.pose} data-floor={it.floor ? `${it.floor[0].toFixed(3)},${it.floor[1].toFixed(3)}` : undefined}>
+            {it.rig ? (
+              <div className="v3p-rig-scale" style={{ transform: `scale(${(it.rig.hu / quantHu(it.rig.hu)).toFixed(4)})` }}>
+              <PaintedFigure body={it.rig.body} pose={it.rig.pose} hu={quantHu(it.rig.hu)} hero={it.rig.hero} finish={it.rig.finish} ink={it.treatment === 'ink'} tint={it.rig.tint} coatLag={it.rig.coatLag} prop={it.holding} contact={it.treatment !== 'through_glass'} testId={`figure-${it.id}`} label={it.label} dataPose={it.pose} dataPosture={it.posture} />
+              </div>
+            ) : (
+              <Figure spec={it.spec} posture={it.posture} pose={it.pose} facingLeft={it.facingLeft} holding={it.holding} ink={it.treatment === 'ink'} testId={`figure-${it.id}`} label={it.label} stride={it.stride} breath={it.breath} />
+            )}
           </div>
         )
       )}
       {model.marks?.filter(k => k.near).map(k => <Mark key={k.id} k={k} />)}
+      {model.commit && (
+        <svg className="v3p-commit" style={{ left: model.commit.left, top: model.commit.top }} width={model.commit.width} height={model.commit.height} aria-hidden="true" data-testid="commit-bracket">
+          {(() => {
+            const { width: w, height: h } = model.commit!;
+            const a = Math.min(26, w * 0.28);
+            return <path d={`M0,${a} V0 H${a} M${w - a},0 H${w} V${a} M${w},${h - a} V${h} H${w - a} M${a},${h} H0 V${h - a}`} />;
+          })()}
+        </svg>
+      )}
       {overlay}
     </div>
   );

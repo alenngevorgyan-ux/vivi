@@ -64,6 +64,9 @@ declare global {
 const correctionRoomTone = (location: string) =>
   location === 'meeting' ? ({ tone: 'meeting', floor: 'carpet' } as const) : location === 'hallway' ? ({ tone: 'corridor', floor: 'tile' } as const) : ({ tone: 'open_plan', floor: 'carpet' } as const);
 
+/** Design frames: the open-plan desk sits in warm daylight; the meeting room and the corridor under cold practicals. */
+const correctionTint = (location: string) => (location === 'desk' ? ('warm' as const) : ('cold' as const));
+
 const param = (k: string) => new URLSearchParams(window.location.search).get(k) ?? undefined;
 
 export default function CorrectionDevEntry() {
@@ -218,6 +221,7 @@ export default function CorrectionDevEntry() {
           onReady={onReady}
           onIntent={i => log.current.intents.push(i)}
           roomTone={correctionRoomTone}
+          tintOf={correctionTint}
           onEvent={(e, r) => {
             // For QA: what was on screen when a presentation receipt was accepted.
             const receipt = e.type === 'ENACTED' || e.type === 'HOLD_DONE' || e.type === 'BOUNDARY_DONE' || e.type === 'SKIP';
