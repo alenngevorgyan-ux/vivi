@@ -61,6 +61,8 @@ const rel = async (p: Page, id: string) => {
   return b && s ? { x: Math.round(b.x - s.x), y: Math.round(b.y - s.y), w: Math.round(b.width), h: Math.round(b.height) } : undefined;
 };
 const settle = (p: Page, ms = 150) => p.waitForTimeout(ms);
+/** A body's presented FLOOR position: the camera follows the hero, so screen boxes move while the world does not. */
+const floorOf = (p: Page, id: string) => p.locator(T(id)).getAttribute('data-floor');
 
 interface Walk {
   observeTitle?: boolean;
@@ -257,7 +259,7 @@ async function main() {
     await test(`Act ${option} from the ${prep === 'seat' ? 'seated' : 'standing'} preparation: stops before any reaction, Mira and the director unchanged, same account`, async p => {
       await walkToQuestion(p, { prep });
       await settle(p, 1500); // the preparation walk is presentation only
-      const before = { mira: await box(p, 'body-a_mira'), dir: await box(p, 'body-a_director') };
+      const before = { mira: await floorOf(p, 'body-a_mira'), dir: await floorOf(p, 'body-a_director'), dirBox: await box(p, 'body-a_director') };
       const s0 = await state(p);
       assert.equal(s0.entities.find((e: any) => e.id === 'a_me').state.mark_role, prep === 'seat' ? 'own_seat' : 'near_director');
       assert.equal(await p.locator(T('figure-a_me')).getAttribute('data-posture'), prep === 'seat' ? 'seat' : 'stand');
@@ -270,12 +272,12 @@ async function main() {
       const s1 = await state(p);
       // Only the hero acts: every other body is exactly where it was, in the snapshot and on screen.
       for (const id of ['a_mira', 'a_director']) assert.deepEqual(s1.entities.find((e: any) => e.id === id), s0.entities.find((e: any) => e.id === id));
-      assert.deepEqual(await box(p, 'body-a_mira'), before.mira, 'Mira does not move');
-      assert.deepEqual(await box(p, 'body-a_director'), before.dir, 'the director does not move');
+      assert.equal(await floorOf(p, 'body-a_mira'), before.mira, 'Mira does not move');
+      assert.equal(await floorOf(p, 'body-a_director'), before.dir, 'the director does not move');
       assert.equal(await p.locator('[data-testid^="body-"]').count(), 3, 'no one appears');
       if (option === 'request_private') {
-        const hero = await box(p, 'body-a_me');
-        assert.ok(hero!.x > before.dir!.x - 200, 'the hero has approached the director (the approved route)');
+        const [hero, dir] = [await box(p, 'body-a_me'), await box(p, 'body-a_director')];
+        assert.ok(hero!.x > dir!.x - 200, 'the hero has approached the director (the approved route)');
       }
       if (option === 'pass_question') assert.equal(await p.locator(T('figure-a_me')).getAttribute('data-posture'), prep === 'seat' ? 'seat' : 'stand', 'pass keeps the selected preparation');
       assert.deepEqual(await readAccount(p), GOLD, 'every act opens the same author account');
@@ -288,12 +290,12 @@ async function main() {
     await click(p, 'advance');
     await travel(p, 'cut_to_meeting', 'c_meeting_before');
     for (let i = 0; i < 4; i++) await click(p, 'advance');
-    const roomRef = { mira: await rel(p, 'body-a_mira'), dir: await rel(p, 'body-a_director') };
+    const roomRef = { mira: await floorOf(p, 'body-a_mira'), dir: await floorOf(p, 'body-a_director') };
     await travel(p, 'start_break', 'c_hallway');
     await click(p, 'advance');
     await settle(p, 2600); // the arrival crossing walk ends on the hallway mark
     const hall = await state(p);
-    const hallHero = await rel(p, 'body-a_me');
+    const hallHero = await floorOf(p, 'body-a_me');
     for (let i = 0; i < 3; i++) {
       await travel(p, 'p_room', 'c_meeting_before');
       const r = await state(p);
@@ -301,12 +303,12 @@ async function main() {
       assert.equal(await p.locator(T('line-f06')).count(), 0, 'the board quote is not shown again');
       assert.deepEqual(r.entities.filter((e: any) => e.id !== 'a_me'), hall.entities.filter((e: any) => e.id !== 'a_me'), 'every other entity unchanged; the summary is still the hero’s');
       await settle(p, 300);
-      assert.deepEqual({ mira: await rel(p, 'body-a_mira'), dir: await rel(p, 'body-a_director') }, roomRef, 'the same Mira and director, where they were');
+      assert.deepEqual({ mira: await floorOf(p, 'body-a_mira'), dir: await floorOf(p, 'body-a_director') }, roomRef, 'the same Mira and director, where they were');
       await travel(p, 'p_hall', 'c_hallway');
       await settle(p, 2600);
       const h = await state(p);
       assert.deepEqual(h.entities.find((e: any) => e.id === 'a_me').mark, hall.entities.find((e: any) => e.id === 'a_me').mark, 'the hallway mark is restored');
-      assert.deepEqual(await rel(p, 'body-a_me'), hallHero);
+      assert.equal(await floorOf(p, 'body-a_me'), hallHero);
     }
     assert.equal((await state(p)).entities.find((e: any) => e.id === 'o_summary').owner.id, 'a_me');
     // Hallway proxies never exist: in the hallway only the hero is a body, plus the same actors through the open door.
@@ -317,7 +319,7 @@ async function main() {
   });
 
   /* ---------------------------------------------------------------- 6 --- */
-  await test('Keyboard only: Tab/Enter play, Enter in the world opens actions, arrows step to a supported mark, one Enter press cannot select and confirm, Escape keeps considering', async p => {
+  await test('Keyboard only: Tab/Enter play, Enter in the world opens actions, held arrows walk the body (no story event, no scroll), one Enter press cannot select and confirm, Escape keeps considering', async p => {
     const press = async (id: string) => {
       await p.locator(T(id)).focus();
       await p.keyboard.press('Enter');
@@ -340,11 +342,16 @@ async function main() {
     await p.locator(T('sheet')).waitFor();
     await p.keyboard.press('Escape');
     await p.locator(T('sheet')).waitFor({ state: 'detached' });
-    // Arrow keys: bounded local movement onto a supported mark (a reversible preparation).
+    // Held arrows: free local movement (master plan §G). The body walks; the story does not change; the page never scrolls.
     await click(p, 'entry-button');
-    await p.keyboard.press('ArrowLeft');
-    await settle(p, 200);
-    assert.ok(['own_seat', 'near_director'].includes((await state(p)).entities.find((e: any) => e.id === 'a_me').state.mark_role), 'an arrow stepped to a supported mark');
+    const [floor0, events0, scroll0] = [await floorOf(p, 'body-a_me'), (await events(p)).length, await p.evaluate(() => window.scrollY)];
+    await p.keyboard.down('ArrowRight');
+    await settle(p, 700);
+    await p.keyboard.up('ArrowRight');
+    await settle(p, 300);
+    assert.notEqual(await floorOf(p, 'body-a_me'), floor0, 'a held arrow walks the body');
+    assert.equal((await events(p)).length, events0, 'walking is presentation: no story event');
+    assert.equal(await p.evaluate(() => window.scrollY), scroll0, 'owned arrows never scroll the page');
     // Select with Enter, hold Enter: the confirm dialog opens but the held key cannot accept.
     await p.locator(T('decision-option-pass_question')).focus();
     await p.keyboard.down('Enter');
@@ -370,12 +377,12 @@ async function main() {
   });
 
   /* ---------------------------------------------------------------- 7 --- */
-  await test('Touch on the stage (390 phone): tap the display to read it, tap the floor by the seat to sit, tap yourself for actions; a drag never commits', async p => {
+  await test('Touch on the stage (390 phone): tap the display to walk to it and read it, tap the seat to walk there and sit; a drag never commits', async p => {
     await click(p, 'advance');
     const disp = await box(p, 'surface-o_deck');
     if (disp) {
       await p.touchscreen.tap(disp.x + disp.width / 2, disp.y + disp.height / 2);
-      await p.locator(T('observation')).waitFor({ timeout: 3000 });
+      await p.locator(T('observation')).waitFor({ timeout: 8000 }); // the body walks to it first
       assert.ok((await state(p)).seenObservations.includes('obs_title'), 'tapping the display opens Read the deck title');
       await click(p, 'observation-close');
     } else assert.fail('the desk display is in the portrait framing');
@@ -396,10 +403,15 @@ async function main() {
     const stage = (await box(p, 'stage'))!;
     const marks = JSON.parse((await p.locator(T('scene-viewport')).getAttribute('data-marks'))!);
     // A tap on the seat itself: the inverse projection lands on the chair, which is legal only as this seat.
-    await p.touchscreen.tap(stage.x + marks.own_seat[0], stage.y + marks.own_seat[1] - 2);
-    await settle(p, 120);
+    // Design C10 stacks the three acts over the portrait thumb zone; when they cover the seat, its margin control
+    // (the same APPLY_PREPARATION) is what a thumb reaches. Otherwise the tap lands on the seat in the room.
+    const seatAt = { x: stage.x + marks.own_seat[0], y: stage.y + marks.own_seat[1] - 2 };
+    const covered = await p.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('button'), seatAt);
+    if (covered) await p.locator(T('prepare-prep_seat')).tap();
+    else await p.touchscreen.tap(seatAt.x, seatAt.y);
+    await p.waitForFunction(() => window.__v3Correction!.getState()!.entities.find(e => e.id === 'a_me')!.state.mark_role === 'own_seat', null, { timeout: 8000 }).catch(() => undefined);
     const sat = (await state(p)).entities.find((e: any) => e.id === 'a_me').state.mark_role === 'own_seat';
-    assert.ok(sat, 'a floor tap beside the seat applies Return to my seat');
+    assert.ok(sat, 'a tap on the seat walks there and applies Return to my seat');
     await settle(p, 1500);
     // Drag across the stage: a scroll gesture, never an activation.
     const before = (await events(p)).length;

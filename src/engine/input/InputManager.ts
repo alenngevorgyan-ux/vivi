@@ -25,7 +25,7 @@ export type StopReason = 'blur' | 'hidden' | 'scope_opened' | 'focus_left' | 'po
 
 export type InputIntent =
   | { type: 'move'; vector: [number, number]; reason: 'input' | StopReason }
-  | { type: 'activate'; source: 'key' | 'pointer'; activationId: string; point?: [number, number] }
+  | { type: 'activate'; source: 'key' | 'pointer'; activationId: string; point?: [number, number]; /** Physical key (key source only): lets a shell tell "interact" (E) from "continue" (Enter/Space). */ code?: string }
   | { type: 'cancel'; scope: ScopeKind }
   /** The world has focus and owns the key, but locomotion is not possible now. Hinted once per focus. */
   | { type: 'movement_blocked' };
@@ -45,7 +45,7 @@ const NATIVE_ROLES = new Set(['button', 'link', 'menuitem', 'tab', 'option', 'ch
 
 /** Enter/Space by logical key OR physical code: virtual keyboards often send `key` with an empty `code`. */
 function isActivationKey(e: Pick<KeyboardEvent, 'key' | 'code'>): boolean {
-  return e.key === 'Enter' || e.key === ' ' || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space';
+  return e.key === 'Enter' || e.key === ' ' || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space' || e.code === 'KeyE';
 }
 
 export class InputManager {
@@ -256,7 +256,7 @@ export class InputManager {
         }
         break;
       case 'activate':
-        this.onIntent({ type: 'activate', source: 'key', activationId: `k${this.pressSeq}` });
+        this.onIntent({ type: 'activate', source: 'key', activationId: `k${this.pressSeq}`, code: e.code });
         break;
       case 'cancel':
         this.onIntent({ type: 'cancel', scope: r.action.scope });

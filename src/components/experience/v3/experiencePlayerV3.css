@@ -475,3 +475,717 @@
 .v3p.is-reduced-motion .v3p-surface {
   transition-duration: 0.4s;
 }
+
+/* =====================================================================================================
+ * GAME LAYER — the scene is the screen. Full-bleed stage, camera inside it; the paper margin carries text.
+ * ===================================================================================================== */
+
+.v3g.is-stage {
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  background: #e2d8c5;
+  z-index: 1;
+}
+.v3g-stage {
+  position: absolute;
+  inset: 0;
+  animation: v3g-wash-in 0.9s ease-out both;
+}
+.v3g-stage::after {
+  /* the paper wash between places: the room un-paints to paper while the next one prepares */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #e8dfcc;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease-in;
+}
+.v3g-stage.is-leaving::after {
+  opacity: 0.92;
+}
+@keyframes v3g-wash-in {
+  from {
+    opacity: 0;
+    filter: saturate(0.2) blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+.v3g .v3g-world {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  outline: none;
+  cursor: crosshair;
+}
+.v3g .v3g-world:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px rgba(181, 82, 58, 0.55);
+}
+.v3g .v3p-viewport {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.v3g .v3p-stage {
+  border-radius: 0;
+  background: #e2d8c5;
+}
+.v3p-plates {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.v3g-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 95% at 50% 46%, transparent 62%, rgba(226, 216, 197, 0.55) 86%, rgba(226, 216, 197, 0.9) 100%),
+    linear-gradient(to bottom, rgba(226, 216, 197, 0.85) 0, transparent 90px),
+    linear-gradient(to top, rgba(226, 216, 197, 0.5) 0, transparent 70px);
+}
+
+/* the painted cast: a paper cut-out halo and a soft ground contact */
+.v3p-body.is-paint > svg {
+  filter: drop-shadow(0 0 0.7px #efe6d4) drop-shadow(0 0 0.7px #efe6d4) drop-shadow(0 2px 2px rgba(33, 31, 29, 0.12));
+}
+
+/* --------------------------------------------------------------- top bar */
+.v3g .v3g-top {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: max(12px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+  align-items: flex-start;
+  pointer-events: none;
+}
+.v3g .v3g-top > * {
+  pointer-events: auto;
+}
+.v3g .v3g-id {
+  flex: 1 1 auto;
+}
+.v3g .v3g-top .v3p-fiction-label {
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  opacity: 0.85;
+}
+.v3g .v3g-top .v3p-title {
+  font-size: 1.15rem;
+  margin-top: 0.15rem;
+}
+.v3g .v3p-settings {
+  gap: 0.35rem;
+}
+.v3p-page .v3g-chip {
+  min-height: 44px;
+  padding: 0.35rem 0.75rem;
+  background: rgba(236, 227, 207, 0.72);
+  border: 1px solid rgba(74, 74, 72, 0.35);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: #3a3631;
+  backdrop-filter: blur(3px);
+}
+
+/* ----------------------------------------------------------- title card */
+.v3g-card {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  padding: 2.25rem 2.25rem 1.75rem;
+  background: rgba(236, 228, 213, 0.94);
+  box-shadow: 0 0 0 1px rgba(74, 74, 72, 0.12), 0 30px 80px -20px rgba(33, 31, 29, 0.35);
+  text-align: left;
+  animation: v3g-card-in 0.9s 0.25s ease-out both;
+}
+@keyframes v3g-card-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+}
+.v3g-card-kicker {
+  margin: 0 0 1rem;
+  font: 500 0.625rem/1.4 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #a5442e;
+}
+.v3g-card-title {
+  margin: 0;
+  font: 400 clamp(2.4rem, 6vw, 3.6rem) / 0.98 Newsreader, Georgia, serif;
+  letter-spacing: -0.035em;
+}
+.v3g-card-hook {
+  margin: 1rem 0 1.5rem;
+  font: italic 400 1.2rem/1.45 Newsreader, Georgia, serif;
+  color: #3a3631;
+}
+.v3p-page .v3g-enter {
+  background: #b5523b;
+  border-color: #8e3b28;
+  color: #fff;
+  padding: 0.75rem 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.v3g-card-keys {
+  margin: 1.1rem 0 0;
+  font-size: 0.8125rem;
+  color: #5e5953;
+}
+.v3g kbd,
+.v3p-key {
+  display: inline-block;
+  min-width: 1.45em;
+  padding: 0.05em 0.35em;
+  margin: 0 0.12em;
+  border: 1px solid rgba(74, 74, 72, 0.45);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #f1eadb;
+  font: 600 0.72rem/1.35 'IBM Plex Mono', ui-monospace, monospace;
+  color: #2b2925;
+  text-align: center;
+  font-style: normal;
+}
+
+/* ---------------------------------------------------- dock (paper margin) */
+/* Design zones: the story line lives in the top band, intents in the bottom band; the middle is the room. */
+.v3g.is-stage .v3g-dock {
+  position: absolute;
+  z-index: 4;
+  inset: max(62px, calc(env(safe-area-inset-top) + 50px)) max(18px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  width: auto;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.v3g.is-stage .v3g-dock :is(button, a, ol, [role='alert'], [role='status'], .v3p-reveal, .v3p-boundary, .v3p-enactment) {
+  pointer-events: auto;
+}
+.v3g.is-stage .v3g-dock.is-waiting {
+  opacity: 0;
+}
+.v3g.is-stage .v3g-dock.is-waiting:focus-within {
+  opacity: 1;
+}
+.v3g.is-stage .v3p-story {
+  max-width: min(900px, 100%);
+  text-align: center;
+}
+.v3g.is-stage .v3p-story p,
+.v3g.is-stage .v3p-hook {
+  display: inline;
+  margin: 0;
+  font: italic 400 clamp(1.05rem, 1.55vw, 1.32rem) / 1.5 Newsreader, Georgia, serif;
+  color: #211f1d;
+  text-shadow: 0 0 14px #e8dfcc, 0 0 4px #e8dfcc, 0 0 2px #e8dfcc;
+  animation: v3g-line-in 0.6s ease-out both;
+}
+.v3g.is-stage .v3p-story p + p::before {
+  content: ' ';
+}
+/* the intent band: everything after the story line sits at the bottom of the frame */
+.v3g.is-stage .v3p-actions {
+  margin-top: auto;
+}
+.v3g.is-stage .v3p-story .v3p-quote {
+  font-style: normal;
+}
+@keyframes v3g-line-in {
+  from {
+    opacity: 0;
+  }
+}
+.v3g.is-stage .v3p-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem 1.1rem;
+  padding: 0.35rem 1rem;
+  background: radial-gradient(closest-side, rgba(232, 223, 204, 0.85), rgba(232, 223, 204, 0));
+}
+.v3g.is-stage .v3p-actions:empty {
+  display: none;
+}
+.v3p-page .v3g-continue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.v3p-page .v3g-continue kbd {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+.v3p-page .v3g-quiet {
+  min-height: 44px;
+  padding: 0.3rem 0.1rem;
+  border: none;
+  background: none;
+  font: italic 400 1rem/1.3 Newsreader, Georgia, serif;
+  color: #4a4a48;
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 74, 72, 0.35);
+  text-underline-offset: 4px;
+}
+.v3p-page .v3g-quiet:hover {
+  color: #211f1d;
+  text-decoration-color: #211f1d;
+}
+.v3g-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #5e5953;
+}
+.v3g.is-stage .v3p-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.v3g.is-stage .v3p-context {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.4rem;
+  max-width: min(460px, 70vw);
+}
+.v3g.is-stage .v3g-hint,
+.v3g.is-stage .v3p-hint {
+  text-align: center;
+  text-shadow: 0 0 6px #e8dfcc;
+}
+.v3g.is-stage .v3p-context ol {
+  background: rgba(236, 228, 213, 0.95);
+  padding: 0.75rem 1rem 0.75rem 2rem;
+  margin: 0;
+  max-height: 30dvh;
+  overflow: auto;
+}
+
+/* -------------------------------------------------------------- inventory */
+.v3g-inventory {
+  position: absolute;
+  z-index: 4;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 0.5rem;
+}
+.v3p-page .v3g-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 92px;
+  padding: 0.55rem 0.4rem 0.45rem;
+  background: rgba(236, 228, 213, 0.9);
+  border: 1px solid rgba(74, 74, 72, 0.25);
+  border-radius: 3px;
+  box-shadow: 0 6px 16px -8px rgba(33, 31, 29, 0.35);
+  text-align: center;
+  transition: transform 0.18s ease;
+}
+.v3p-page .v3g-item:hover {
+  transform: translateY(-3px) rotate(-1deg);
+}
+.v3g-item img {
+  position: static;
+  width: 42px;
+  height: 56px;
+  object-fit: cover;
+  transform: rotate(-4deg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+}
+.v3g-item span {
+  font: italic 400 0.78rem/1.15 Newsreader, Georgia, serif;
+  color: #3a3631;
+}
+.v3g-item:not(.is-seen) img {
+  animation: v3g-nudge 3.4s ease-in-out infinite;
+}
+@keyframes v3g-nudge {
+  0%,
+  86%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  92% {
+    transform: rotate(-9deg) translateY(-2px);
+  }
+}
+
+/* --------------------------------------- graphite marks (noticing is drawn) */
+.v3p-mark {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+}
+.v3p-mark path {
+  fill: none;
+  stroke: #4a4a48;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* dormant: only a pencil's first touch of the loop — "something is here", never a UI ring */
+  opacity: 0.38;
+  stroke-dasharray: 0.16 1;
+  stroke-dashoffset: 0;
+}
+.v3p-mark.is-seen path {
+  opacity: 0.2;
+}
+.v3p-mark.is-near path {
+  opacity: 0.88;
+  stroke-width: 1.6;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: v3g-draw 0.24s ease-out forwards;
+}
+@keyframes v3g-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.v3p-note {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.55rem 0.3rem;
+  background: rgba(236, 228, 213, 0.9);
+  border-left: 1px solid #4a4a48;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: v3g-note-in 0.24s ease-out both;
+}
+.v3p-note.is-left {
+  border-left: none;
+  border-right: 1px solid #4a4a48;
+}
+.v3p-note-text {
+  font: italic 400 1.02rem/1.2 Newsreader, Georgia, serif;
+  color: #211f1d;
+}
+@keyframes v3g-note-in {
+  from {
+    opacity: 0;
+    margin-top: 4px;
+  }
+}
+
+/* ----------------------------------------- decisions: the one rust mark */
+.v3g .v3p-decision.is-anchored .v3p-option {
+  position: absolute;
+  background: rgba(236, 228, 213, 0.94);
+  border: none;
+  border-radius: 0;
+  padding: 0.6rem 0.9rem;
+  font: 600 0.95rem/1.3 Inter, 'IBM Plex Sans', system-ui, sans-serif;
+  color: #211f1d;
+  box-shadow: 0 10px 24px -14px rgba(33, 31, 29, 0.45);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.v3g .v3p-decision.is-anchored .v3p-option::before,
+.v3g .v3p-decision.is-anchored .v3p-option::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #b5523b;
+  pointer-events: none;
+}
+.v3g .v3p-decision.is-anchored .v3p-option::before {
+  left: -3px;
+  top: -3px;
+  border-right: none;
+  border-bottom: none;
+}
+.v3g .v3p-decision.is-anchored .v3p-option::after {
+  right: -3px;
+  bottom: -3px;
+  border-left: none;
+  border-top: none;
+}
+.v3g .v3p-decision.is-anchored .v3p-option:hover,
+.v3g .v3p-decision.is-anchored .v3p-option:focus-visible {
+  background: #f3ecdd;
+  transform: translateY(-2px);
+}
+
+/* ------------------------------------------------- reveal / page phases */
+.v3g.is-page {
+  max-width: 44rem;
+  padding-top: 2rem;
+}
+.v3g.is-page .v3g-top {
+  position: static;
+  padding: 0;
+}
+.v3p-page .v3p-dialog {
+  z-index: 30;
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .v3g .v3g-top {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .v3g .v3g-top .v3p-fiction-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+  }
+  .v3g .v3g-top .v3p-title {
+    font-size: 1rem;
+  }
+  .v3g .v3p-settings {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+  .v3p-page .v3g-chip {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.65rem;
+  }
+  .v3g.is-stage .v3g-dock {
+    top: max(124px, calc(env(safe-area-inset-top) + 112px));
+  }
+  .v3g.is-stage .v3p-story {
+    width: 100%;
+    text-align: left;
+  }
+  .v3g.is-stage .v3p-context {
+    top: max(62px, calc(env(safe-area-inset-top) + 50px));
+    bottom: auto;
+    flex-direction: column;
+  }
+  .v3g-vignette {
+    background:
+      linear-gradient(to bottom, rgba(226, 216, 197, 0.95) 0, rgba(226, 216, 197, 0.7) 150px, transparent 230px),
+      linear-gradient(to top, rgba(226, 216, 197, 0.7) 0, transparent 120px);
+  }
+}
+@media (pointer: coarse) {
+  .v3g [data-testid='entry-button'].v3g-chip {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .v3g .v3g-top .v3p-settings .v3g-chip {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+  .v3g-inventory {
+    bottom: auto;
+    top: 88px;
+  }
+  .v3p-page .v3g-item {
+    width: 76px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v3g-stage,
+  .v3g-card,
+  .v3g.is-stage .v3p-story p,
+  .v3p-note,
+  .v3g-item img {
+    animation: none !important;
+  }
+  .v3p-mark.is-near path {
+    animation-duration: 0.01s;
+  }
+}
+.v3g.is-reduced-motion .v3g-stage,
+.v3g.is-reduced-motion .v3g-card,
+.v3g.is-reduced-motion .v3p-story p,
+.v3g.is-reduced-motion .v3g-item img {
+  animation: none !important;
+}
+
+/* exits: a faint italic way-out label at the threshold, stronger when you are at it */
+.v3p-note.is-door.is-far {
+  background: rgba(236, 228, 213, 0.6);
+  opacity: 0.8;
+  animation: none;
+}
+.v3p-note-arrow {
+  font: 400 1rem/1 Newsreader, Georgia, serif;
+  color: #4a4a48;
+}
+.v3p-note.is-left .v3p-note-arrow {
+  order: 2;
+}
+.v3p-page .v3g-quiet.is-here {
+  font-style: normal;
+  font-weight: 500;
+  color: #211f1d;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #4a4a48;
+  border-radius: 2px;
+  text-decoration: none;
+  background: rgba(236, 228, 213, 0.9);
+}
+.v3p-page .v3g-quiet:focus-visible {
+  outline: 2px solid #b5523b;
+  outline-offset: 3px;
+}
+
+/* ------------------------------------- inserts and dialogs: paper over a held room */
+.v3p-page .v3p-dialog {
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 120px);
+  padding: 1.75rem 1.9rem 1.5rem;
+  background: #ece4d5;
+  border: none;
+  border-radius: 1px;
+  /* the room behind holds, washed back toward paper */
+  box-shadow: 0 0 0 100vmax rgba(226, 216, 197, 0.5), 0 40px 90px -30px rgba(33, 31, 29, 0.45), 0 0 0 1px rgba(74, 74, 72, 0.12);
+  animation: v3g-insert-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes v3g-insert-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -47%) rotate(-0.4deg);
+  }
+}
+.v3p-page .v3p-dialog h3 {
+  font: italic 400 1.55rem/1.2 Newsreader, Georgia, serif;
+  margin-bottom: 0.9rem;
+}
+.v3p-page .v3p-dialog h3:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 74, 72, 0.4);
+  text-underline-offset: 6px;
+}
+.v3p-page .v3p-dialog p {
+  font: 400 1.08rem/1.5 Newsreader, Georgia, serif;
+}
+.v3p-page .v3p-dialog .v3p-insert-display,
+.v3p-page .v3p-dialog .v3p-insert-paper {
+  box-shadow: 0 10px 30px -14px rgba(33, 31, 29, 0.5);
+  transform: rotate(-0.6deg);
+}
+.v3p-page .v3p-observation {
+  width: min(640px, calc(100vw - 32px));
+}
+.v3p-page .v3p-dialog button {
+  border-radius: 2px;
+}
+.v3p-page .v3p-confirm h3 {
+  position: relative;
+  font: 600 1.2rem/1.35 Inter, 'IBM Plex Sans', system-ui, sans-serif;
+  font-style: normal;
+  padding: 0.6rem 0.9rem;
+}
+.v3p-page .v3p-confirm h3::before,
+.v3p-page .v3p-confirm h3::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #b5523b;
+}
+.v3p-page .v3p-confirm h3::before {
+  left: 0;
+  top: 0;
+  border-right: none;
+  border-bottom: none;
+}
+.v3p-page .v3p-confirm h3::after {
+  right: 0;
+  bottom: 0;
+  border-left: none;
+  border-top: none;
+}
+.v3p-page .v3p-sheet ul {
+  gap: 0.25rem;
+}
+
+/* ------------------------------------------------- the author's page */
+.v3g.is-page {
+  max-width: 40rem;
+  padding: 3rem 0 4rem;
+  animation: v3g-page-in 1.2s ease-out both;
+}
+@keyframes v3g-page-in {
+  from {
+    opacity: 0;
+  }
+}
+.v3g.is-page .v3g-top {
+  margin-bottom: 2.5rem;
+}
+.v3g.is-page .v3g-top .v3p-settings {
+  display: none;
+}
+.v3g.is-page .v3p-reveal {
+  gap: 1.1rem;
+}
+.v3g.is-page .v3p-reveal > .v3p-fiction-label {
+  display: none;
+}
+.v3g.is-page .v3p-reveal h2 {
+  font-size: clamp(1.9rem, 4vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.v3g.is-page .v3p-account {
+  font: 400 clamp(1.75rem, 3.4vw, 2.15rem) / 1.32 Newsreader, Georgia, serif;
+  letter-spacing: -0.012em;
+  max-width: 60ch;
+  animation: v3g-line-in 0.9s ease-out both;
+}
+.v3g.is-page .v3p-account::first-letter {
+  color: #b5523b;
+}
+.v3g.is-page .v3p-author {
+  font: 400 0.875rem/1.4 'IBM Plex Mono', ui-monospace, monospace;
+  color: #5e5953;
+}
+
+/* stacked decisions (portrait / readable) stay inside the frame's gutters */
+.v3g.is-stage .v3p-decision.is-stacked {
+  width: 100%;
+  max-width: 560px;
+  pointer-events: auto;
+}
+.v3g.is-stage .v3p-decision.is-stacked .v3p-option {
+  width: 100%;
+  background: rgba(236, 228, 213, 0.94);
+}

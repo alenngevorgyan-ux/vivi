@@ -23,12 +23,16 @@ interface Props {
   ink?: boolean;
   testId?: string;
   label?: string;
+  /** Walk-cycle phase in strides (distance-driven; the caller quantizes it to on-twos). */
+  stride?: number;
+  /** Idle breath phase, 0..1 (≈3.4 s cycle), applied only when not walking. */
+  breath?: number;
 }
 
 const PAPER_EDGE = '#EFE6D4';
 type Pt = [number, number];
 
-export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, label }: Props) {
+export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, label, stride, breath }: Props) {
   const p = spec.palette;
   const c = (x: string) => (ink ? '#211F1D' : x);
   const seated = posture === 'seat';
@@ -37,6 +41,13 @@ export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, 
   const shoulderW = broad ? 17 : slight ? 13 : 15;
   const hemY = spec.build === 'hero' ? (seated ? 82 : 74) : seated ? 76 : 54;
   const lean = pose === 'ask' ? 18 : pose === 'speak' ? -3 : 0;
+
+  // Walk cycle: distance-driven phase. Feet swing and lift, the far arm counter-swings, the body rises at passing.
+  const walking = pose === 'walk' && !seated;
+  const th = walking ? (stride ?? 0) * Math.PI * 2 : 0;
+  const swing = walking ? Math.sin(th) : 0;
+  const bob = walking ? -1.3 * Math.abs(Math.cos(th)) : 0; // highest at passing, lowest at full stride
+  const breathe = !walking && breath !== undefined ? Math.sin(breath * Math.PI * 2) : 0;
 
   // Skeleton (standing frame unless seated).
   const hip: Pt = seated ? [29, 72] : [30, 51];
@@ -92,8 +103,8 @@ export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, 
       prop = holding && (seated ? [hip[0] + 8, hip[1] - 2] : near[1]);
       break;
     default: // hold / walk
-      near = [[sNear[0] + 2, sNear[1] + 12], [sNear[0] + 9, sNear[1] + 16]];
-      far = [[sFar[0] + 1, sFar[1] + 13], [sFar[0] + 2, sFar[1] + 24]];
+      near = [[sNear[0] + 2, sNear[1] + 12 + bob * 0.3], [sNear[0] + 9, sNear[1] + 16 + bob * 0.3]];
+      far = [[sFar[0] + 1 - swing * 3, sFar[1] + 13], [sFar[0] + 2 - swing * 7, sFar[1] + 24 - Math.abs(swing) * 1.5]];
       prop = holding && (seated ? [hip[0] + 9, hip[1] - 4] : near[1]);
   }
 
@@ -104,12 +115,33 @@ export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, 
       <ellipse cx={hip[0] + 17} cy={98} rx={4.4} ry={1.8} fill={c(p.shoe)} />
       <ellipse cx={hip[0] + 14} cy={98.6} rx={4} ry={1.6} fill={c(p.shoe)} />
     </g>
+  ) : walking ? (
+    <g>
+      {[
+        { k: 'far', dir: -1, w: 5.4, op: 0.92 },
+        { k: 'near', dir: 1, w: 5.6, op: 1 },
+      ].map(({ k, dir, w, op }) => {
+        const sw = swing * dir;
+        const lift = Math.max(0, Math.cos(th) * dir) * 2.6;
+        const hx = hip[0] + dir * 1.2;
+        const fx = hip[0] + sw * 8;
+        const fy = 97 - lift;
+        const kx = (hx + fx) / 2 + 1.6 + lift * 0.6;
+        const ky = (hip[1] + bob + fy) / 2;
+        return (
+          <g key={k} opacity={op}>
+            <path d={`M${hx} ${hip[1] + bob} L${kx} ${ky} L${fx} ${fy}`} fill="none" stroke={c(p.trousers)} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+            <ellipse cx={fx + 1.6} cy={fy + 1.4} rx={4.1} ry={1.5} fill={c(p.shoe)} transform={`rotate(${-lift * 5} ${fx + 1.6} ${fy + 1.4})`} />
+          </g>
+        );
+      })}
+    </g>
   ) : (
     <g>
-      <path d={`M${hip[0] - 3} ${hip[1]} L${hip[0] - (pose === 'walk' ? 6 : 3)} 97`} stroke={c(p.trousers)} strokeWidth={5.4} strokeLinecap="round" />
-      <path d={`M${hip[0] + 2} ${hip[1]} L${hip[0] + (pose === 'walk' ? 6 : 2)} 97`} stroke={c(p.trousers)} strokeWidth={5.6} strokeLinecap="round" />
-      <ellipse cx={hip[0] - (pose === 'walk' ? 5 : 2)} cy={98.5} rx={4} ry={1.5} fill={c(p.shoe)} />
-      <ellipse cx={hip[0] + (pose === 'walk' ? 8 : 4)} cy={98.8} rx={4.2} ry={1.6} fill={c(p.shoe)} />
+      <path d={`M${hip[0] - 3} ${hip[1]} L${hip[0] - 3} 97`} stroke={c(p.trousers)} strokeWidth={5.4} strokeLinecap="round" />
+      <path d={`M${hip[0] + 2} ${hip[1]} L${hip[0] + 2} 97`} stroke={c(p.trousers)} strokeWidth={5.6} strokeLinecap="round" />
+      <ellipse cx={hip[0] - 2} cy={98.5} rx={4} ry={1.5} fill={c(p.shoe)} />
+      <ellipse cx={hip[0] + 4} cy={98.8} rx={4.2} ry={1.6} fill={c(p.shoe)} />
     </g>
   );
 
@@ -117,9 +149,11 @@ export function Figure({ spec, posture, pose, facingLeft, holding, ink, testId, 
   const half = shoulderW / 2;
   const coat = `M${30 - half} ${torsoTop + 1} Q30 ${torsoTop - 2} ${30 + half} ${torsoTop + 1} L${30 + half + 2} ${hemY} L${30 - half - 2} ${hemY} Z`;
   const body = (
-    <g transform={`rotate(${lean} ${hip[0]} ${hip[1]})`}>
+    <g transform={`translate(0 ${bob}) rotate(${lean + (walking ? 2.5 : 0)} ${hip[0]} ${hip[1]}) translate(0 ${hip[1]}) scale(1 ${1 + breathe * 0.007}) translate(0 ${-hip[1]})`}>
       {arm(sFar, far[0], far[1], p.coat, 'far')}
       <path d={coat} fill={c(p.coat)} />
+      {!ink && <path d={`M${30 + half - 0.6} ${torsoTop + 2} L${30 + half + 1.4} ${hemY - 1}`} stroke="#F6D9A8" strokeWidth={0.9} strokeLinecap="round" opacity={0.55} />}
+      {!ink && <path d={`M${30 - half} ${hemY - 0.8} L${30 + half + 2} ${hemY - 0.8}`} stroke="#000" strokeWidth={1.4} opacity={0.08} />}
       <path d={`M29.2 ${torsoTop + 2} L30.8 ${torsoTop + 2} L30.4 ${Math.min(hemY, torsoTop + 22)} L29.6 ${Math.min(hemY, torsoTop + 22)} Z`} fill={c(p.inner)} opacity={0.7} />
       <rect x={29.2} y={torsoTop - 4} width={3.4} height={5} fill={c(p.skin)} />
       <g transform={`rotate(${headDown * 6} ${head[0]} ${head[1] + 6})`}>

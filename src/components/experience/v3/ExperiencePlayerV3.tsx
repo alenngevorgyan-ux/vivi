@@ -20,14 +20,14 @@ import type { RuntimeGeometryV3 } from '../../../engine/v3/contracts/geometry';
 import type { RuntimeSnapshot } from '../../../engine/v3/contracts/state';
 import type { EntityRef, ScenePlan } from '../../../engine/v3/contracts/semantic';
 import { readableEvents, type ReadableModel } from '../../../engine/v3/readable';
-import { targetActions } from '../../../engine/v3/queries';
+import { movementEligible, targetActions } from '../../../engine/v3/queries';
 import type { ExperienceEvent, StepResult } from '../../../engine/v3/ExperienceController';
 import { InputManager, type InputIntent } from '../../../engine/input/InputManager';
 import { FocusCoordinatorProvider, ScopeDialog, WorldEntryButton, WorldSurface, useFocusCoordinator } from './FocusCoordinator';
 import { useExperience } from './useExperience';
 import type { HostConfig } from './hostContracts';
 import type { ExperienceHost } from './ExperienceHost';
-import { SceneViewportV3, type OverlayLayout, type ViewportHandle } from './SceneViewportV3';
+import { SceneViewportV3, sceneFloorLimit, sceneViewFrom, type OverlayLayout, type ViewportHandle } from './SceneViewportV3';
 import { ConfirmDialogV3, DecisionProjectionV3, type DecisionCopy } from './DecisionProjectionV3';
 import { CorrectionEnactment } from './CorrectionEnactment';
 import { CorrectionBoundary } from './CorrectionBoundary';
@@ -35,6 +35,8 @@ import { PrivateRevealV3 } from './PrivateRevealV3';
 import type { AssetCache } from './AssetPreloader';
 import type { Orientation, StagingV3 } from './staging';
 import { afterPaint } from './PresentationReceipts';
+import { deriveInteractions, type WorldCommand } from './hotspots';
+import { SoundscapeV3, type RoomToneOf } from './SoundscapeV3';
 import './experiencePlayerV3.css';
 
 export interface PlayerCopy extends DecisionCopy {
@@ -76,6 +78,8 @@ export interface ExperiencePlayerV3Props {
   onDisclosure?: (e: 'why' | 'aftermath' | 'skipped') => void;
   /** Where per-viewer display preferences live (optional; memory only when absent). */
   prefs?: PreferenceStore;
+  /** What each place sounds like (story binding). Without it the player is silent. */
+  roomTone?: RoomToneOf;
 }
 
 export function ExperiencePlayerV3(props: ExperiencePlayerV3Props) {
@@ -164,6 +168,15 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   const [motif, setMotif] = useState<string | undefined>(() => assets.url(staging.props.authorPage));
   const viewport = useRef<ViewportHandle>(null);
   const lastPortal = useRef<string | undefined>(undefined);
+  const [nearId, setNearId] = useState<string | undefined>(undefined);
+  const nearRef = useRef<string | undefined>(undefined);
+  nearRef.current = nearId;
+  const [started, setStarted] = useState(false);
+  const [moved, setMoved] = useState(false);
+  const [sound] = useState(() => new SoundscapeV3());
+  const [muted, setMuted] = useState(() => prefs.read('muted') ?? false);
+  useEffect(() => () => sound.dispose(), [sound]);
+  useEffect(() => sound.setMuted(muted), [sound, muted]);
 
   const visual = !readableMode && assetMode === 'full';
   const plan = m.scenePlans.find(p => p.id === s.scene)!;
@@ -218,26 +231,98 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   };
   const prepFor = (role: string | undefined) => (role ? readable.preparations.find(p => p.available && !p.applied && m.preparations.find(x => x.id === p.id)?.action.kind === 'reposition' && (m.preparations.find(x => x.id === p.id)!.action as { markRole: string }).markRole === role) : undefined);
 
+  /* ------------------------------------- in-world interactions (derived) --- */
+  const loc = geometry.locations.find(l => l.location === s.location);
+  const heroMark = s.entities.find(e => e.id === m.perspectiveActor)?.mark;
+  const floorLimit = useMemo(() => sceneFloorLimit(m, s, staging, geometry, orientation), [m, s.scene, s.location, s.deliveredBeats.length, s.decision?.option, orientation, staging, geometry, heroMark?.x, heroMark?.y]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Approach points are chosen from where the body stands when the scene's offer changes, not every frame.
+  const interactions = useMemo(
+    () => deriveInteractions(m, s, readable, loc, staging.locations[s.location], viewport.current?.heroAt() ?? (heroMark ? [heroMark.x, heroMark.y] : undefined), floorLimit, sceneViewFrom(m, s, staging, geometry, orientation)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [m, readable, loc, staging, floorLimit, s.scene, s.entities]
+  );
+  const canMove = movementEligible(s);
+  const control = useMemo(() => ({ vector: () => manager.heldVector, eligible: canMove }), [manager, canMove]);
+  useEffect(() => setNearId(undefined), [s.scene]);
+  // Any story progress (however it was asked for) means the player is in: the title card gives way.
+  const progress = s.deliveredBeats.length + s.seenObservations.length + s.visitedScenes.length;
+  const firstProgress = useRef(progress);
+  useEffect(() => {
+    if (progress !== firstProgress.current) setStarted(true);
+  }, [progress]);
+
+  /** At a door several ways share: hand the choice to the real buttons (Enter/click picks; Tab moves; Esc back). */
+  const offerDoor = (h: { choices?: Array<{ command: WorldCommand }> }) => {
+    const first = h.choices?.[0];
+    const el = first && document.querySelector<HTMLButtonElement>(`[data-testid="travel-${first.command.id}"]`);
+    if (el) el.focus();
+    return !!el;
+  };
+  const runCommand = (c: WorldCommand, activationId?: string) => {
+    setStarted(true);
+    if (c.kind === 'observe') return dispatch(readableEvents.observe(c.id, activationId));
+    if (c.kind === 'prepare') return dispatch(readableEvents.prepare(c.id, activationId));
+    lastPortal.current = c.id;
+    return dispatch(readableEvents.travel(c.id, activationId));
+  };
+  /** Walk to an interaction (A* over the floor), then use it — the same command its list button sends. */
+  const goUse = (id: string, activationId: string) => {
+    const h = interactions.hotspots.find(x => x.id === id);
+    if (!h) return;
+    if (nearRef.current === id) return void runCommand(h.command, activationId);
+    if (!viewport.current?.walkTo(h.at, () => runCommand(h.command, activationId))) runCommand(h.command, activationId);
+  };
+
+  /* ------------------------------------------------------------ sound --- */
+  const tone = props.roomTone && visual ? props.roomTone(s.location) : undefined;
+  useEffect(() => sound.setRoom(tone && !boundaryReached ? tone.tone : null, boundaryReached ? 1.6 : 1.2), [sound, tone?.tone, boundaryReached]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => void (nearId && sound.notice()), [sound, nearId]);
+  useEffect(() => {
+    if (s.phase === 'enacting') sound.tick();
+    if (s.phase === 'transitioning') sound.door();
+  }, [sound, s.phase]);
+  const onStep = useCallback(() => sound.step(tone?.floor), [sound, tone?.floor]);
+
   intentRef.current = (i: InputIntent) => {
     props.onIntent?.(i);
+    if (i.type === 'activate' || (i.type === 'move' && i.reason === 'input')) sound.unlock();
     switch (i.type) {
       case 'activate': {
+        setStarted(true);
         if (i.source === 'key' || !i.point || !viewport.current) {
-          dispatch({ type: 'ACTIVATE_CONTEXT', activationId: i.activationId });
+          const st = getState();
+          const here = interactions.hotspots.find(x => x.id === nearRef.current);
+          const interact = i.code === 'KeyE';
+          // E uses what you are at; Enter/Space carry the story on. Each falls back to the other, then to the list.
+          if (here && (here.choices?.length ?? 0) > 1 && (interact || !readable.canAdvance)) offerDoor(here);
+          else if (interact && here) runCommand(here.command, i.activationId);
+          else if (readable.canAdvance && st.phase === 'playing' && !st.sheet) dispatch(readableEvents.advance(i.activationId));
+          else if (here) runCommand(here.command, i.activationId);
+          else dispatch({ type: 'ACTIVATE_CONTEXT', activationId: i.activationId });
           break;
         }
         const hit = viewport.current.hitTest(i.point[0], i.point[1]);
-        if (hit.kind === 'hero') {
+        const entityHotspot = (id: string) => interactions.hotspots.find(h => h.command.kind === 'observe' && m.observations.find(o => o.id === h.command.id && o.target.kind !== 'self' && (o.target as { id: string }).id === id));
+        const multi = hit.kind === 'hotspot' ? interactions.hotspots.find(x => x.id === hit.id && (x.choices?.length ?? 0) > 1) : undefined;
+        if (multi) {
+          if (nearRef.current === multi.id) offerDoor(multi);
+          else viewport.current.walkTo(multi.at, () => offerDoor(multi));
+        } else if (hit.kind === 'hotspot') goUse(hit.id, i.activationId);
+        else if ((hit.kind === 'actor' || hit.kind === 'object') && entityHotspot(hit.id)) goUse(entityHotspot(hit.id)!.id, i.activationId);
+        else if (hit.kind === 'hero') {
           const summary = m.initialEntities.find(e => e.kind === 'object' && s.entities.find(x => x.id === e.id)?.owner.id === m.perspectiveActor);
           const opened = (summary && sendTarget({ kind: 'object', id: summary.id }, i.activationId)) || sendTarget({ kind: 'self' }, i.activationId);
           if (!opened) focus.announce('Nothing to do with yourself right now.');
         } else if (hit.kind === 'actor' || hit.kind === 'object') {
           if (!sendTarget({ kind: hit.kind, id: hit.id }, i.activationId)) focus.announce('Nothing to do there right now.');
         } else if (hit.kind === 'floor') {
+          // Click-to-walk (free, presentation only). A click ON a preparation's mark walks there and takes it.
           const prep = prepFor(hit.nearestRole);
-          if (prep && hit.legal) dispatch(readableEvents.prepare(prep.id, i.activationId));
-          else if (!hit.legal && !hit.nearestRole) focus.announce('You cannot stand there.');
-          else focus.announce('Nowhere to move to there right now.');
+          const spot = prep && interactions.hotspots.find(h => h.command.kind === 'prepare' && h.command.id === prep.id);
+          if (spot) goUse(spot.id, i.activationId);
+          else if (!canMove) focus.announce('Movement is not available right now.');
+          else if (!viewport.current.walkTo(hit.point)) focus.announce('You cannot get there.');
+          else setMoved(true);
         }
         break;
       }
@@ -249,30 +334,10 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
       case 'movement_blocked':
         focus.announce('Movement is not available right now.');
         break;
-      case 'move': {
-        if (i.reason !== 'input' || (i.vector[0] === 0 && i.vector[1] === 0)) break;
-        // Bounded local movement: step to the supported mark in that direction (a reversible preparation).
-        const vp = viewport.current;
-        const hero = getState().entities.find(e => e.id === m.perspectiveActor);
-        const cs = m.compiledScenes.find(c => c.id === s.scene);
-        const here = hero?.mark && vp ? vp.pointOnStage(hero.mark.x, hero.mark.y) : undefined;
-        let best: { id: string; d: number } | undefined;
-        for (const p of readable.preparations) {
-          const plan = m.preparations.find(x => x.id === p.id)!;
-          if (!p.available || p.applied || plan.action.kind !== 'reposition' || !cs?.marks?.[plan.action.markRole]) continue;
-          const at = vp?.markOnStage(plan.action.markRole);
-          if (!at || !here) continue;
-          const dx = at.x - here.x;
-          const dy = at.y - here.y;
-          const along = dx * i.vector[0] + dy * i.vector[1];
-          if (along <= 0) continue;
-          const d = Math.hypot(dx, dy);
-          if (!best || d < best.d) best = { id: p.id, d };
-        }
-        if (best) dispatch(readableEvents.prepare(best.id));
-        else focus.announce('No other place to stand in that direction.');
+      case 'move':
+        // Locomotion is continuous: the viewport reads the held vector every frame (InputManager.heldVector).
+        if (i.reason === 'input' && (i.vector[0] || i.vector[1])) (setMoved(true), setStarted(true));
         break;
-      }
     }
   };
 
@@ -306,118 +371,168 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   const showStage = visual && s.phase !== 'reveal_loading' && s.phase !== 'revealed' && s.phase !== 'ended';
   const stageReady = s.phase !== 'loading';
 
+  const carried = interactions.hud.filter(h => h.kind === 'carried');
+  const onward = interactions.hud.filter(h => h.kind === 'onward');
+  const pageMode = !showStage;
+  const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+  const hint = !moved && canMove ? (coarse ? 'Tap the floor to walk; tap a marked thing to use it.' : 'Walk with WASD or the arrow keys, or click the floor. E uses what you are next to; Enter continues.') : undefined;
+
   return (
-    <section className={`v3p${reducedMotion ? ' is-reduced-motion' : ''}${readableMode ? ' is-readable' : ''}`} lang={m.locale} aria-label={copy.title} data-testid="player" data-phase={s.phase} data-scene={s.scene} data-orientation={orientation}>
-      <header className="v3p-header">
-        <p className="v3p-fiction-label" data-testid="fiction-label">
-          {copy.disclosure}
-        </p>
-        <h1 className="v3p-title">{copy.title}</h1>
+    <section
+      className={`v3p v3g${reducedMotion ? ' is-reduced-motion' : ''}${readableMode ? ' is-readable' : ''}${pageMode ? ' is-page' : ' is-stage'}`}
+      lang={m.locale}
+      aria-label={copy.title}
+      data-testid="player"
+      data-phase={s.phase}
+      data-scene={s.scene}
+      data-orientation={orientation}
+      onFocusCapture={e => (e.target as HTMLElement).hasAttribute?.('data-v3-world-surface') && setStarted(true)}
+    >
+      {showStage && stageReady && (
+        <div className={`v3g-stage${s.phase === 'transitioning' ? ' is-leaving' : ''}`} key={s.location}>
+          <WorldSurface label={`${copy.describeScene(s.scene)} Walk with the arrow keys or WASD; E or Enter to act; Tab leaves.`} className="v3p-world v3g-world">
+            <SceneViewportV3
+              ref={viewport}
+              manifest={m}
+              state={s}
+              staging={staging}
+              geometry={geometry}
+              assets={assets}
+              orientation={orientation}
+              reducedMotion={reducedMotion}
+              displayTitle={copy.displayTitle}
+              act={act}
+              onActStopped={setStoppedFor}
+              onWithdrawn={setWithdrawnFor}
+              overlay={stageOverlay}
+              control={control}
+              hotspots={interactions.hotspots}
+              onNear={setNearId}
+              onStep={props.roomTone ? onStep : undefined}
+              keyHint={coarse ? 'tap' : 'E'}
+            />
+          </WorldSurface>
+          <div className="v3g-vignette" aria-hidden="true" />
+        </div>
+      )}
+
+      <header className="v3p-header v3g-top">
+        <div className="v3g-id">
+          <p className="v3p-fiction-label" data-testid="fiction-label">
+            {copy.disclosure}
+          </p>
+          <h1 className="v3p-title">{copy.title}</h1>
+        </div>
         <div className="v3p-settings" role="group" aria-label="Display settings">
-          <button type="button" aria-pressed={readableMode} data-testid="toggle-readable" onClick={() => (setReadableMode(!readableMode), prefs.write('readable', !readableMode))}>
+          {started && showStage && <WorldEntryButton className="v3g-chip">Scene controls</WorldEntryButton>}
+          <button type="button" className="v3g-chip" aria-pressed={readableMode} data-testid="toggle-readable" onClick={() => (setReadableMode(!readableMode), prefs.write('readable', !readableMode))}>
             Readable mode
           </button>
-          <button type="button" aria-pressed={reducedMotion} data-testid="toggle-reduced-motion" onClick={() => setReducedMotion(!reducedMotion)}>
+          <button type="button" className="v3g-chip" aria-pressed={reducedMotion} data-testid="toggle-reduced-motion" onClick={() => setReducedMotion(!reducedMotion)}>
             Reduce motion
           </button>
+          {props.roomTone && (
+            <button type="button" className="v3g-chip" aria-pressed={!muted} data-testid="toggle-sound" onClick={() => (sound.unlock(), setMuted(!muted), prefs.write('muted', !muted))}>
+              Sound
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="v3p-main">
-        {showStage && stageReady && (
-          <div className="v3p-stage-col">
-            <WorldEntryButton>Enter the scene</WorldEntryButton>
-            <WorldSurface label={`${copy.describeScene(s.scene)} Tap or press Enter for actions; arrow keys step between places you can stand; Tab leaves.`} className="v3p-world">
-              <SceneViewportV3
-                ref={viewport}
-                manifest={m}
-                state={s}
-                staging={staging}
-                geometry={geometry}
-                assets={assets}
-                orientation={orientation}
-                reducedMotion={reducedMotion}
-                displayTitle={copy.displayTitle}
-                act={act}
-                onActStopped={setStoppedFor}
-                onWithdrawn={setWithdrawnFor}
-                overlay={stageOverlay}
-              />
-            </WorldSurface>
-          </div>
-        )}
-        {!visual && assetMode === 'readable' && s.phase !== 'loading' && (
-          <p className="v3p-hint" data-testid="readable-fallback">
-            Pictures are off. The same story, choices and author’s account continue in text.{' '}
-            <button type="button" data-testid="pictures-on" onClick={() => onAssetMode('full')}>
-              Try pictures again
-            </button>
+      {!started && showStage && stageReady && (
+        <div className="v3g-card" data-testid="title-card">
+          <p className="v3g-card-kicker">{copy.disclosure}</p>
+          <h2 className="v3g-card-title">{copy.title}</h2>
+          <p className="v3g-card-hook">{copy.hook}</p>
+          <WorldEntryButton className="v3g-enter" onEnter={() => (sound.unlock(), setStarted(true))}>
+            Enter the scene
+          </WorldEntryButton>
+          <p className="v3g-card-keys" aria-hidden="true">
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · click to go · <kbd>E</kbd> act · <kbd>Enter</kbd> continue
           </p>
+        </div>
+      )}
+      {(!showStage || !stageReady) && !visual && assetMode === 'readable' && s.phase !== 'loading' && (
+        <p className="v3p-hint" data-testid="readable-fallback">
+          Pictures are off. The same story, choices and author’s account continue in text.{' '}
+          <button type="button" data-testid="pictures-on" onClick={() => onAssetMode('full')}>
+            Try pictures again
+          </button>
+        </p>
+      )}
+
+      {showStage && stageReady && carried.length > 0 && (
+        <div className="v3g-inventory" role="group" aria-label="What you carry">
+          {carried.map(c => (
+            <button key={c.command.id} type="button" className={`v3g-item${c.seen ? ' is-seen' : ''}`} data-testid={`carry-${c.command.id}`} onClick={e => runCommand(c.command, activation(e))} title={c.label}>
+              {assets.url(staging.props.summary) && <img src={assets.url(staging.props.summary)} alt="" draggable={false} />}
+              <span>{c.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={`v3p-panel v3g-dock${started || !showStage ? '' : ' is-waiting'}`} data-testid="panel">
+        <StatusAlerts s={s} host={host} status={status} lastPortal={lastPortal} dispatch={dispatch} activation={activation} onAssetMode={onAssetMode} persistenceProblem={persistenceProblem} />
+
+        {(playing || s.phase === 'entering' || s.phase === 'transitioning') && (
+          <section className="v3p-story" aria-label="Story" aria-live="polite" data-testid="story">
+            {!lastBeat && s.scene === m.spine[0] && <p className="v3p-hook">{copy.hook}</p>}
+            {lines.map((f, i) => (
+              <p key={`${lastBeat}:${f.id}`} className={`v3p-line is-${f.kind}`} data-testid={`line-${f.id}`} style={{ animationDelay: `${i * 0.55}s` }}>
+                <FactText text={f.text} />
+              </p>
+            ))}
+          </section>
         )}
 
-        <div className="v3p-panel" data-testid="panel">
-          <StatusAlerts s={s} host={host} status={status} lastPortal={lastPortal} dispatch={dispatch} activation={activation} onAssetMode={onAssetMode} persistenceProblem={persistenceProblem} />
+        {playing && <Actions readable={readable} dispatch={dispatch} activation={activation} onTravel={id => (lastPortal.current = id)} onward={onward.map(o => o.command.id)} here={(interactions.hotspots.find(h => h.id === nearId)?.choices ?? []).map(c => c.command.id)} />}
+        {playing && hint && s.scene === m.spine[0] && <p className="v3g-hint">{hint}</p>}
 
-          {(playing || s.phase === 'entering' || s.phase === 'transitioning') && (
-            <section className="v3p-story" aria-label="Story" aria-live="polite" data-testid="story">
-              {!lastBeat && s.scene === m.spine[0] && <p className="v3p-hook">{copy.hook}</p>}
-              {lines.map(f => (
-                <p key={f.id} className={`v3p-line is-${f.kind}`} data-testid={`line-${f.id}`}>
-                  <FactText text={f.text} />
-                </p>
-              ))}
-            </section>
-          )}
+        {decisionVisible && !anchored && <DecisionProjectionV3 readable={readable} reserved={s.reservation?.option} copy={decisionCopy} dispatch={dispatch} activation={activation} mode="stacked" />}
+        {decisionVisible && anchored && <p className="v3p-sr-only" data-testid="decision-hint">Your three possible acts are marked in the room. Choosing opens a confirmation.</p>}
 
-          {playing && (
-            <Actions readable={readable} dispatch={dispatch} activation={activation} onTravel={id => (lastPortal.current = id)} />
-          )}
+        {(s.phase === 'enacting' || s.phase === 'holding') && act && <CorrectionEnactment host={host} phase={s.phase} instance={instance} caption={copy.intention(act.option)} stopped={stoppedFor === instance} reducedMotion={reducedMotion} />}
+        {s.phase === 'boundary' && act && (
+          <>
+            <p className="v3p-caption is-held" data-testid="held-caption">
+              {copy.intention(act.option)}
+            </p>
+            <CorrectionBoundary host={host} status={status} phase={s.phase} instance={instance} withdrawn={withdrawnFor === instance} boundaryLine={copy.boundaryLine} disclosure={copy.disclosure} motifSrc={motif} />
+          </>
+        )}
+        {(s.phase === 'reveal_loading' || s.phase === 'revealed' || s.phase === 'ended') && (
+          <PrivateRevealV3
+            phase={s.phase}
+            status={status}
+            record={host.revealRecord()}
+            bridge={copy.boundaryLine}
+            disclosure={copy.disclosure}
+            motifSrc={motif}
+            onRetry={() => host.retryReveal()}
+            onFinish={() => dispatch({ type: 'END' })}
+            onDisclosure={props.onDisclosure}
+          />
+        )}
 
-          {decisionVisible && !anchored && <DecisionProjectionV3 readable={readable} reserved={s.reservation?.option} copy={decisionCopy} dispatch={dispatch} activation={activation} mode="stacked" />}
-          {decisionVisible && anchored && <p className="v3p-hint" data-testid="decision-hint">Your three possible acts are placed in the room above. Choosing opens a confirmation.</p>}
-
-          {(s.phase === 'enacting' || s.phase === 'holding') && act && <CorrectionEnactment host={host} phase={s.phase} instance={instance} caption={copy.intention(act.option)} stopped={stoppedFor === instance} reducedMotion={reducedMotion} />}
-          {s.phase === 'boundary' && act && (
-            <>
-              <p className="v3p-caption is-held" data-testid="held-caption">
-                {copy.intention(act.option)}
-              </p>
-              <CorrectionBoundary host={host} status={status} phase={s.phase} instance={instance} withdrawn={withdrawnFor === instance} boundaryLine={copy.boundaryLine} disclosure={copy.disclosure} motifSrc={motif} />
-            </>
-          )}
-          {(s.phase === 'reveal_loading' || s.phase === 'revealed' || s.phase === 'ended') && (
-            <PrivateRevealV3
-              phase={s.phase}
-              status={status}
-              record={host.revealRecord()}
-              bridge={copy.boundaryLine}
-              disclosure={copy.disclosure}
-              motifSrc={motif}
-              onRetry={() => host.retryReveal()}
-              onFinish={() => dispatch({ type: 'END' })}
-              onDisclosure={props.onDisclosure}
-            />
-          )}
-
-          {(playing || readableMode) && readable.facts.length > 0 && !boundaryReached && (
-            <section className="v3p-context" aria-label="What you know">
-              {!readableMode && (
-                <button type="button" aria-expanded={contextOpen} aria-controls="v3p-transcript" data-testid="context-toggle" onClick={() => setContextOpen(!contextOpen)}>
-                  Context
-                </button>
-              )}
-              {(contextOpen || readableMode) && (
-                <ol id="v3p-transcript" data-testid="transcript">
-                  {readable.facts.map(f => (
-                    <li key={f.id}>
-                      <FactText text={f.text} />
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
-          )}
-        </div>
+        {(playing || readableMode) && readable.facts.length > 0 && !boundaryReached && (
+          <section className="v3p-context" aria-label="What you know">
+            {!readableMode && (
+              <button type="button" className="v3g-chip" aria-expanded={contextOpen} aria-controls="v3p-transcript" data-testid="context-toggle" onClick={() => setContextOpen(!contextOpen)}>
+                Context
+              </button>
+            )}
+            {(contextOpen || readableMode) && (
+              <ol id="v3p-transcript" data-testid="transcript">
+                {readable.facts.map(f => (
+                  <li key={f.id}>
+                    <FactText text={f.text} />
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
       </div>
 
       <ObservationInsert m={m} s={s} copy={copy} dispatch={dispatch} />
@@ -430,7 +545,7 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
 
 /* -------------------------------------------------------------- pieces --- */
 
-function Actions({ readable, dispatch, activation, onTravel }: { readable: ReadableModel; dispatch: (e: ExperienceEvent) => StepResult; activation: (e: React.SyntheticEvent) => string; onTravel: (id: string) => void }) {
+function Actions({ readable, dispatch, activation, onTravel, onward = [], here = [] }: { readable: ReadableModel; dispatch: (e: ExperienceEvent) => StepResult; activation: (e: React.SyntheticEvent) => string; onTravel: (id: string) => void; onward?: string[]; here?: string[] }) {
   const obs = readable.observations.filter(o => o.available);
   const preps = readable.preparations.filter(p => p.available || p.applied);
   const doors = readable.portals.filter(p => p.available);
@@ -438,18 +553,18 @@ function Actions({ readable, dispatch, activation, onTravel }: { readable: Reada
   return (
     <section className="v3p-actions" aria-label="What you can do" data-testid="actions">
       {readable.canAdvance && (
-        <button type="button" className="v3p-primary" data-testid="advance" onClick={e => dispatch(readableEvents.advance(activation(e)))}>
-          Continue
+        <button type="button" className="v3p-primary v3g-continue" data-testid="advance" onClick={e => dispatch(readableEvents.advance(activation(e)))}>
+          Continue <kbd aria-hidden="true">↵</kbd>
         </button>
       )}
       {obs.map(o => (
-        <button key={o.id} type="button" data-testid={`observe-${o.id}`} onClick={e => dispatch(readableEvents.observe(o.id, activation(e)))}>
+        <button key={o.id} type="button" className="v3g-quiet" data-testid={`observe-${o.id}`} onClick={e => dispatch(readableEvents.observe(o.id, activation(e)))}>
           {o.label}
           {o.seen ? <span className="v3p-sr-only"> (already seen)</span> : null}
         </button>
       ))}
       {preps.map(p => (
-        <button key={p.id} type="button" aria-pressed={p.applied} data-testid={`prepare-${p.id}`} onClick={e => dispatch(p.applied ? readableEvents.undoPreparation(p.id, activation(e)) : readableEvents.prepare(p.id, activation(e)))}>
+        <button key={p.id} type="button" className="v3g-quiet" aria-pressed={p.applied} data-testid={`prepare-${p.id}`} onClick={e => dispatch(p.applied ? readableEvents.undoPreparation(p.id, activation(e)) : readableEvents.prepare(p.id, activation(e)))}>
           {p.label}
         </button>
       ))}
@@ -457,7 +572,7 @@ function Actions({ readable, dispatch, activation, onTravel }: { readable: Reada
         <button
           key={p.id}
           type="button"
-          className={p.kind === 'spine' ? 'v3p-primary' : undefined}
+          className={onward.includes(p.id) && !readable.canAdvance ? 'v3p-primary v3g-continue' : here.includes(p.id) ? 'v3g-quiet is-here' : 'v3g-quiet'}
           data-testid={`travel-${p.id}`}
           onClick={e => {
             onTravel(p.id);

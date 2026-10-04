@@ -60,6 +60,10 @@ declare global {
   }
 }
 
+/** What each Correction place sounds like: an open-plan office, a closed meeting room, a tiled corridor. */
+const correctionRoomTone = (location: string) =>
+  location === 'meeting' ? ({ tone: 'meeting', floor: 'carpet' } as const) : location === 'hallway' ? ({ tone: 'corridor', floor: 'tile' } as const) : ({ tone: 'open_plan', floor: 'carpet' } as const);
+
 const param = (k: string) => new URLSearchParams(window.location.search).get(k) ?? undefined;
 
 export default function CorrectionDevEntry() {
@@ -213,6 +217,7 @@ export default function CorrectionDevEntry() {
           prefs={devPrefs}
           onReady={onReady}
           onIntent={i => log.current.intents.push(i)}
+          roomTone={correctionRoomTone}
           onEvent={(e, r) => {
             // For QA: what was on screen when a presentation receipt was accepted.
             const receipt = e.type === 'ENACTED' || e.type === 'HOLD_DONE' || e.type === 'BOUNDARY_DONE' || e.type === 'SKIP';

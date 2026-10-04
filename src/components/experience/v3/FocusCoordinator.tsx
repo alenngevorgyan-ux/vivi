@@ -179,12 +179,12 @@ export function WorldSurface({ label, describedBy, className, children }: { labe
 }
 
 /** The visible way into the scene controls, for people who do not tap the stage. */
-export function WorldEntryButton({ children }: { children: ReactNode }) {
+export function WorldEntryButton({ children, className, onEnter }: { children: ReactNode; className?: string; onEnter?: () => void }) {
   const api = useFocusCoordinator();
   const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => api.registerEntryButton(ref.current!), [api]);
   return (
-    <button ref={ref} type="button" data-testid="entry-button" onClick={() => api.focusWorld()}>
+    <button ref={ref} type="button" data-testid="entry-button" className={className} onClick={() => (onEnter?.(), api.focusWorld())}>
       {children}
     </button>
   );

@@ -124,7 +124,8 @@ export function routeKeydown(k: KeyFacts, ctx: RouteContext): RouteResult {
     return { owner, preventDefault: true, action: worldIsTop && ctx.movementEligible ? { kind: 'move_down', code: move } : { kind: 'blocked' } };
   }
 
-  if (k.key === 'Enter') {
+  // Enter, and on the world surface the game key E (physical, so it works on RU layouts), interact. Space stays native.
+  if (k.key === 'Enter' || k.code === 'KeyE') {
     // Enter on anything but the world surface is native activation, untouched.
     if (ctx.target !== 'world_surface' || top) return NONE(owner);
     // A held key is swallowed: one press, one command.
