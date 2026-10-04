@@ -43,7 +43,8 @@ export class FigureAnimator {
   private yaw = 0;
   private walk = 0;
   private lag = 0;
-  private clock = 0;
+  // a random phase, so a crowd does not re-pose all in the same frame
+  private clock = Math.random() / 12;
   private t = 0;
   private sampled: { pose: Pose; lag: number } | null = null;
 

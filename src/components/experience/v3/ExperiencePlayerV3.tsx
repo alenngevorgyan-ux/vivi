@@ -250,6 +250,35 @@ function PlayerBody(props: ExperiencePlayerV3Props & { manager: InputManager; in
   const canMove = movementEligible(s);
   const control = useMemo(() => ({ vector: () => manager.heldVector, eligible: canMove }), [manager, canMove]);
   useEffect(() => setNearId(undefined), [s.scene]);
+
+  /* The scene is the screen: the page never scrolls under it, and movement keys always mean walking. A movement
+     key pressed while focus is on the page or a control (not a text field, not a dialog) steps into the scene. */
+  const stageUp = visual && s.phase !== 'reveal_loading' && s.phase !== 'revealed' && s.phase !== 'ended';
+  useEffect(() => {
+    if (!stageUp) return;
+    const html = document.documentElement;
+    const prev = [html.style.overflow, document.body.style.overflow];
+    html.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    const MOVE = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'PageUp', 'PageDown']);
+    const onKey = (e: KeyboardEvent) => {
+      if (!MOVE.has(e.code) || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (t?.closest?.('[role="dialog"]')) return;
+      if (t?.hasAttribute?.('data-v3-world-surface')) return;
+      e.preventDefault();
+      if (e.code.startsWith('Page')) return;
+      focus.focusWorld();
+      setStarted(true);
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => {
+      window.removeEventListener('keydown', onKey, { capture: true });
+      [html.style.overflow, document.body.style.overflow] = prev;
+    };
+  }, [stageUp, focus]);
   // Any story progress (however it was asked for) means the player is in: the title card gives way.
   const progress = s.deliveredBeats.length + s.seenObservations.length + s.visitedScenes.length;
   const firstProgress = useRef(progress);
